@@ -135,7 +135,7 @@ class MomentDetector:
         elif t is EventType.GOAL:
             self._on_goal(e, prev_score)
 
-        if t is EventType.SHOT:
+        if t is EventType.SHOT and e.outcome != "goal":  # gol olan şut 'sonuçsuz' değildir
             self._check_dominance(e)
         self._check_pressure_shift(e)
 
