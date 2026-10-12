@@ -19,5 +19,8 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Momentler: .venv/bin/python -m app.analytics --scenario red_card_swing --seed 42 [--jsonl] (ya da --input data/demo/<dosya>.jsonl)
 - Anlatı + doğrulama: .venv/bin/python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en|tr|both] [--all]
 - Anlatım hattı: .venv/bin/python -m app.explain.run --input data/demo/<dosya>.jsonl --narrator template|fake:<mod> [--lang en|tr] [--no-cache] (önbellek: data/cache/, git'e girmez)
+- Enjeksiyon değerlendirmesi: .venv/bin/python -m eval.inject [--quick] (docs/EVAL.md'yi yeniden yazar)
+- LLM anlatıcı (opsiyonel): .venv/bin/pip install -e ".[llm]"; FOUNDRY_PROJECT_ENDPOINT ve FOUNDRY_MODEL ortam değişkeni olarak (.env otomatik yüklenmez, örn. set -a; source .env); --narrator foundry
+- Foundry bağlantı testi: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
 ## Scope freeze: 24 Ekim akşamı. Sonrasında yeni özellik yok.

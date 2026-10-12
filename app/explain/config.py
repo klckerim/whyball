@@ -30,6 +30,12 @@ class ExplainConfig:
     # --- text lint ---
     lint_allowed_capitalized: tuple[str, ...] = ()  # cümle ortasında serbest büyük harfli kelimeler
     lint_percent_tolerance: float = 0.5  # metindeki tam yüzde ile ratio iddiası arasındaki fark
+    lint_number_words: bool = True  # yazıyla sayılar (EN/TR, 0-20) da denetlensin
+
+    # --- LLM anlatıcı güvenliği ---
+    llm_timeout_s: float = 20.0  # çağrı başına
+    llm_max_tokens: int = 800  # yanıt token üst sınırı
+    llm_max_calls_per_run: int = 50  # anlatıcı örneği başına toplam çağrı
 
 
 DEFAULT_EXPLAIN_CONFIG = ExplainConfig()

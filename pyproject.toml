@@ -11,6 +11,8 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Foundry (FoundryNarrator, app/llm/hello.py) için; çekirdek ve testler gerektirmez.
+llm = ["agent-framework-foundry", "azure-identity", "python-dotenv"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

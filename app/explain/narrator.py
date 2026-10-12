@@ -27,9 +27,29 @@ class Draft:
     claims: tuple[Claim, ...]
 
 
+class NarratorError(Exception):
+    """Anlatıcı taslak üretemedi. `retryable=False` ise hat hemen yedeğe geçer."""
+
+    code = "client_error"
+    retryable = True
+
+
+class NarratorTimeout(NarratorError):
+    code = "timeout"
+
+
+class InvalidNarratorOutput(NarratorError):
+    code = "invalid_output"
+
+
+class BudgetExceeded(NarratorError):
+    code = "budget_exceeded"
+    retryable = False
+
+
 @dataclass(frozen=True)
 class FeedbackItem:
-    source: str  # "lint" | "verify" | "draft"
+    source: str  # "lint" | "verify" | "draft" | "narrator"
     code: str
     fragment: str | None = None
     claim_index: int | None = None
@@ -154,10 +174,14 @@ class FakeNarrator:
 def make_narrator(
     spec: str, events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> Narrator:
-    """"template" ya da "fake:<mod>"."""
+    """"template", "fake:<mod>" ya da "foundry" (FOUNDRY_PROJECT_ENDPOINT, FOUNDRY_MODEL)."""
     if spec == "template":
         return TemplateNarrator(events, config)
+    if spec == "foundry":
+        from .llm_narrator import foundry_narrator_from_env
+
+        return foundry_narrator_from_env(events, config)
     kind, _, mode = spec.partition(":")
     if kind == "fake" and mode:
         return FakeNarrator(events, mode, config)
-    raise ValueError(f"Bilinmeyen anlatıcı: {spec!r} (template | fake:<mod>)")
+    raise ValueError(f"Bilinmeyen anlatıcı: {spec!r} (template | fake:<mod> | foundry)")

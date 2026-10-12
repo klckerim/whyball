@@ -29,6 +29,46 @@ NUMBER_RE = re.compile(
 WORD_RE = re.compile(r"[^\W\d_]+(?:['’-][^\W\d_]+)*")
 SENTENCE_BREAKS = ".!?:—–\"("
 
+# Yazıyla sayılar (0-20). Dizin = değer.
+NUMBER_WORDS: dict[str, tuple[str, ...]] = {
+    "en": (
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+        "eighteen", "nineteen", "twenty",
+    ),
+    "tr": (
+        "sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz", "on",
+        "on bir", "on iki", "on üç", "on dört", "on beş", "on altı", "on yedi", "on sekiz",
+        "on dokuz", "yirmi",
+    ),
+}
+# Sayı dışında da sık kullanılan kelimeler: yalnızca ardından sayılabilir bir isim gelirse sayı.
+# TR "bir" artikel, "yedi" fiil ("gol yedi"), "altı" ("altı pas"); EN "one" ("one of").
+AMBIGUOUS_NUMBER_WORDS: dict[str, frozenset[str]] = {
+    "en": frozenset({"one"}),
+    "tr": frozenset({"bir", "yedi", "altı"}),
+}
+# Dil bilinmiyorsa diğer dilde sıradan kelime olanlar da belirsiz (EN "on" edat, TR "on" = 10).
+AMBIGUOUS_ANY_LANGUAGE = frozenset({"on"})
+COUNT_NOUN_STEMS = (
+    "goal", "shot", "corner", "player", "minute", "card", "penalt", "point", "save",
+    "gol", "şut", "korner", "oyuncu", "kişi", "dakika", "kart", "penaltı", "fark", "kurtarış",
+)
+NEXT_WORD_RE = re.compile(r"\s+([^\W\d_]+)")
+
+
+def _number_word_pattern(words: Sequence[str]) -> re.Pattern[str]:
+    ordered = sorted(words, key=lambda w: (-len(w), w))
+    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(w) for w in ordered) + r")(?!\w)")
+
+
+NUMBER_WORD_RE = {
+    "en": _number_word_pattern(NUMBER_WORDS["en"]),
+    "tr": _number_word_pattern(NUMBER_WORDS["tr"]),
+    None: _number_word_pattern([*NUMBER_WORDS["en"], *NUMBER_WORDS["tr"]]),
+}
+WORD_VALUES = {w: i for words in NUMBER_WORDS.values() for i, w in enumerate(words)}
+
 
 @dataclass(frozen=True)
 class LintIssue:
@@ -36,7 +76,7 @@ class LintIssue:
     fragment: str
     start: int
     end: int
-    kind: str  # minute | percent | decimal | integer | name
+    kind: str  # minute | percent | decimal | integer | word | name
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -108,12 +148,32 @@ def _capitalized_groups(text: str) -> list[tuple[int, int, list[str]]]:
     return groups
 
 
+def _number_words(text: str, language: str | None) -> list[tuple[int, int, int]]:
+    """(başlangıç, bitiş, değer) — belirsiz kelimeler yalnızca sayılabilir isimden önceyse."""
+    scan = text.replace("İ", "i").lower()  # aynı uzunluk; TR büyük İ
+    if language in AMBIGUOUS_NUMBER_WORDS:
+        ambiguous = AMBIGUOUS_NUMBER_WORDS[language]
+    else:
+        ambiguous = AMBIGUOUS_ANY_LANGUAGE.union(*AMBIGUOUS_NUMBER_WORDS.values())
+    found = []
+    for m in NUMBER_WORD_RE.get(language, NUMBER_WORD_RE[None]).finditer(scan):
+        word = m.group()
+        if word in ambiguous:
+            nxt = NEXT_WORD_RE.match(scan, m.end())
+            if not nxt or not nxt.group(1).startswith(COUNT_NOUN_STEMS):
+                continue
+        found.append((m.start(), m.end(), WORD_VALUES[word]))
+    return found
+
+
 def lint_text(
     text: str,
     claims: Sequence[Claim],
     roster: Roster,
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+    language: str | None = None,
 ) -> LintResult:
+    """`language` ("en"/"tr") yazıyla sayıların hangi dilde aranacağını belirler."""
     issues: list[LintIssue] = []
     teams = {c.subject.team for c in claims if c.subject.team}
     players = {c.subject.player for c in claims if c.subject.player}
@@ -164,5 +224,11 @@ def lint_text(
             kind, ok = "integer", any(v == n for v in values)
         if not ok:
             issues.append(LintIssue("unsupported_number", m.group(), m.start(), m.end(), kind))
+
+    # 4) Yazıyla sayılar (tamsayıyla aynı kural).
+    if config.lint_number_words:
+        for start, end, n in _number_words(masked_text, language):
+            if not any(v == n for v in values):
+                issues.append(LintIssue("unsupported_number", text[start:end], start, end, "word"))
 
     return LintResult(tuple(sorted(issues, key=lambda i: (i.start, i.code))))

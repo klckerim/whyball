@@ -18,7 +18,7 @@ from app.generator.models import Event
 from .cache import NarrationCache, cache_key
 from .claims import Claim, VerificationResult, verify_claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
-from .narrator import Feedback, FeedbackItem, Narrator
+from .narrator import Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
 from .template_narrator import narrate as template_narrate
 from .text_lint import LintIssue, Roster, lint_text
@@ -80,15 +80,21 @@ class NarrationRecord:
         )
 
 
-def _check(
-    text: str, claims: Sequence[Claim], events: Sequence[Event], roster: Roster, config: ExplainConfig
+def check_draft(
+    text: str,
+    claims: Sequence[Claim],
+    events: Sequence[Event],
+    roster: Roster,
+    config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+    language: str | None = None,
 ) -> tuple[list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...]]:
+    """Bir taslağın yayınlanabilirliği: boş liste = yeşil. (feedback öğeleri, lint, verify)"""
     items: list[FeedbackItem] = []
     if not text.strip():
         items.append(FeedbackItem("draft", "empty_text"))
     if not claims:
         items.append(FeedbackItem("draft", "no_claims"))
-    lint = lint_text(text, claims, roster, config)
+    lint = lint_text(text, claims, roster, config, language)
     items += [FeedbackItem("lint", i.code, fragment=i.fragment) for i in lint.issues]
     results = tuple(verify_claim(c, events, config) for c in claims)
     items += [
@@ -136,11 +142,26 @@ def run_moment(
 
     max_attempts = 1 + config.max_retries
     feedback: Feedback | None = None
+    fallback_reason = "max_retries_exceeded"
+    attempts = 0
     for attempt in range(1, max_attempts + 1):
-        draft = narrator.narrate(moment, persona, language, feedback)
+        attempts = attempt
+        feedback_codes = list(feedback.codes) if feedback else []
+        try:
+            draft = narrator.narrate(moment, persona, language, feedback)
+        except NarratorError as e:
+            trace.append({"attempt": attempt, "step": "narrate", "ok": False, "narrator": narrator.name,
+                          "claims": 0, "feedback": feedback_codes, "error": e.code, "message": str(e)})
+            if not e.retryable:
+                fallback_reason = e.code
+                break
+            feedback = Feedback(attempt, (FeedbackItem("narrator", e.code, fragment=str(e)[:200]),))
+            trace.append({"attempt": attempt, "step": "feedback", "ok": False,
+                          "codes": list(feedback.codes), "will_retry": attempt < max_attempts})
+            continue
         trace.append({"attempt": attempt, "step": "narrate", "ok": True, "narrator": narrator.name,
-                      "claims": len(draft.claims), "feedback": list(feedback.codes) if feedback else []})
-        items, issues, results = _check(draft.text, draft.claims, events, roster, config)
+                      "claims": len(draft.claims), "feedback": feedback_codes})
+        items, issues, results = check_draft(draft.text, draft.claims, events, roster, config, language)
         trace.append({"attempt": attempt, "step": "lint", "ok": not issues,
                       "issues": [{"code": i.code, "fragment": i.fragment} for i in issues]})
         trace.append({"attempt": attempt, "step": "verify", "ok": all(r.ok for r in results),
@@ -166,17 +187,17 @@ def run_moment(
     results_out: list[VerificationResult] = []
     for i, sentence in enumerate(narration.sentences):
         text = sentence.text[language]
-        if narration.sentence_ok(i) and lint_text(text, sentence.claims, roster, config).ok:
+        if narration.sentence_ok(i) and lint_text(text, sentence.claims, roster, config, language).ok:
             text_parts.append(text)
             claims += sentence.claims
             results_out += narration.results[i]
     text = " ".join(text_parts)
-    trace.append({"attempt": max_attempts, "step": "fallback", "ok": True,
-                  "reason": "max_retries_exceeded", "narrator": "template",
+    trace.append({"attempt": attempts, "step": "fallback", "ok": True,
+                  "reason": fallback_reason, "narrator": "template",
                   "published_sentences": len(text_parts), "total_sentences": len(narration.sentences)})
-    final_lint = lint_text(text, claims, roster, config)
+    final_lint = lint_text(text, claims, roster, config, language)
     return record(text=text, claims=tuple(claims), verification=tuple(results_out),
-                  lint_issues=final_lint.issues, attempts=max_attempts, source="template_fallback")
+                  lint_issues=final_lint.issues, attempts=attempts, source="template_fallback")
 
 
 def run_match(

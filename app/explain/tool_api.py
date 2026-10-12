@@ -98,7 +98,9 @@ def metrics_at_tool(payload: Payload) -> Payload:
 def lint_text_tool(payload: Payload) -> Payload:
     events = _events(payload)
     claims = [Claim.from_dict(c) for c in payload.get("claims", [])]
-    return lint_text(payload["text"], claims, Roster.from_events(events)).to_dict()
+    return lint_text(
+        payload["text"], claims, Roster.from_events(events), language=payload.get("language")
+    ).to_dict()
 
 
 @_tool

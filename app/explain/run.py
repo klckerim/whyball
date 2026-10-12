@@ -24,6 +24,8 @@ def format_step(step: dict[str, Any]) -> str:
     a, kind = step["attempt"], step["step"]
     if kind == "cache":
         return f"cache {'HIT' if step['hit'] else 'MISS'}"
+    if kind == "narrate" and not step["ok"]:
+        return f"#{a} narrate {step['narrator']} FAIL {step['error']}: {step['message']}"
     if kind == "narrate":
         fb = f" (feedback: {', '.join(step['feedback'])})" if step["feedback"] else ""
         return f"#{a} narrate {step['narrator']} -> {step['claims']} claims{fb}"
@@ -44,8 +46,8 @@ def format_step(step: dict[str, Any]) -> str:
     if kind == "cache_store":
         return "cache STORE"
     if kind == "fallback":
-        return (f"fallback template ({step['published_sentences']}/{step['total_sentences']} "
-                f"sentences published)")
+        return (f"fallback template [{step['reason']}] ({step['published_sentences']}/"
+                f"{step['total_sentences']} sentences published)")
     return str(step)
 
 
@@ -56,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
     parser.add_argument(
         "--narrator", default="template",
-        help=f"template | fake:<mod> ({', '.join(FAKE_MODES)})",
+        help=f"template | foundry | fake:<mod> ({', '.join(FAKE_MODES)})",
     )
     parser.add_argument("--persona")
     parser.add_argument("--lang", choices=LANGS, default="en")

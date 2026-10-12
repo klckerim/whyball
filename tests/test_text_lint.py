@@ -119,3 +119,78 @@ def test_percent_and_decimal():
     assert lint_text("58% possession, %58 topa sahip olma, balance +0.83.", [ratio, state], ROSTER).ok
     result = lint_text("60% possession, balance +0.90.", [ratio, state], ROSTER)
     assert _codes(result) == [("unsupported_number", "60%"), ("unsupported_number", "+0.90")]
+
+
+# --- yazıyla sayılar (EN/TR, 0-20) -------------------------------------------------------
+
+
+def _goals(value, team="home"):
+    return [_claim(team=team, value=value)]
+
+
+@pytest.mark.parametrize(
+    "text,lang",
+    [
+        ("22' — two goals for the home side.", "en"),
+        ("22' — Two goals in total.", "en"),
+        ("22' — iki gol geldi.", "tr"),
+        ("22' — İki gol geldi.", "tr"),
+    ],
+)
+def test_supported_number_words(text, lang):
+    assert lint_text(text, _goals(2), ROSTER, language=lang).ok
+
+
+@pytest.mark.parametrize(
+    "text,lang,fragment",
+    [
+        ("22' — three goals for the home side.", "en", "three"),
+        ("22' — üç gol geldi.", "tr", "üç"),
+        ("22' — on bir şut atıldı.", "tr", "on bir"),
+        ("22' — one goal for the home side.", "en", "one"),
+        ("22' — bir gol geldi.", "tr", "bir"),
+    ],
+)
+def test_unsupported_number_words(text, lang, fragment):
+    result = lint_text(text, _goals(2), ROSTER, language=lang)
+    assert [(i.code, i.fragment, i.kind) for i in result.issues] == [("unsupported_number", fragment, "word")]
+
+
+def test_multi_word_turkish_number_is_one_value():
+    assert lint_text("22' — on bir şut atıldı.", _goals(11), ROSTER, language="tr").ok
+
+
+@pytest.mark.parametrize(
+    "text,lang",
+    [
+        ("22' — Bir ara gerideydi.", "tr"),  # artikel
+        ("22' — Takım gol yedi.", "tr"),  # fiil
+        ("22' — It was one of those days.", "en"),
+        ("22' — The goal came on the break.", "en"),  # EN "on" sayı değil
+    ],
+)
+def test_ambiguous_words_without_count_noun_are_not_numbers(text, lang):
+    assert lint_text(text, _goals(2), ROSTER, language=lang).ok
+
+
+def test_unknown_language_treats_cross_language_words_as_ambiguous():
+    assert lint_text("22' — The goal came on the break.", _goals(2), ROSTER).ok
+    assert not lint_text("22' — three goals.", _goals(2), ROSTER).ok
+
+
+def test_number_words_can_be_disabled():
+    from dataclasses import replace as dc_replace
+
+    from app.explain import DEFAULT_EXPLAIN_CONFIG
+
+    off = dc_replace(DEFAULT_EXPLAIN_CONFIG, lint_number_words=False)
+    assert lint_text("22' — three goals.", _goals(2), ROSTER, off, language="en").ok
+
+
+@pytest.mark.parametrize("lang", ["en", "tr"])
+def test_template_drafts_pass_with_language(lang):
+    narrator = TemplateNarrator(EVENTS)
+    for m in detect_moments(EVENTS):
+        d = narrator.narrate(m, "neutral", lang)
+        result = lint_text(d.text, d.claims, ROSTER, language=lang)
+        assert result.ok, (m.type, d.text, _codes(result))
