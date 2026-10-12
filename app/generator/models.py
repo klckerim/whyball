@@ -22,6 +22,7 @@ class EventType(Enum):
     FOUL = "foul"
     YELLOW_CARD = "yellow_card"
     RED_CARD = "red_card"
+    PENALTY = "penalty"
     CORNER = "corner"
     OFFSIDE = "offside"
     SUBSTITUTION = "substitution"

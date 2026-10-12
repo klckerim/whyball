@@ -16,6 +16,7 @@ from typing import Any
 
 from .models import SCHEMA_VERSION, Event, EventType
 from .names import FIRST_NAMES, LAST_NAMES, TEAM_CITIES, TEAM_SUFFIXES
+from .scenarios import SCENARIOS, ForcedEvent, Scenario
 
 PITCH_LENGTH = 105.0
 PITCH_WIDTH = 68.0
@@ -25,6 +26,16 @@ BENCH_SIZE = 5
 MAX_SUBS = 3
 MIN_PLAYERS = 7  # altına düşülürse kart verilmez
 SIDES = ("home", "away")
+
+PASS_SUCCESS = 0.82
+DRIBBLE_SUCCESS = 0.6
+TURNOVER_PER_MISSING = 0.06  # sahadaki her eksik oyuncu için ek top kaybı olasılığı
+STRAIGHT_RED_PROB = 0.002  # faul başına
+YELLOW_PROB = 0.15  # faul başına
+BOOKED_CAUTION = 0.15  # sarısı olan oyuncunun tekrar sarı görme çarpanı
+BOX_PROGRESS = 0.83  # bunun ötesi ceza sahası
+PENALTY_FROM_BOX_FOUL = 0.065
+PENALTY_SPOT = 1.0 - 11.0 / PITCH_LENGTH
 
 
 def _other(side: str) -> str:
@@ -51,10 +62,21 @@ class _Team:
 
 
 class _Match:
-    def __init__(self, seed: int) -> None:
+    def __init__(self, seed: int, scenario: Scenario | None = None) -> None:
         self.seed = seed
         self.rng = random.Random(seed)
-        self.match_id = f"m-{seed}"
+        self.scenario = scenario
+        self.match_id = f"m-{seed}" if scenario is None else f"m-{seed}-{scenario.name}"
+        # Senaryo modunda skor yalnızca zorunlu olaylardan gelir.
+        self.natural_goals = scenario is None
+        overrides = (scenario.turnover_factor if scenario else None) or {}
+        self.turnover_factor = {s: overrides.get(s, 1.0) for s in SIDES}
+        tempo = (scenario.tempo if scenario else None) or {}
+        self.tempo = {s: tempo.get(s, 1.0) for s in SIDES}
+        # sorted kararlıdır: aynı dakikadaki olaylar tanım sırasını korur.
+        self.forced: list[ForcedEvent] = (
+            sorted(scenario.forced, key=lambda f: f.minute) if scenario else []
+        )
         self.events: list[Event] = []
         self.score = {"home": 0, "away": 0}
         self.period = 1
@@ -140,6 +162,7 @@ class _Match:
             data={
                 "schema": SCHEMA_VERSION,
                 "seed": self.seed,
+                "scenario": self.scenario.name if self.scenario else None,
                 "teams": {
                     # Kopya: bench maç içinde değişiklikle küçülür, meta değişmemeli.
                     side: {"name": t.name, "lineup": list(t.lineup), "bench": list(t.bench)}
@@ -161,7 +184,15 @@ class _Match:
         subs = self._plan_subs() if period == 2 else {side: [] for side in SIDES}
         self._kickoff(kickoff_side)
         while True:
-            self.clock += self.rng.randint(2, 20)
+            step = self.rng.randint(2, 20)
+            due = self._next_forced_at()
+            if due is not None and due <= self.clock + step:
+                # Zorunlu olay tam dakikasında; saat zaten geçtiyse (gol kutlaması) hemen.
+                self.clock = max(self.clock, due)
+                self._run_due_subs(subs)
+                self._run_forced(self.forced.pop(0))
+                continue
+            self.clock += step
             if self.clock >= self.period_end:
                 break
             self._run_due_subs(subs)
@@ -169,6 +200,30 @@ class _Match:
         self.clock = max(self.clock, self.period_end)
         end_type = EventType.HALF_TIME if period == 1 else EventType.FULL_TIME
         self._emit(end_type, at_ball=False)
+
+    def _next_forced_at(self) -> int | None:
+        if self.forced and self.forced[0].period == self.period:
+            return self.forced[0].minute * 60
+        return None
+
+    def _run_forced(self, f: ForcedEvent) -> None:
+        side = f.team
+        if f.kind == "goal":
+            self._give_ball(side, 0.9, self.rng.uniform(24.0, 44.0))
+            player = self._attacker()
+            self._emit(EventType.SHOT, side, player, outcome="goal")
+            self._score_goal(side, player)
+        elif f.kind == "red_card":
+            if self.possession == side:
+                self._turnover()
+            offender = self.rng.choice(self.teams[side].outfield())
+            self._emit(EventType.FOUL, side, offender)
+            self._send_off(side, offender, "straight_red")
+        else:  # penalty
+            defending = _other(side)
+            self._give_ball(side, 0.9, self.rng.uniform(20.0, 48.0))
+            self._emit(EventType.FOUL, defending, self.rng.choice(self.teams[defending].outfield()))
+            self._penalty(side, f.outcome)
 
     def _kickoff(self, side: str) -> None:
         self._give_ball(side, 0.5, PITCH_WIDTH / 2)
@@ -213,11 +268,17 @@ class _Match:
     def _attacker(self) -> str:
         return self.rng.choice(self.teams[self.possession].outfield())
 
+    def _keeps_ball(self, side: str, base_success: float) -> bool:
+        missing = LINEUP_SIZE - len(self.teams[side].on_pitch)
+        fail = (1.0 - base_success) * self.turnover_factor[side] + TURNOVER_PER_MISSING * missing
+        return self.rng.random() >= fail
+
     def _pass(self) -> None:
         side, player = self.possession, self._attacker()
-        if self.rng.random() < 0.82:
+        if self._keeps_ball(side, PASS_SUCCESS):
             self._emit(EventType.PASS, side, player, outcome="success")
-            self.progress = _clamp(self.progress + self.rng.uniform(-0.04, 0.10), 0.02, 0.98)
+            delta = self.rng.uniform(-0.04, 0.10) * self.tempo[side]
+            self.progress = _clamp(self.progress + delta, 0.02, 0.98)
             self._walk_y()
         else:
             self._emit(EventType.PASS, side, player, outcome="fail")
@@ -225,9 +286,10 @@ class _Match:
 
     def _dribble(self) -> None:
         side, player = self.possession, self._attacker()
-        if self.rng.random() < 0.6:
+        if self._keeps_ball(side, DRIBBLE_SUCCESS):
             self._emit(EventType.DRIBBLE, side, player, outcome="success")
-            self.progress = _clamp(self.progress + self.rng.uniform(0.02, 0.10), 0.02, 0.98)
+            delta = self.rng.uniform(0.02, 0.10) * self.tempo[side]
+            self.progress = _clamp(self.progress + delta, 0.02, 0.98)
             self._walk_y()
         else:
             self._emit(EventType.DRIBBLE, side, player, outcome="fail")
@@ -238,15 +300,10 @@ class _Match:
         defending = _other(side)
         goal_prob = 0.04 + 0.14 * _clamp((self.progress - 0.6) / 0.4, 0.0, 1.0)
         r = self.rng.random()
-        if r < goal_prob:
+        if r < goal_prob and self.natural_goals:
             self._emit(EventType.SHOT, side, player, outcome="goal")
-            self.score[side] += 1
-            self.progress, self.y = 1.0, PITCH_WIDTH / 2
-            self._emit(EventType.GOAL, side, player)
-            self.clock += self.rng.randint(30, 75)
-            if self.clock < self.period_end:
-                self._kickoff(defending)
-        elif r < goal_prob + 0.30:
+            self._score_goal(side, player)
+        elif r < goal_prob + 0.30:  # doğal goller kapalıysa gol şutu kurtarışa döner
             self._emit(EventType.SHOT, side, player, outcome="saved")
             self._give_ball(defending, 0.03, PITCH_WIDTH / 2)
             self._emit(EventType.SAVE, defending, self.teams[defending].goalkeeper())
@@ -262,28 +319,64 @@ class _Match:
             self._emit(EventType.SHOT, side, player, outcome="off_target")
             self._give_ball(defending, 0.05, PITCH_WIDTH / 2)
 
+    def _score_goal(self, side: str, player: str) -> None:
+        # Çağıran topu `side` takımına vermiş olmalı (gol koordinatı için).
+        self.score[side] += 1
+        self.progress, self.y = 1.0, PITCH_WIDTH / 2
+        self._emit(EventType.GOAL, side, player)
+        self.clock += self.rng.randint(30, 75)
+        if self.clock < self.period_end:
+            self._kickoff(_other(side))
+
+    def _penalty(self, side: str, outcome: str | None = None) -> None:
+        """`side` penaltıyı kullanır. outcome verilmezse doğal sonuç çekilir."""
+        defending = _other(side)
+        self._give_ball(side, PENALTY_SPOT, PITCH_WIDTH / 2)
+        taker = self._attacker()
+        if outcome is None:
+            r = self.rng.random()
+            outcome = "scored" if r < 0.76 else ("saved" if r < 0.92 else "missed")
+            if outcome == "scored" and not self.natural_goals:
+                outcome = "saved"
+        self._emit(EventType.PENALTY, side, taker, outcome=outcome)
+        if outcome == "scored":
+            self._score_goal(side, taker)
+        elif outcome == "saved":
+            self._give_ball(defending, 0.03, PITCH_WIDTH / 2)
+            self._emit(EventType.SAVE, defending, self.teams[defending].goalkeeper())
+        else:
+            self._give_ball(defending, 0.05, PITCH_WIDTH / 2)
+
     def _corner(self, side: str) -> None:
         self._give_ball(side, 1.0, self.rng.choice((0.0, PITCH_WIDTH)))
         self._emit(EventType.CORNER, side, self._attacker())
         self._give_ball(side, 0.9, self.rng.uniform(20.0, 48.0))
 
     def _foul(self) -> None:
-        defending = _other(self.possession)
+        attacking = self.possession
+        defending = _other(attacking)
         team = self.teams[defending]
         offender = self.rng.choice(team.outfield())
         self._emit(EventType.FOUL, defending, offender)
-        if len(team.on_pitch) <= MIN_PLAYERS:
-            return
+        if len(team.on_pitch) > MIN_PLAYERS:
+            self._maybe_card(defending, offender)
+        if self.progress > BOX_PROGRESS and self.rng.random() < PENALTY_FROM_BOX_FOUL:
+            self._penalty(attacking)
+        # Aksi halde top hücum eden takımda kalır (serbest vuruş).
+
+    def _maybe_card(self, side: str, offender: str) -> None:
+        team = self.teams[side]
+        booked = offender in team.booked
+        yellow_prob = YELLOW_PROB * (BOOKED_CAUTION if booked else 1.0)
         r = self.rng.random()
-        if r < 0.004:
-            self._send_off(defending, offender, "straight_red")
-        elif r < 0.15:
-            self._emit(EventType.YELLOW_CARD, defending, offender, at_ball=False)
-            if offender in team.booked:
-                self._send_off(defending, offender, "second_yellow")
+        if r < STRAIGHT_RED_PROB:
+            self._send_off(side, offender, "straight_red")
+        elif r < STRAIGHT_RED_PROB + yellow_prob:
+            self._emit(EventType.YELLOW_CARD, side, offender, at_ball=False)
+            if booked:
+                self._send_off(side, offender, "second_yellow")
             else:
                 team.booked.append(offender)
-        # Faul sonrası top hücum eden takımda kalır (serbest vuruş).
 
     def _send_off(self, side: str, player: str, reason: str) -> None:
         self._emit(EventType.RED_CARD, side, player, at_ball=False, data={"reason": reason})
@@ -294,6 +387,11 @@ class _Match:
         self._turnover()
 
 
-def generate_match(seed: int) -> list[Event]:
-    """Verilen seed için tam bir maçın olay akışını üretir."""
-    return _Match(seed).run()
+def generate_match(seed: int, scenario: str | Scenario | None = None) -> list[Event]:
+    """Verilen seed (ve isteğe bağlı senaryo) için tam bir maçın olay akışını üretir."""
+    if isinstance(scenario, str):
+        if scenario not in SCENARIOS:
+            choices = ", ".join(sorted(SCENARIOS))
+            raise ValueError(f"Bilinmeyen senaryo: {scenario!r} (seçenekler: {choices})")
+        scenario = SCENARIOS[scenario]
+    return _Match(seed, scenario).run()
