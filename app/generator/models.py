@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from enum import Enum
@@ -51,6 +52,10 @@ class Event:
         d["type"] = self.type.value
         return d
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> Event:
+        return cls(**{**d, "type": EventType(d["type"])})
+
 
 def _dumps(event: Event) -> str:
     return json.dumps(
@@ -65,3 +70,8 @@ def to_jsonl(events: Iterable[Event]) -> str:
 def write_jsonl(events: Iterable[Event], fp: TextIO) -> None:
     for e in events:
         fp.write(_dumps(e) + "\n")
+
+
+def read_jsonl(path: str | os.PathLike[str]) -> list[Event]:
+    with open(path, encoding="utf-8") as fp:
+        return [Event.from_dict(json.loads(line)) for line in fp if line.strip()]
