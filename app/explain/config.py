@@ -20,7 +20,16 @@ class ExplainConfig:
     # --- anlatıcı ---
     context_minutes: int = 10  # baskı kayması cümlesindeki "X'ten beri" aralığı
     dominance_context_minutes: int = 20
-    full_squad: int = 11
+    full_squad: int = 11  # meta'da kadro yoksa players_on_pitch için
+
+    # --- anlatım hattı ---
+    max_retries: int = 2  # ilk denemeden sonra; sonra template yedeği
+    default_persona: str = "neutral"
+    template_prompt_version: str = "template-v1"
+
+    # --- text lint ---
+    lint_allowed_capitalized: tuple[str, ...] = ()  # cümle ortasında serbest büyük harfli kelimeler
+    lint_percent_tolerance: float = 0.5  # metindeki tam yüzde ile ratio iddiası arasındaki fark
 
 
 DEFAULT_EXPLAIN_CONFIG = ExplainConfig()

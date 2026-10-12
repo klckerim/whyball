@@ -144,7 +144,7 @@ COUNT_METRICS: dict[str, Callable[[Event], bool]] = {
     "substitutions": _type_is(EventType.SUBSTITUTION),
 }
 RATIO_METRICS = ("possession", "field_tilt")
-STATE_METRICS = ("score", "score_margin", "min_score_margin", "pressure_balance")
+STATE_METRICS = ("score", "score_margin", "min_score_margin", "players_on_pitch", "pressure_balance")
 METRIC_KINDS: dict[str, str] = {
     **{m: "count" for m in COUNT_METRICS},
     **{m: "ratio" for m in RATIO_METRICS},
@@ -208,6 +208,11 @@ def measure(
     if metric == "min_score_margin":
         margins = [_margin(e.score, team) for e in in_range] or [_margin(current, team)]
         return Measurement(min(margins))
+    if metric == "players_on_pitch":
+        meta = events[0].data if events and events[0].type is EventType.MATCH_META else None
+        squad = len(meta["teams"][team]["lineup"]) if meta else DEFAULT_EXPLAIN_CONFIG.full_squad
+        reds = sum(e.type is EventType.RED_CARD and e.team == team for e in visible)
+        return Measurement(squad - reds)
 
     tracker = MatchTracker(analytics_config)
     for e in visible:

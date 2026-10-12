@@ -1,0 +1,121 @@
+import pytest
+
+from app.analytics import detect_moments
+from app.explain import Claim, MatchTime, Subject
+from app.explain.narrator import TemplateNarrator
+from app.explain.text_lint import Roster, lint_text
+from app.generator import generate_match
+from app.generator.freeze import DEMO_DIR, demo_filename
+from app.generator.models import read_jsonl
+
+EVENTS = read_jsonl(DEMO_DIR / demo_filename("red_card_swing", 42))
+ROSTER = Roster.from_events(EVENTS)
+TEAMS = EVENTS[0].data["teams"]
+HOME, AWAY = TEAMS["home"]["name"], TEAMS["away"]["name"]
+GOAL = next(m for m in detect_moments(EVENTS) if m.type == "goal")
+DRAFT = TemplateNarrator(EVENTS).narrate(GOAL, "neutral", "en")
+
+
+def _claim(kind="count", team="home", player=None, value=1, start=(1, 22, 0), end=(1, 22, 0)):
+    return Claim(kind, Subject(team, player), "goals", "eq", value, MatchTime(*start), MatchTime(*end), ())
+
+
+def _codes(result):
+    return [(i.code, i.fragment) for i in result.issues]
+
+
+# --- her şey desteklenmiş metin ----------------------------------------------------
+
+
+def test_template_draft_is_fully_supported():
+    result = lint_text(DRAFT.text, DRAFT.claims, ROSTER)
+    assert result.ok, _codes(result)
+
+
+@pytest.mark.parametrize("seed,scenario", [(42, "late_comeback"), (7, "dominant_loss"), (100, None)])
+@pytest.mark.parametrize("lang", ["en", "tr"])
+def test_all_template_drafts_pass(seed, scenario, lang):
+    events = generate_match(seed, scenario)
+    narrator, roster = TemplateNarrator(events), Roster.from_events(events)
+    for m in detect_moments(events):
+        d = narrator.narrate(m, "neutral", lang)
+        result = lint_text(d.text, d.claims, roster)
+        assert result.ok, (m.type, d.text, _codes(result))
+
+
+# --- iddiasız sayı ------------------------------------------------------------------
+
+
+def test_number_without_claim_is_rejected():
+    text = f"{DRAFT.text} {HOME} have 7 corners."
+    result = lint_text(text, DRAFT.claims, ROSTER)
+    assert _codes(result) == [("unsupported_number", "7")]
+    issue = result.issues[0]
+    assert text[issue.start : issue.end] == "7" and issue.kind == "integer"
+
+
+# --- iddiasız isim -------------------------------------------------------------------
+
+
+def test_known_name_without_claim_is_rejected():
+    scorer = GOAL.detail["player"]
+    bystander = next(p for p in TEAMS["away"]["lineup"] if p != scorer)
+    result = lint_text(f"{DRAFT.text} {bystander} was booked.", DRAFT.claims, ROSTER)
+    assert _codes(result) == [("unsupported_name", bystander)]
+
+
+def test_team_without_claim_is_rejected():
+    claims = [_claim(team="home", player=GOAL.detail["player"])]
+    result = lint_text(f"22' — {GOAL.detail['player']} scores against {AWAY}.", claims, ROSTER)
+    assert _codes(result) == [("unsupported_name", AWAY)]
+
+
+# --- uydurma isim ----------------------------------------------------------------------
+
+
+def test_fabricated_name_is_rejected():
+    result = lint_text(f"{DRAFT.text} Arlo Quintana was everywhere.", DRAFT.claims, ROSTER)
+    assert _codes(result) == [("unknown_name", "Arlo Quintana")]
+
+
+def test_fabricated_single_word_mid_sentence_is_rejected():
+    result = lint_text(f"{DRAFT.text} The ball reached Zorvak.", DRAFT.claims, ROSTER)
+    assert _codes(result) == [("unknown_name", "Zorvak")]
+
+
+def test_sentence_start_capitalized_word_is_fine():
+    assert lint_text(f"{DRAFT.text} What a moment.", DRAFT.claims, ROSTER).ok
+
+
+# --- takma adlar ve sayı biçimleri ------------------------------------------------------
+
+
+def test_surname_and_city_aliases_are_recognised():
+    player = GOAL.detail["player"]
+    surname, city = player.split()[-1], HOME.rsplit(" ", 1)[0]
+    claims = [_claim(team="home", player=player)]
+    assert lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER).ok
+    other = next(p for p in TEAMS["away"]["lineup"] if p.split()[-1] != surname)
+    result = lint_text(f"22' — {other.split()[-1]} scores.", claims, ROSTER)
+    assert _codes(result) == [("unsupported_name", other.split()[-1])]
+
+
+def test_minute_formats():
+    claims = [_claim(start=(1, 45, 0), end=(1, 45, 30))]
+    assert lint_text("45+1' — something happened.", claims, ROSTER).ok
+    assert _codes(lint_text("45+2' — something happened.", claims, ROSTER)) == [
+        ("unsupported_number", "45+2'")
+    ]
+    tr_claims = [_claim(start=(2, 46, 0), end=(2, 66, 0))]
+    assert lint_text("46. dakikadan bu yana, 66' itibarıyla.", tr_claims, ROSTER).ok
+    assert not lint_text("47. dakikadan bu yana.", tr_claims, ROSTER).ok
+
+
+def test_percent_and_decimal():
+    ratio = Claim("ratio", Subject("home"), "possession", "approx", 0.58,
+                  MatchTime(1, 0, 0), MatchTime(1, 30, 0), ())
+    state = Claim("state", Subject("home"), "pressure_balance", "approx", 0.83,
+                  MatchTime(1, 0, 0), MatchTime(1, 30, 0), ())
+    assert lint_text("58% possession, %58 topa sahip olma, balance +0.83.", [ratio, state], ROSTER).ok
+    result = lint_text("60% possession, balance +0.90.", [ratio, state], ROSTER)
+    assert _codes(result) == [("unsupported_number", "60%"), ("unsupported_number", "+0.90")]

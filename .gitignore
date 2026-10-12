@@ -6,3 +6,4 @@ node_modules/
 *.db
 .DS_Store
 *.egg-info/
+data/cache/

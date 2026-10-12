@@ -148,8 +148,8 @@ def _red_card(c: _Context) -> list[Sentence]:
     side, player = c.m.team, c.m.detail["player"]
     team = c.names[side]
     sent_off = c.count("red_cards", Subject(side, player), c.t)
-    team_reds = c.count("red_cards", Subject(side), KICKOFF)
-    left = c.config.full_squad - int(team_reds.value)
+    team_reds = measure("red_cards", Subject(side), KICKOFF, c.t, c.events).counted
+    left = c.measured("players_on_pitch", side)
     return [
         Sentence(
             {
@@ -160,10 +160,10 @@ def _red_card(c: _Context) -> list[Sentence]:
         ),
         Sentence(
             {
-                "en": f"{team} are down to {left} players.",
-                "tr": f"{team} sahada {left} kişi kaldı.",
+                "en": f"{team} are down to {left:g} players.",
+                "tr": f"{team} sahada {left:g} kişi kaldı.",
             },
-            (team_reds,),
+            (c.state("players_on_pitch", side, "eq", left, team_reds),),
         ),
     ]
 
@@ -235,7 +235,6 @@ def _score_change(c: _Context) -> list[Sentence]:
 def _pressure_shift(c: _Context) -> list[Sentence]:
     side = c.m.team
     team, opp = c.names[side], c.names[other(side)]
-    window = c.m.detail["window_min"]
     balance = round(c.measured("pressure_balance", side), 2)
     start = _since(c.t, c.config.context_minutes)
     shots = c.count("shots", Subject(side), start)
@@ -244,9 +243,8 @@ def _pressure_shift(c: _Context) -> list[Sentence]:
         Sentence(
             {
                 "en": f"{c.minute} — {team} take control: pressure balance {balance:+.2f} "
-                      f"in their favour over the last {window:g} minutes.",
-                "tr": f"{c.minute} — Baskı {team} tarafına geçti: son {window:g} dakikada "
-                      f"baskı dengesi {balance:+.2f}.",
+                      f"in their favour.",
+                "tr": f"{c.minute} — Baskı {team} tarafına geçti: baskı dengesi {balance:+.2f}.",
             },
             (c.state("pressure_balance", side, "approx", balance, c.m.event_ids),),
         ),
