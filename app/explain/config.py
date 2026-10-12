@@ -33,9 +33,9 @@ class ExplainConfig:
     lint_number_words: bool = True  # yazıyla sayılar (EN/TR, 0-20) da denetlensin
 
     # --- LLM anlatıcı güvenliği ---
-    llm_timeout_s: float = 20.0  # çağrı başına
-    llm_max_tokens: int = 800  # yanıt token üst sınırı
-    llm_max_calls_per_run: int = 50  # anlatıcı örneği başına toplam çağrı
+    llm_timeout_s: float = 60.0  # çağrı başına (reasoning modeli)
+    llm_max_tokens: int = 4000  # yanıt token üst sınırı; reasoning token'larını da kapsar
+    llm_max_calls_per_run: int = 60  # anlatıcı örneği (çalıştırma) başına toplam çağrı
 
 
 DEFAULT_EXPLAIN_CONFIG = ExplainConfig()

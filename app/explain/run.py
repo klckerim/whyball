@@ -7,6 +7,7 @@ python -m app.explain.run --seed 42 --scenario late_comeback --narrator template
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from collections import Counter
 from typing import Any
@@ -79,11 +80,20 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         parser.error(str(e))
     cache = None if args.no_cache else NarrationCache(args.cache_dir)
+    usage = getattr(narrator, "usage", None)
+    if usage is not None:  # LLM anlatıcı: her çağrının token ve süresi stderr'e
+        logging.basicConfig(level=logging.WARNING, format="%(message)s", stream=sys.stderr)
+        logging.getLogger("whyball.llm").setLevel(logging.INFO)
 
-    results = run_match(
-        events, narrator, persona=args.persona, language=args.lang, select=not args.all,
-        cache=cache, prompt_version=args.prompt_version,
-    )
+    try:
+        results = run_match(
+            events, narrator, persona=args.persona, language=args.lang, select=not args.all,
+            cache=cache, prompt_version=args.prompt_version,
+        )
+    finally:
+        close = getattr(narrator, "close", None)
+        if close:
+            close()
     out = sys.stdout
     for m, r in results:
         short_id = m.id.rsplit("-", 1)[-1]
@@ -98,6 +108,21 @@ def main(argv: list[str] | None = None) -> int:
     summary = ", ".join(f"{k}={v}" for k, v in sorted(by_source.items()))
     hits = sum(r.cache_hit for _, r in results)
     out.write(f"Moment: {len(results)} · {summary} · cache hit: {hits}\n")
+    if usage is not None:
+        tokens_in = sum(u.input_tokens or 0 for u in usage)
+        tokens_out = sum(u.output_tokens or 0 for u in usage)
+        avg_ms = sum(u.latency_ms for u in usage) / len(usage) if usage else 0
+        out.write(
+            f"LLM çağrı: {len(usage)} · token: {tokens_in} giriş + {tokens_out} çıkış "
+            f"· ortalama süre: {avg_ms / 1000:.1f} sn\n"
+        )
+    budget_hits = [r for _, r in results if r.trace and r.trace[-1].get("reason") == "budget_exceeded"]
+    if budget_hits:
+        limit = getattr(getattr(narrator, "config", None), "llm_max_calls_per_run", "?")
+        out.write(
+            f"UYARI: LLM çağrı bütçesi aşıldı ({limit}/{limit}): "
+            f"{len(budget_hits)} moment yedeğe düştü\n"
+        )
     return 0 if all(r.ok for _, r in results) else 1
 
 

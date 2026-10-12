@@ -1,0 +1,634 @@
+{
+  "matches": [
+    {
+      "match_id": "red_card_swing_seed42",
+      "moments": [
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M002",
+          "minute": 22,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Murek Brestani scored for home to make it 1-0 at 22'.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M003",
+          "minute": 22,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Murek Brestani scored at 22' to make it 1-0. Home possession is 0.555.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 2,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M005",
+          "minute": 38,
+          "ok": true,
+          "period": 1,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "client_error"
+              ]
+            }
+          ],
+          "second": 0,
+          "source": "llm",
+          "text": "Orvik Belmaro was shown a red card at 38'. The score was 1-0.",
+          "type": "red_card"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M007",
+          "minute": 61,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Davel Selvado scored to make it 1-1 at 61'.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M008",
+          "minute": 61,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Davel Selvado scored at 61' to make it 1-1 for the away team.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 2,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M009",
+          "minute": 81,
+          "ok": true,
+          "period": 2,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "missing_evidence",
+                "missing_evidence"
+              ]
+            }
+          ],
+          "second": 14,
+          "source": "llm",
+          "text": "At 81' the score was 1-1 and home had field_tilt 0.316.",
+          "type": "pressure_shift"
+        },
+        {
+          "attempts": 3,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M010",
+          "minute": 84,
+          "ok": true,
+          "period": 2,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "evidence_mismatch",
+                "evidence_mismatch"
+              ]
+            },
+            {
+              "attempt": 2,
+              "codes": [
+                "evidence_mismatch"
+              ]
+            }
+          ],
+          "second": 0,
+          "source": "llm",
+          "text": "Murek Ymberto scored for the away side to make it 2-1 at 84'.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M011",
+          "minute": 84,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Murek Ymberto scored to make it 2-1 at 84'.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-42-red_card_swing-M012",
+          "minute": 90,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 5,
+          "source": "llm",
+          "text": "away lead 2-1 at 90'; possession 0.508 for away.",
+          "type": "pressure_shift"
+        }
+      ],
+      "usage": [
+        {
+          "call": 1,
+          "input_tokens": 1817,
+          "latency_ms": 21426,
+          "moment_id": "m-42-red_card_swing-M002",
+          "outcome": "ok",
+          "output_tokens": 2907,
+          "reasoning_tokens": 2560
+        },
+        {
+          "call": 2,
+          "input_tokens": 1738,
+          "latency_ms": 26804,
+          "moment_id": "m-42-red_card_swing-M003",
+          "outcome": "ok",
+          "output_tokens": 3274,
+          "reasoning_tokens": 2432
+        },
+        {
+          "call": 3,
+          "input_tokens": null,
+          "latency_ms": 27581,
+          "moment_id": "m-42-red_card_swing-M005",
+          "outcome": "client_error",
+          "output_tokens": null,
+          "reasoning_tokens": null
+        },
+        {
+          "call": 4,
+          "input_tokens": 1885,
+          "latency_ms": 19491,
+          "moment_id": "m-42-red_card_swing-M005",
+          "outcome": "ok",
+          "output_tokens": 2944,
+          "reasoning_tokens": 2048
+        },
+        {
+          "call": 5,
+          "input_tokens": 1814,
+          "latency_ms": 20629,
+          "moment_id": "m-42-red_card_swing-M007",
+          "outcome": "ok",
+          "output_tokens": 2899,
+          "reasoning_tokens": 2624
+        },
+        {
+          "call": 6,
+          "input_tokens": 1737,
+          "latency_ms": 24622,
+          "moment_id": "m-42-red_card_swing-M008",
+          "outcome": "ok",
+          "output_tokens": 3183,
+          "reasoning_tokens": 2624
+        },
+        {
+          "call": 7,
+          "input_tokens": 2180,
+          "latency_ms": 18469,
+          "moment_id": "m-42-red_card_swing-M009",
+          "outcome": "ok",
+          "output_tokens": 2213,
+          "reasoning_tokens": 1984
+        },
+        {
+          "call": 8,
+          "input_tokens": 2216,
+          "latency_ms": 21359,
+          "moment_id": "m-42-red_card_swing-M009",
+          "outcome": "ok",
+          "output_tokens": 2674,
+          "reasoning_tokens": 2368
+        },
+        {
+          "call": 9,
+          "input_tokens": 1817,
+          "latency_ms": 21857,
+          "moment_id": "m-42-red_card_swing-M010",
+          "outcome": "ok",
+          "output_tokens": 3186,
+          "reasoning_tokens": 2752
+        },
+        {
+          "call": 10,
+          "input_tokens": 1853,
+          "latency_ms": 25739,
+          "moment_id": "m-42-red_card_swing-M010",
+          "outcome": "ok",
+          "output_tokens": 3747,
+          "reasoning_tokens": 3264
+        },
+        {
+          "call": 11,
+          "input_tokens": 1842,
+          "latency_ms": 19819,
+          "moment_id": "m-42-red_card_swing-M010",
+          "outcome": "ok",
+          "output_tokens": 2895,
+          "reasoning_tokens": 2560
+        },
+        {
+          "call": 12,
+          "input_tokens": 1754,
+          "latency_ms": 16028,
+          "moment_id": "m-42-red_card_swing-M011",
+          "outcome": "ok",
+          "output_tokens": 2155,
+          "reasoning_tokens": 1792
+        },
+        {
+          "call": 13,
+          "input_tokens": 1914,
+          "latency_ms": 28604,
+          "moment_id": "m-42-red_card_swing-M012",
+          "outcome": "ok",
+          "output_tokens": 3560,
+          "reasoning_tokens": 2944
+        }
+      ]
+    },
+    {
+      "match_id": "dominant_loss_seed7",
+      "moments": [
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-7-dominant_loss-M003",
+          "minute": 45,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 33,
+          "source": "llm",
+          "text": "Vellorin FC had 0.609 possession and the score was 0-0 at 45'.",
+          "type": "dominance_without_reward"
+        },
+        {
+          "attempts": 2,
+          "fallback_reason": null,
+          "id": "m-7-dominant_loss-M005",
+          "minute": 57,
+          "ok": true,
+          "period": 2,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "missing_evidence",
+                "missing_evidence"
+              ]
+            }
+          ],
+          "second": 0,
+          "source": "llm",
+          "text": "Nolvek Ilvanto scored at 57' to make it 1-0.",
+          "type": "goal"
+        },
+        {
+          "attempts": 2,
+          "fallback_reason": null,
+          "id": "m-7-dominant_loss-M006",
+          "minute": 57,
+          "ok": true,
+          "period": 2,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "client_error"
+              ]
+            }
+          ],
+          "second": 0,
+          "source": "llm",
+          "text": "Nolvek Ilvanto scored to make it 1-0 at 57'.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-7-dominant_loss-M008",
+          "minute": 66,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 57,
+          "source": "llm",
+          "text": "At 66' home had 5 shots.",
+          "type": "dominance_without_reward"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-7-dominant_loss-M009",
+          "minute": 70,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 0,
+          "source": "llm",
+          "text": "Alvezo Hazulov had a penalty saved at 70', leaving the score 1-0.",
+          "type": "penalty"
+        }
+      ],
+      "usage": [
+        {
+          "call": 1,
+          "input_tokens": 2040,
+          "latency_ms": 18596,
+          "moment_id": "m-7-dominant_loss-M003",
+          "outcome": "ok",
+          "output_tokens": 2383,
+          "reasoning_tokens": 2112
+        },
+        {
+          "call": 2,
+          "input_tokens": 1830,
+          "latency_ms": 20231,
+          "moment_id": "m-7-dominant_loss-M005",
+          "outcome": "ok",
+          "output_tokens": 2592,
+          "reasoning_tokens": 2304
+        },
+        {
+          "call": 3,
+          "input_tokens": 1866,
+          "latency_ms": 23086,
+          "moment_id": "m-7-dominant_loss-M005",
+          "outcome": "ok",
+          "output_tokens": 3114,
+          "reasoning_tokens": 2816
+        },
+        {
+          "call": 4,
+          "input_tokens": null,
+          "latency_ms": 27948,
+          "moment_id": "m-7-dominant_loss-M006",
+          "outcome": "client_error",
+          "output_tokens": null,
+          "reasoning_tokens": null
+        },
+        {
+          "call": 5,
+          "input_tokens": 1823,
+          "latency_ms": 14620,
+          "moment_id": "m-7-dominant_loss-M006",
+          "outcome": "ok",
+          "output_tokens": 2073,
+          "reasoning_tokens": 1600
+        },
+        {
+          "call": 6,
+          "input_tokens": 2128,
+          "latency_ms": 14874,
+          "moment_id": "m-7-dominant_loss-M008",
+          "outcome": "ok",
+          "output_tokens": 1945,
+          "reasoning_tokens": 1728
+        },
+        {
+          "call": 7,
+          "input_tokens": 1825,
+          "latency_ms": 15836,
+          "moment_id": "m-7-dominant_loss-M009",
+          "outcome": "ok",
+          "output_tokens": 2191,
+          "reasoning_tokens": 1920
+        }
+      ]
+    },
+    {
+      "match_id": "natural_seed100",
+      "moments": [
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M001",
+          "minute": 14,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 10,
+          "source": "llm",
+          "text": "Iveno Gundrel was shown a straight red at 14' and the score remained 0-0.",
+          "type": "red_card"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M004",
+          "minute": 29,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 28,
+          "source": "llm",
+          "text": "Hesko Ilvanto scored in the 29' to make it 1-0.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M005",
+          "minute": 29,
+          "ok": true,
+          "period": 1,
+          "rejections": [],
+          "second": 28,
+          "source": "llm",
+          "text": "Hesko Ilvanto scored at 29' to make it 1-0.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M006",
+          "minute": 51,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 23,
+          "source": "llm",
+          "text": "Quenlo Pelvisto scored to make it 1-1 at 51'.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M007",
+          "minute": 51,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 23,
+          "source": "llm",
+          "text": "Quenlo Pelvisto equalised at 51' to make it 1-1.",
+          "type": "score_change"
+        },
+        {
+          "attempts": 2,
+          "fallback_reason": null,
+          "id": "m-100-M009",
+          "minute": 79,
+          "ok": true,
+          "period": 2,
+          "rejections": [
+            {
+              "attempt": 1,
+              "codes": [
+                "missing_evidence"
+              ]
+            }
+          ],
+          "second": 1,
+          "source": "llm",
+          "text": "Home had 4 shots between 70' and 79'. Possession to this point was 0.543 and the score was 1-1 at 79'.",
+          "type": "dominance_without_reward"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M010",
+          "minute": 90,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 13,
+          "source": "llm",
+          "text": "Brisko Ymberto scored for the home side at 90' to make the score 2-1.",
+          "type": "goal"
+        },
+        {
+          "attempts": 1,
+          "fallback_reason": null,
+          "id": "m-100-M011",
+          "minute": 90,
+          "ok": true,
+          "period": 2,
+          "rejections": [],
+          "second": 13,
+          "source": "llm",
+          "text": "Brisko Ymberto scored at 90' to make it 2-1 for the home team.",
+          "type": "score_change"
+        }
+      ],
+      "usage": [
+        {
+          "call": 1,
+          "input_tokens": 1789,
+          "latency_ms": 20774,
+          "moment_id": "m-100-M001",
+          "outcome": "ok",
+          "output_tokens": 2719,
+          "reasoning_tokens": 2176
+        },
+        {
+          "call": 2,
+          "input_tokens": 1801,
+          "latency_ms": 18799,
+          "moment_id": "m-100-M004",
+          "outcome": "ok",
+          "output_tokens": 2452,
+          "reasoning_tokens": 2176
+        },
+        {
+          "call": 3,
+          "input_tokens": 1728,
+          "latency_ms": 17455,
+          "moment_id": "m-100-M005",
+          "outcome": "ok",
+          "output_tokens": 1897,
+          "reasoning_tokens": 1600
+        },
+        {
+          "call": 4,
+          "input_tokens": 1801,
+          "latency_ms": 25783,
+          "moment_id": "m-100-M006",
+          "outcome": "ok",
+          "output_tokens": 3416,
+          "reasoning_tokens": 3072
+        },
+        {
+          "call": 5,
+          "input_tokens": 1728,
+          "latency_ms": 18129,
+          "moment_id": "m-100-M007",
+          "outcome": "ok",
+          "output_tokens": 2390,
+          "reasoning_tokens": 2112
+        },
+        {
+          "call": 6,
+          "input_tokens": 1991,
+          "latency_ms": 21473,
+          "moment_id": "m-100-M009",
+          "outcome": "ok",
+          "output_tokens": 3062,
+          "reasoning_tokens": 2752
+        },
+        {
+          "call": 7,
+          "input_tokens": 2016,
+          "latency_ms": 27731,
+          "moment_id": "m-100-M009",
+          "outcome": "ok",
+          "output_tokens": 3160,
+          "reasoning_tokens": 2752
+        },
+        {
+          "call": 8,
+          "input_tokens": 1795,
+          "latency_ms": 23218,
+          "moment_id": "m-100-M010",
+          "outcome": "ok",
+          "output_tokens": 3116,
+          "reasoning_tokens": 2688
+        },
+        {
+          "call": 9,
+          "input_tokens": 1742,
+          "latency_ms": 16403,
+          "moment_id": "m-100-M011",
+          "outcome": "ok",
+          "output_tokens": 2270,
+          "reasoning_tokens": 1984
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "finished_at": "2026-10-12T19:16:52+00:00",
+    "lang": "en",
+    "max_calls_per_run": 60,
+    "max_retries": 2,
+    "max_tokens": 4000,
+    "model": "gpt-5-mini",
+    "prompt_version": "foundry-v2:gpt-5-mini",
+    "started_at": "2026-10-12T19:06:34+00:00",
+    "timeout_s": 60.0
+  }
+}

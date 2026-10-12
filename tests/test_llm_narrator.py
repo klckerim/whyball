@@ -5,16 +5,20 @@ import sys
 from dataclasses import replace
 
 import pytest
+from openai.lib._pydantic import to_strict_json_schema
 
 from app.analytics import detect_moments
 from app.explain import DEFAULT_EXPLAIN_CONFIG
+from app.explain.claims import METRIC_KINDS
 from app.explain.llm_narrator import (
     PROMPT_VERSION,
     ChatResult,
-    DraftOut,
     FoundryChatClientAdapter,
     FoundryNarrator,
     build_messages,
+    draft_model_for,
+    moment_record,
+    parse_draft,
 )
 from app.explain.narrator import (
     BudgetExceeded,
@@ -30,10 +34,18 @@ from tests.explain_helpers import match, moment_case
 
 EVENTS, MOMENT = moment_case("goal")
 TEMPLATE = TemplateNarrator(EVENTS)
+MATCH_ID = EVENTS[0].match_id
+
+
+def _t(time):
+    return {"period": time[0], "minute": time[1], "second": time[2]}
 
 
 def _draft_json(draft):
-    return json.dumps({"text": draft.text, "claims": [c.to_dict() for c in draft.claims]})
+    claims = [
+        {**c.to_dict(), "start": _t(c.start), "end": _t(c.end)} for c in draft.claims
+    ]
+    return json.dumps({"text": draft.text, "claims": claims})
 
 
 def _template_json(moment, lang="en", events=EVENTS):
@@ -61,7 +73,7 @@ class FakeChatClient:
             await asyncio.sleep(step.seconds)
             return ChatResult("{}")
         text = step(messages) if callable(step) else step
-        return ChatResult(text, input_tokens=321, output_tokens=87)
+        return ChatResult(text, input_tokens=321, output_tokens=87, reasoning_tokens=64)
 
 
 def _user(call):
@@ -70,6 +82,51 @@ def _user(call):
 
 def _narrator(client, **cfg):
     return FoundryNarrator(EVENTS, client, config=replace(DEFAULT_EXPLAIN_CONFIG, **cfg))
+
+
+# --- moment kaydı ve kapalı şema ---------------------------------------------------------
+
+
+def test_prompt_contains_only_the_moment_record():
+    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
+    assert "Turkish" in system and "analyst" in system and "No outside knowledge" in system
+    record = json.loads(user)
+    assert record == moment_record(MOMENT, EVENTS)
+    assert [e["id"] for e in record["events"]] == [f"{MATCH_ID}#{s}" for s in MOMENT.event_ids]
+    assert record["metrics_at_moment"] == MOMENT.metrics
+    assert record["moment"]["detail"] == MOMENT.detail
+    teams = EVENTS[0].data["teams"]
+    assert record["squads"]["home"]["lineup"] == teams["home"]["lineup"]
+    # Moment dışında hiçbir olay modele gitmez.
+    allowed = {f"{MATCH_ID}#{s}" for s in MOMENT.event_ids}
+    mentioned = {tok.strip('",') for tok in user.split() if f"{MATCH_ID}#" in tok}
+    assert mentioned <= allowed
+
+
+def test_response_schema_is_closed_per_moment():
+    model = _narrator(FakeChatClient("{}")).response_model(MOMENT)
+    schema = to_strict_json_schema(model)
+    claim = schema["$defs"]["ClaimOut"]
+    assert claim["properties"]["event_ids"]["items"]["enum"] == [f"{MATCH_ID}#{s}" for s in MOMENT.event_ids]
+    assert claim["properties"]["metric"]["enum"] == list(METRIC_KINDS)
+    assert claim["properties"]["kind"]["enum"] == ["count", "ratio", "state"]
+    players = schema["$defs"]["SubjectOut"]["properties"]["player"]["anyOf"][0]["enum"]
+    teams = EVENTS[0].data["teams"]
+    assert players == [*teams["home"]["lineup"], *teams["home"]["bench"],
+                       *teams["away"]["lineup"], *teams["away"]["bench"]]
+    assert claim["additionalProperties"] is False
+
+
+def test_event_id_outside_moment_is_rejected_by_schema():
+    good = TEMPLATE.narrate(MOMENT, "neutral", "en")
+    foreign = replace(good, claims=(replace(good.claims[0], event_ids=(f"{MATCH_ID}#0",)), *good.claims[1:]))
+    with pytest.raises(InvalidNarratorOutput):
+        _narrator(FakeChatClient(_draft_json(foreign))).narrate(MOMENT, "neutral", "en")
+
+
+def test_parse_draft_round_trips_template_draft():
+    model = draft_model_for([f"{MATCH_ID}#{s}" for s in MOMENT.event_ids], ["x y", MOMENT.detail["player"]])
+    assert parse_draft(model, _template_json(MOMENT)) == TEMPLATE.narrate(MOMENT, "neutral", "en")
 
 
 # --- geçerli yanıt -----------------------------------------------------------------------
@@ -83,11 +140,11 @@ def test_valid_response_becomes_draft_and_logs_usage(caplog):
 
     assert draft == TEMPLATE.narrate(MOMENT, "neutral", "en")
     assert client.calls[0]["max_tokens"] == DEFAULT_EXPLAIN_CONFIG.llm_max_tokens
-    assert client.calls[0]["response_model"] is DraftOut
     [usage] = narrator.usage
     assert (usage.call, usage.moment_id, usage.outcome) == (1, MOMENT.id, "ok")
-    assert (usage.input_tokens, usage.output_tokens) == (321, 87)
-    assert "input_tokens=321" in caplog.text and "output_tokens=87" in caplog.text
+    assert (usage.input_tokens, usage.output_tokens, usage.reasoning_tokens) == (321, 87, 64)
+    for field in ("input_tokens=321", "output_tokens=87", "reasoning_tokens=64", "latency_ms="):
+        assert field in caplog.text
 
 
 def test_valid_response_passes_pipeline():
@@ -96,12 +153,12 @@ def test_valid_response_passes_pipeline():
     assert (record.source, record.attempts, record.ok) == ("llm", 1, True)
 
 
-def test_protocol_and_prompt_version():
+def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v1"
-    tagged = FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x")
-    assert tagged.prompt_version == "foundry-v1:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v2"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v2:gpt-x"
+    assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 
 # --- bozuk JSON --------------------------------------------------------------------------
@@ -169,15 +226,36 @@ def test_budget_exceeded_before_calling_client():
     assert len(client.calls) == 2
 
 
-def test_budget_exceeded_falls_back_cleanly_for_rest_of_match():
-    events, _ = match(42, "red_card_swing")
+def responder(events):
+    """Her moment için kapalı şemaya uyan, doğrulanabilir bir taslak üreten sahte model.
+
+    Yalnızca moment kaydını kullanır: skoru metrics_at_moment'tan alır, dayanak olarak
+    momentin ilk olayını gösterir (template iddiaları kayıt dışı olaylara dayanabilir).
+    """
+    moments = {m.id: m for m in detect_moments(events)}
 
     def respond(messages):
-        payload, _ = json.JSONDecoder().raw_decode(messages[1]["content"])
-        moment = next(m for m in detect_moments(events) if m.id == payload["moment"]["id"])
-        return _template_json(moment, events=events)
+        record, _ = json.JSONDecoder().raw_decode(messages[1]["content"])
+        moment = moments[record["moment"]["id"]]
+        score, squads = record["metrics_at_moment"]["score"], record["squads"]
+        start = {"period": 1, "minute": 0, "second": 0}
+        end = record["moment"]["time"]
+        evidence = [record["events"][0]["id"]]
+        claims = [
+            {"kind": "state", "subject": {"team": side, "player": None}, "metric": "score",
+             "comparison": "eq", "value": score[side], "start": start, "end": end, "event_ids": evidence}
+            for side in ("home", "away")
+        ]
+        text = f"{squads['home']['name']} {score['home']}–{score['away']} {squads['away']['name']}."
+        assert moment.id == record["moment"]["id"]
+        return json.dumps({"text": text, "claims": claims})
 
-    client = FakeChatClient(respond)
+    return respond
+
+
+def test_budget_exceeded_falls_back_cleanly_for_rest_of_match():
+    events, _ = match(42, "red_card_swing")
+    client = FakeChatClient(responder(events))
     narrator = FoundryNarrator(events, client, config=replace(DEFAULT_EXPLAIN_CONFIG, llm_max_calls_per_run=2))
     results = run_match(events, narrator)
 
@@ -214,13 +292,6 @@ def test_pipeline_feeds_verifier_feedback_into_second_call():
     assert "value_mismatch" in second and "claim[0]" in second
 
 
-def test_prompt_contains_allowed_event_ids_and_language():
-    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
-    assert "Turkish" in system and "analyst" in system
-    payload = json.loads(user)
-    assert payload["allowed_event_ids"] == [f"{EVENTS[0].match_id}#{s}" for s in MOMENT.event_ids]
-
-
 # --- Agent Framework adaptörü ---------------------------------------------------------------
 
 
@@ -231,28 +302,27 @@ class _InnerClient:
     async def get_response(self, messages, options):
         self.seen = (messages, options)
 
-        class Usage:
-            input_token_count = 12
-            output_token_count = 34
-
         class Response:
             text = '{"text": "x", "claims": []}'
-            usage_details = Usage()
+            # agent-framework-core 1.21: UsageDetails bir TypedDict (dict)
+            usage_details = {"input_token_count": 12, "output_token_count": 34,
+                             "reasoning_output_token_count": 20}
 
         return Response()
 
 
 def test_adapter_maps_options_and_usage():
     inner = _InnerClient()
+    model = draft_model_for(["m#1"], ["a b"])
     adapter = FoundryChatClientAdapter(inner, message_factory=lambda role, text: (role, text))
     result = asyncio.run(adapter.complete(
         [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}],
-        response_model=DraftOut, max_tokens=99,
+        response_model=model, max_tokens=99,
     ))
     messages, options = inner.seen
     assert messages == [("system", "s"), ("user", "u")]
-    assert options == {"max_tokens": 99, "response_format": DraftOut}
-    assert result == ChatResult('{"text": "x", "claims": []}', 12, 34)
+    assert options == {"max_tokens": 99, "response_format": model}
+    assert result == ChatResult('{"text": "x", "claims": []}', 12, 34, 20)
 
 
 def test_adapter_without_agent_framework_gives_install_hint(monkeypatch):
