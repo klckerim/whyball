@@ -15,5 +15,6 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Kurulum: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 - Test: .venv/bin/pytest -q
 - Maç üret: .venv/bin/python -m app.generator --seed 42 [--scenario late_comeback|red_card_swing|dominant_loss] [--out match.jsonl]
+- Fixture'ları yeniden üret: .venv/bin/python -m app.generator.freeze (sadece üretici bilerek değiştiyse; sonra docs/DATASHEET.md tablosunu güncelle)
 
 ## Scope freeze: 24 Ekim akşamı. Sonrasında yeni özellik yok.
