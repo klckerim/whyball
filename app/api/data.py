@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from app.generator.models import Event, EventType, read_jsonl
@@ -48,6 +49,10 @@ class Match:
     @property
     def id(self) -> str:
         return self.store.match_id
+
+    @cached_property
+    def by_seq(self) -> dict[int, Event]:
+        return {e.seq: e for e in self.events}
 
     @property
     def duration_t(self) -> int:

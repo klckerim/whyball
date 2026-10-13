@@ -19,7 +19,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.publish.schema import SOURCES, Score, StoredMoment, Teams
+from app.publish.schema import SOURCES, EvidenceEvent, Score, StoredClaim, StoredMoment, Teams
 
 from .data import TIMELINE_TYPES, Match, load_matches
 from .replay import event_out, moment_out, replay
@@ -69,8 +69,18 @@ class MatchDetail(BaseModel):
     prompt_version: str
 
 
+class EvidenceOut(EvidenceEvent):
+    x: float | None = None  # pitch position from the event stream (0..105, 0..68)
+    y: float | None = None
+
+
+class ClaimOut(StoredClaim):
+    evidence: list[EvidenceOut]
+
+
 class MomentOut(StoredMoment):
     t: int
+    claims: list[ClaimOut]
 
 
 def _summary(m: Match) -> MatchSummary:

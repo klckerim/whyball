@@ -1,0 +1,135 @@
+/* Every colour in the UI lives here; styles.css and the components only use var(--…).
+ * Groups: neutrals · one accent · semantic (source badges and verification state only) ·
+ * categorical moment types (badge, timeline marker, legend) · teams · pitch.
+ * tokens.test.ts checks the AA pairs in both themes. */
+
+:root {
+  /* neutrals */
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --text: #15171c;
+  --muted: #586070;
+  --border: #d8dce4;
+  --control-border: #848d9d;
+  --shadow: 0 1px 2px #15171c14, 0 4px 16px #15171c0f;
+  --scrim: #15171c33;
+
+  /* the one accent */
+  --accent: #1d4ed8;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6edfd;
+  --focus: #1d4ed8;
+
+  /* semantic: source badges and verification state */
+  --llm-bg: #e3f4ec;
+  --llm-fg: #145c3a;
+  --llm-border: #8fd0ae;
+  --tpl-bg: #eceef2;
+  --tpl-fg: #3a404c;
+  --tpl-border: #c3c8d2;
+  --fb-bg: #fdf0d8;
+  --fb-fg: #7a4a00;
+  --fb-border: #e8b86a;
+  --ok: #157347;
+  --fail: #b42318;
+
+  /* categorical: moment types */
+  --goal: #0e7490;
+  --red: #be123c;
+  --penalty: #7e22ce;
+  --pressure: #a21caf;
+  --dominance: #9a3412;
+
+  /* teams (crest circle + initial, pitch dots) */
+  --home: #1e3a8a;
+  --home-fg: #ffffff;
+  --away: #a16207;
+  --away-fg: #ffffff;
+
+  /* pitch */
+  --pitch: #e6efe8;
+  --pitch-line: #9db5a3;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101216;
+    --surface: #191c22;
+    --surface-2: #232730;
+    --text: #e8eaef;
+    --muted: #a0a8b6;
+    --border: #2f343e;
+    --control-border: #6f7889;
+    --shadow: 0 1px 2px #00000066, 0 4px 16px #00000040;
+    --scrim: #00000080;
+    --accent: #8ab4ff;
+    --accent-fg: #0b1220;
+    --accent-soft: #1f2a44;
+    --focus: #8ab4ff;
+    --llm-bg: #133325;
+    --llm-fg: #8fe0b5;
+    --llm-border: #2b6b4a;
+    --tpl-bg: #262a33;
+    --tpl-fg: #c9ced8;
+    --tpl-border: #454b57;
+    --fb-bg: #3a2a0c;
+    --fb-fg: #ffcc78;
+    --fb-border: #7d5a1c;
+    --ok: #6fdc9c;
+    --fail: #ff8a80;
+    --goal: #4cc9e0;
+    --red: #fb7185;
+    --penalty: #c084fc;
+    --pressure: #e879f9;
+    --dominance: #fb923c;
+    --home: #7cb3ff;
+    --home-fg: #0b1220;
+    --away: #f5c451;
+    --away-fg: #1f1600;
+    --pitch: #17241d;
+    --pitch-line: #3f5d4a;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #101216;
+  --surface: #191c22;
+  --surface-2: #232730;
+  --text: #e8eaef;
+  --muted: #a0a8b6;
+  --border: #2f343e;
+  --control-border: #6f7889;
+  --shadow: 0 1px 2px #00000066, 0 4px 16px #00000040;
+  --scrim: #00000080;
+  --accent: #8ab4ff;
+  --accent-fg: #0b1220;
+  --accent-soft: #1f2a44;
+  --focus: #8ab4ff;
+  --llm-bg: #133325;
+  --llm-fg: #8fe0b5;
+  --llm-border: #2b6b4a;
+  --tpl-bg: #262a33;
+  --tpl-fg: #c9ced8;
+  --tpl-border: #454b57;
+  --fb-bg: #3a2a0c;
+  --fb-fg: #ffcc78;
+  --fb-border: #7d5a1c;
+  --ok: #6fdc9c;
+  --fail: #ff8a80;
+  --goal: #4cc9e0;
+  --red: #fb7185;
+  --penalty: #c084fc;
+  --pressure: #e879f9;
+  --dominance: #fb923c;
+  --home: #7cb3ff;
+  --home-fg: #0b1220;
+  --away: #f5c451;
+  --away-fg: #1f1600;
+  --pitch: #17241d;
+  --pitch-line: #3f5d4a;
+  color-scheme: dark;
+}

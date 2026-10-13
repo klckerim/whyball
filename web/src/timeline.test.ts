@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { clockLabel, fraction, minuteLabel, scoreAt, visibleMoments } from "./timeline";
+import {
+  assignLanes,
+  clockLabel,
+  fraction,
+  isFeatured,
+  minuteLabel,
+  runMeta,
+  scoreAt,
+  scoreboardClock,
+  SPEED_OPTIONS,
+  teamInitials,
+  visibleMoments,
+} from "./timeline";
 import type { MatchEvent, Moment, Period } from "./types";
 
 // red_card_swing_seed42: first half ends at 47:35 (t=2855), second half restarts at 45:00.
@@ -50,4 +62,41 @@ it("clamps the timeline fraction", () => {
   expect(fraction(50, 100)).toBe(0.5);
   expect(fraction(150, 100)).toBe(1);
   expect(fraction(5, 0)).toBe(0);
+});
+
+describe("ui helpers", () => {
+  it("features model and fallback cards, not plain templates", () => {
+    expect(isFeatured({ source: "llm" })).toBe(true);
+    expect(isFeatured({ source: "template_fallback" })).toBe(true);
+    expect(isFeatured({ source: "template" })).toBe(false);
+  });
+
+  it("shows FT at the final whistle", () => {
+    expect(scoreboardClock(5729, 5729, periods)).toBe("FT");
+    expect(scoreboardClock(1320, 5729, periods)).toBe("22'");
+  });
+
+  it("names the existing replay speeds", () => {
+    expect(SPEED_OPTIONS.map((s) => [s.value, s.label])).toEqual([[30, "Slow"], [60, "1×"], [120, "Fast"], [300, "Faster"]]);
+  });
+
+  it("stacks markers that are too close to each other", () => {
+    const lanes = assignLanes(
+      [{ id: "a", f: 0.5 }, { id: "b", f: 0.51 }, { id: "c", f: 0.515 }, { id: "d", f: 0.6 }, { id: "e", f: 0.1 }],
+      0.02,
+    );
+    expect(Object.fromEntries(lanes)).toEqual({ e: 0, a: 0, b: 1, c: 2, d: 0 });
+  });
+
+  it("derives crest initials without club suffixes", () => {
+    expect(teamInitials("Brannoch FC")).toBe("B");
+    expect(teamInitials("Morvane Athletic")).toBe("M");
+    expect(teamInitials("Port Selvan City")).toBe("PS");
+    expect(teamInitials("FC")).toBe("F");
+  });
+
+  it("shortens the model and run line", () => {
+    expect(runMeta("foundry-v5.2:gpt-5-mini", "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00").short).toBe("gpt-5-mini · run 2026-10-13");
+    expect(runMeta("template-v1", null)).toEqual({ short: "template-v1", full: "Prompt template-v1" });
+  });
 });

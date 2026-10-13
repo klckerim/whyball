@@ -54,8 +54,19 @@ def test_moments(client):
     body = client.get(f"/api/matches/{MATCH}/moments").json()
     assert [m["id"] for m in body] == [m["id"] for m in STORE["moments"]]
     for m, stored in zip(body, STORE["moments"]):
+        for c in m["claims"]:
+            for ev in c["evidence"]:
+                ev.pop("x"), ev.pop("y")
         assert {k: v for k, v in m.items() if k != "t"} == stored
     assert [m["t"] for m in body] == sorted(m["t"] for m in body)
+
+
+def test_evidence_carries_pitch_position(client):
+    body = client.get(f"/api/matches/{MATCH}/moments").json()
+    evidence = {ev["type"]: ev for m in body for c in m["claims"] for ev in c["evidence"]}
+    shot = evidence["shot"]
+    assert 0 <= shot["x"] <= 105 and 0 <= shot["y"] <= 68
+    assert evidence["red_card"]["x"] is None and evidence["red_card"]["y"] is None
 
 
 @pytest.mark.parametrize("path", ["/api/matches/nope", "/api/matches/nope/moments", "/api/matches/nope/replay"])

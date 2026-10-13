@@ -64,6 +64,9 @@ export interface EvidenceEvent {
   minute: number;
   second: number;
   minute_label: string;
+  /** Pitch position from the event stream (0..105, 0..68); null for cards and substitutions. */
+  x?: number | null;
+  y?: number | null;
 }
 
 export interface Claim {

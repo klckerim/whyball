@@ -4,7 +4,7 @@ import { replayUrl } from "./api";
 import type { MatchEvent, Moment } from "./types";
 
 /** Playback over the SSE replay: the stream moves the clock and announces cards; pausing or
- * scrubbing closes it, playing again resumes from the current position. */
+ * scrubbing closes it, playing again resumes from the current position (from kickoff at the end). */
 export function useReplay(matchId: string | null, speed: number, duration: number) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -56,11 +56,18 @@ export function useReplay(matchId: string | null, speed: number, duration: numbe
     setPlaying(true);
   }, [matchId, speed, duration, close]);
 
-  // A new match starts at kickoff.
+  // A new match opens at the final whistle: final score, every card. (While its detail loads the
+  // duration is 0, so this runs again once it is known.)
   useEffect(() => {
-    seek(0);
+    seek(duration);
     setArrived(null);
-  }, [matchId, seek]);
+  }, [matchId, duration, seek]);
+
+  const restart = useCallback(() => {
+    position.current = 0;
+    setT(0);
+    play();
+  }, [play]);
 
   // A speed change while playing restarts the stream from the current position.
   const playingRef = useRef(playing);
@@ -71,5 +78,5 @@ export function useReplay(matchId: string | null, speed: number, duration: numbe
 
   useEffect(() => close, [close]);
 
-  return { t, playing, arrived, play, pause, seek };
+  return { t, playing, arrived, play, pause, seek, restart };
 }

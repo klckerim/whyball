@@ -36,8 +36,15 @@ def event_out(e: Event, t: int) -> dict[str, Any]:
 
 
 def moment_out(match: Match, index: int) -> dict[str, Any]:
+    """The stored card plus `t`, and each evidence event's pitch position (x, y; null when the event
+    has none) from the event stream, so the UI can draw the evidence on a pitch."""
     m = match.store.moments[index]
-    return {**m.model_dump(mode="json"), "t": match.t[m.at_seq]}
+    out = {**m.model_dump(mode="json"), "t": match.t[m.at_seq]}
+    for claim in out["claims"]:
+        for ev in claim["evidence"]:
+            e = match.by_seq[ev["seq"]]
+            ev["x"], ev["y"] = e.x, e.y
+    return out
 
 
 async def replay(match: Match, speed: float, from_t: int = 0) -> AsyncIterator[str]:
