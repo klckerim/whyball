@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+
+import { clockLabel, fraction, minuteLabel, scoreAt, visibleMoments } from "./timeline";
+import type { MatchEvent, Moment, Period } from "./types";
+
+// red_card_swing_seed42: first half ends at 47:35 (t=2855), second half restarts at 45:00.
+const periods: Period[] = [
+  { period: 1, start_t: 0, end_t: 2855 },
+  { period: 2, start_t: 2855, end_t: 5729 },
+];
+
+const goal = (t: number, home: number, away: number) => ({ t, type: "goal", score: { home, away } }) as MatchEvent;
+
+describe("clock", () => {
+  it("formats stoppage time like the narration", () => {
+    expect(minuteLabel(1, 22)).toBe("22'");
+    expect(minuteLabel(1, 47)).toBe("45+3'");
+    expect(minuteLabel(2, 92)).toBe("90+3'");
+  });
+
+  it("maps t onto the match clock across half time", () => {
+    expect(clockLabel(0, periods)).toBe("0'");
+    expect(clockLabel(1320, periods)).toBe("22'");
+    expect(clockLabel(2855, periods)).toBe("45+3'");
+    expect(clockLabel(2856, periods)).toBe("45'");
+    expect(clockLabel(3815, periods)).toBe("61'");
+    expect(clockLabel(5729, periods)).toBe("90+3'");
+  });
+});
+
+describe("scoreAt", () => {
+  const timeline = [goal(1320, 1, 0), goal(3815, 1, 1), goal(5195, 1, 2)];
+  it("is the score after every event up to t", () => {
+    expect(scoreAt(0, timeline)).toEqual({ home: 0, away: 0 });
+    expect(scoreAt(1319, timeline)).toEqual({ home: 0, away: 0 });
+    expect(scoreAt(1320, timeline)).toEqual({ home: 1, away: 0 });
+    expect(scoreAt(5729, timeline)).toEqual({ home: 1, away: 2 });
+  });
+});
+
+describe("visibleMoments", () => {
+  const moments = [{ id: "a", t: 10 }, { id: "b", t: 20 }, { id: "c", t: 30 }] as Moment[];
+  it("reveals cards up to t, newest first", () => {
+    expect(visibleMoments(moments, 5)).toEqual([]);
+    expect(visibleMoments(moments, 20).map((m) => m.id)).toEqual(["b", "a"]);
+  });
+});
+
+it("clamps the timeline fraction", () => {
+  expect(fraction(50, 100)).toBe(0.5);
+  expect(fraction(150, 100)).toBe(1);
+  expect(fraction(5, 0)).toBe(0);
+});

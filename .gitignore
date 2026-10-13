@@ -8,3 +8,7 @@ node_modules/
 *.egg-info/
 data/cache/
 !.env.example
+
+# Web UI build
+web/dist/
+*.tsbuildinfo

@@ -22,6 +22,9 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Injection evaluation (foundry-v2 free text ↔ v3 slot ↔ v4 slot + {event:} + strict lint ↔ v4.1 event type allow-list + player repeat + pronoun/article ↔ v5 claim menu): .venv/bin/python -m eval.inject [--quick] (rewrites docs/EVAL.md; reads the v3 human labels from docs/human_review.foundry-v3.csv)
 - LLM narrator (optional): .venv/bin/pip install -e ".[llm]"; az login; FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL in .env (see .env.example); --narrator foundry (at most 60 calls per run; foundry-v5: app/explain/menu.py builds the claims, the model only uses menu ids)
 - Real LLM measurement (3 demo matches, spends tokens): .venv/bin/python -m eval.llm_run --lang en [--repeat 3] → docs/LLM_RUN.json (rejected drafts included), docs/LLM_RUN.md, docs/human_review.csv (from the last run; never overwritten if filled in by hand); re-render only: --from-json docs/LLM_RUN.json. Earlier versions are archived as docs/LLM_RUN.foundry-v*.json (the comparison table reads them)
+- Publication store (no model call; replays the last run's drafts through the current pipeline): .venv/bin/python -m app.publish [--check] → data/demo_narration/{match_id}.json + docs/DEMO_NARRATION.md (diff report); rerun after any change to the explain stage, the analytics or docs/LLM_RUN.json
+- API + built UI (one process): .venv/bin/uvicorn app.api.main:app --reload → /api/matches, /api/matches/{id}, /moments, /replay?speed=60&from_t=0 (SSE); WHYBALL_DATA_DIR, WHYBALL_STATIC_DIR (default web/dist)
+- Web UI (Vite + React + TS, web/): cd web && npm ci; npm run dev (proxies /api to :8000) | npm run build (→ web/dist, served by the API) | npm test (Vitest) | npm run smoke (build + tests/test_smoke_e2e.py against the real build)
 - Foundry connection test: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
 ## Scope freeze: evening of 24 October. No new features after that.
