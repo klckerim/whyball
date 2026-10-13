@@ -146,31 +146,43 @@ class _Builder:
         self.add(cid, claim, en)
 
 
+# Sub-label clause of a goal that changed the match state; it rests on the margin, not on the score
+# (the score itself stays a separate, mandatory claim group).
+_CHANGE_CLAUSES = {
+    "opener": "{T} opened the scoring",
+    "equalizer": "{T} drew level",
+    "go_ahead": "{T} went ahead",
+}
+
+
 def _goal(b: _Builder) -> None:
     player = b.m.detail["player"]
     b.add("goal", b.c.count("goals", Subject(b.side, player), b.c.t),
           f"{b.player(player)} scored for {{T}}")
     b.add("team_goals", b.c.count("goals", Subject(b.side), KICKOFF),
           "{T} have scored {value:team_goals} {label:team_goals} so far")
+    change = b.m.detail.get("score_change")
+    if change is not None:
+        _score_change(b, change)
     b.score()
     b.possession()
 
 
-def _score_change(b: _Builder) -> None:
-    d = b.m.detail
+def _score_change(b: _Builder, change: dict) -> None:
+    kind = change["kind"]
     goal_seq = b.m.event_ids[-1]
-    b.add("goals", b.c.count("goals", Subject(b.side), b.c.t),
-          "{T} scored at {minute:goals}")
     margin = b.c.measured("score_margin", b.side)
-    b.margin("margin", b.c.state("score_margin", b.side, "eq", margin, [goal_seq]))
-    if d.get("from_behind"):
-        deficit = d["max_deficit"]
+    b.add("margin", b.c.state("score_margin", b.side, "eq", margin, [goal_seq]))
+    # An opener: the team's only goal so far and a one-goal lead.
+    claim_ids = ("team_goals", "margin") if kind == "opener" else ("margin",)
+    en = _CHANGE_CLAUSES[kind]
+    if change.get("from_behind"):
+        deficit = change["max_deficit"]
         conceded = measure("goals", Subject(b.opp), KICKOFF, b.c.t, b.c.events).counted
-        goals = "goal" if deficit == 1 else "goals"
-        b.add("deficit", b.c.state("min_score_margin", b.side, "eq", -deficit, conceded),
-              "{T} had been {value:deficit} %s down" % goals)
-    b.score()
-    b.possession()
+        b.add("deficit", b.c.state("min_score_margin", b.side, "eq", -deficit, conceded))
+        claim_ids += ("deficit",)
+        en += " after being {value:deficit} %s down" % ("goal" if deficit == 1 else "goals")
+    b.clause(kind, claim_ids, en)
 
 
 def _red_card(b: _Builder) -> None:
@@ -241,7 +253,6 @@ def _dominance(b: _Builder) -> None:
 
 BUILDERS = {
     "goal": _goal,
-    "score_change": _score_change,
     "red_card": _red_card,
     "penalty": _penalty,
     "pressure_shift": _pressure_shift,
@@ -251,6 +262,14 @@ PRIMARY: dict[str, tuple[frozenset[str], ...]] = {
     "dominance_without_reward": (frozenset({"possession"}), frozenset({"shots_for", "shots_against"})),
     "pressure_shift": (frozenset({"pressure"}),),
 }
+SCORE_GROUP = frozenset(SCORE_IDS.values())
+
+
+def primary_groups(moment: Moment) -> tuple[frozenset[str], ...]:
+    """Claim groups the moment must use; a goal that changed the match state must state the score."""
+    if moment.type == "goal" and "score_change" in moment.detail:
+        return (SCORE_GROUP,)
+    return PRIMARY.get(moment.type, ())
 
 
 def build_menu(
@@ -262,7 +281,7 @@ def build_menu(
     ok = {c.id for c in b.claims if verify_claim(c.claim, events, config).ok}
     claims = tuple(c for c in b.claims if c.id in ok)
     clauses = tuple(c for c in b.clauses if set(c.claim_ids) <= ok)
-    primary = tuple(g & ok for g in PRIMARY.get(moment.type, ()) if g & ok)
+    primary = tuple(g & ok for g in primary_groups(moment) if g & ok)
     return ClaimMenu(moment.id, claims, clauses, primary)
 
 
@@ -326,6 +345,20 @@ def _minutes(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[s
                 out.append(fmt_minute(e.period, e.minute))
         elif ph.kind == "clause" and ph.arg in clauses and ph.arg not in seen:
             out += _minutes(clauses[ph.arg], menu, ctx, seen | {ph.arg})
+    return out
+
+
+def _teams(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[str] = frozenset()) -> list[str]:
+    """Sides the template names when rendered ({score_named} names both; clauses included)."""
+    clauses = menu.clause_templates(ctx.language)
+    out: list[str] = []
+    for ph in parse_placeholders(template)[0]:
+        if ph.kind in ("home", "away"):
+            out.append(ph.kind)
+        elif ph.kind == "score_named":
+            out += ["home", "away"]
+        elif ph.kind == "clause" and ph.arg in clauses and ph.arg not in seen:
+            out += _teams(clauses[ph.arg], menu, ctx, seen | {ph.arg})
     return out
 
 
@@ -395,7 +428,8 @@ def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
 def menu_rule_issues(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[LintIssue]:
-    """Each sentence rests on a menu claim; the primary claim is used; a minute appears once per sentence."""
+    """Each sentence rests on a menu claim; the primary claim is used; a minute appears once per sentence;
+    a team is named at most `slot_team_repeat_max` times per sentence."""
     placeholders = parse_placeholders(template)[0]
     issues: list[LintIssue] = []
     for start, end in template_sentences(template):
@@ -410,6 +444,11 @@ def menu_rule_issues(
                     if minute in seen:
                         issues.append(LintIssue("minute_repeat", ph.raw, ph.start, ph.end, "minute"))
                     seen.add(minute)
+        if config.slot_team_repeat_max:
+            sides = [side for ph in inside for side in _teams(ph.raw, menu, ctx)]
+            for side in ("home", "away"):
+                if sides.count(side) > config.slot_team_repeat_max:
+                    issues.append(LintIssue("team_repeat", "{%s}" % side, start, end, "name"))
     if config.slot_primary_claim and template.strip():
         used = _referenced(placeholders, menu)
         for group in menu.primary:

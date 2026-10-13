@@ -199,8 +199,8 @@ def test_away_goal_score_is_rendered_home_first():
 def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v5"
-    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v5:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v5.1"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v5.1:gpt-x"
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 

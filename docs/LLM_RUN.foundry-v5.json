@@ -1,0 +1,1807 @@
+{
+  "meta": {
+    "finished_at": "2026-10-13T13:22:31+00:00",
+    "lang": "en",
+    "max_calls_per_run": 60,
+    "max_retries": 2,
+    "max_tokens": 4000,
+    "model": "gpt-5-mini",
+    "prompt_version": "foundry-v5:gpt-5-mini",
+    "reasoning_effort": "low",
+    "repeats": 3,
+    "started_at": "2026-10-13T13:16:54+00:00",
+    "timeout_s": 60.0
+  },
+  "runs": [
+    {
+      "finished_at": "2026-10-13T13:18:46+00:00",
+      "matches": [
+        {
+          "match_id": "red_card_swing_seed42",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M002",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M003",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}. {clause:margin}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22'. Brannoch FC lead by 1, and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M005",
+              "minute": 38,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#213}, and {clause:players}.",
+              "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M007",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:possession}.",
+              "text": "Davel Selvado scored at 61', and Morvane Athletic have had 49% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M008",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}. {clause:score}, and {clause:possession}.",
+              "text": "Davel Selvado scored at 61'. The score is Brannoch FC 1–1 Morvane Athletic, and Morvane Athletic have had 49% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M009",
+              "minute": 81,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 14,
+              "source": "llm",
+              "template": "{clause:pressure}. {event:m-42-red_card_swing#464}, and {clause:shots}.",
+              "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83. Murek Brestani had a shot saved at 79', and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
+              "type": "pressure_shift"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M010",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:possession}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic have had 50% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M011",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:score}.",
+              "text": "Murek Ymberto scored at 84', and the score is Brannoch FC 1–2 Morvane Athletic.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M012",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 5,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#493}, and {clause:pressure}. {clause:score}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00. The score is Brannoch FC 1–2 Morvane Athletic.",
+              "type": "pressure_shift"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 4050,
+              "moment_id": "m-42-red_card_swing-M002",
+              "outcome": "ok",
+              "output_tokens": 240,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2122,
+              "latency_ms": 4401,
+              "moment_id": "m-42-red_card_swing-M003",
+              "outcome": "ok",
+              "output_tokens": 368,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 3347,
+              "moment_id": "m-42-red_card_swing-M005",
+              "outcome": "ok",
+              "output_tokens": 205,
+              "reasoning_tokens": 128
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 5621,
+              "moment_id": "m-42-red_card_swing-M007",
+              "outcome": "ok",
+              "output_tokens": 379,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 5279,
+              "moment_id": "m-42-red_card_swing-M008",
+              "outcome": "ok",
+              "output_tokens": 540,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2558,
+              "latency_ms": 5301,
+              "moment_id": "m-42-red_card_swing-M009",
+              "outcome": "ok",
+              "output_tokens": 339,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2189,
+              "latency_ms": 5365,
+              "moment_id": "m-42-red_card_swing-M010",
+              "outcome": "ok",
+              "output_tokens": 390,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2312,
+              "latency_ms": 7234,
+              "moment_id": "m-42-red_card_swing-M011",
+              "outcome": "ok",
+              "output_tokens": 544,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 9,
+              "error": null,
+              "input_tokens": 2340,
+              "latency_ms": 3651,
+              "moment_id": "m-42-red_card_swing-M012",
+              "outcome": "ok",
+              "output_tokens": 333,
+              "reasoning_tokens": 256
+            }
+          ]
+        },
+        {
+          "match_id": "dominant_loss_seed7",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M003",
+              "minute": 45,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 33,
+              "source": "llm",
+              "template": "{clause:dominance}. {event:m-7-dominant_loss#269}, and {clause:score}.",
+              "text": "Since 25' Vellorin FC have had 58% of the ball and a 4–0 lead in shots. Ombar Belmaro shot off target at 45+1', and the score is Vellorin FC 0–0 Tessdal Athletic.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M005",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M006",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M008",
+              "minute": 66,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 57,
+              "source": "llm",
+              "template": "{clause:dominance}, yet {clause:score}.",
+              "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M009",
+              "minute": 70,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#428}, and {clause:possession}.",
+              "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
+              "type": "penalty"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2523,
+              "latency_ms": 6112,
+              "moment_id": "m-7-dominant_loss-M003",
+              "outcome": "ok",
+              "output_tokens": 431,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2126,
+              "latency_ms": 4464,
+              "moment_id": "m-7-dominant_loss-M005",
+              "outcome": "ok",
+              "output_tokens": 393,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2127,
+              "latency_ms": 2519,
+              "moment_id": "m-7-dominant_loss-M006",
+              "outcome": "ok",
+              "output_tokens": 151,
+              "reasoning_tokens": 64
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2654,
+              "latency_ms": 5133,
+              "moment_id": "m-7-dominant_loss-M008",
+              "outcome": "ok",
+              "output_tokens": 422,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2016,
+              "latency_ms": 4860,
+              "moment_id": "m-7-dominant_loss-M009",
+              "outcome": "ok",
+              "output_tokens": 423,
+              "reasoning_tokens": 384
+            }
+          ]
+        },
+        {
+          "match_id": "natural_seed100",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M001",
+              "minute": 14,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 10,
+              "source": "llm",
+              "template": "{event:m-100#84}, and {clause:sent_off}.",
+              "text": "Iveno Gundrel was sent off at 14', and Iveno Gundrel of Isteven United was sent off.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M004",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}, and {clause:possession}.",
+              "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M005",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}, and {clause:possession}.",
+              "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M006",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:score}.",
+              "text": "Quenlo Pelvisto scored at 51', and the score is Tessdal Wanderers 1–1 Isteven United.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M007",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:margin}. {clause:possession}.",
+              "text": "Quenlo Pelvisto scored at 51', and the sides are level. Isteven United have had 49% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M009",
+              "minute": 79,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 1,
+              "source": "llm",
+              "template": "{clause:dominance}. {clause:score}.",
+              "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots. The score is Tessdal Wanderers 1–1 Isteven United.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M010",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}, and {clause:score}. {clause:possession}.",
+              "text": "Brisko Ymberto scored at 90+1', and the score is Tessdal Wanderers 2–1 Isteven United. Tessdal Wanderers have had 52% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M011",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}, and {clause:score}.",
+              "text": "Brisko Ymberto scored at 90+1', and the score is Tessdal Wanderers 2–1 Isteven United.",
+              "type": "score_change"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2087,
+              "latency_ms": 6876,
+              "moment_id": "m-100-M001",
+              "outcome": "ok",
+              "output_tokens": 587,
+              "reasoning_tokens": 512
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2095,
+              "latency_ms": 3200,
+              "moment_id": "m-100-M004",
+              "outcome": "ok",
+              "output_tokens": 185,
+              "reasoning_tokens": 128
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2096,
+              "latency_ms": 4625,
+              "moment_id": "m-100-M005",
+              "outcome": "ok",
+              "output_tokens": 357,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2093,
+              "latency_ms": 4076,
+              "moment_id": "m-100-M006",
+              "outcome": "ok",
+              "output_tokens": 229,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2089,
+              "latency_ms": 8020,
+              "moment_id": "m-100-M007",
+              "outcome": "ok",
+              "output_tokens": 909,
+              "reasoning_tokens": 832
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2451,
+              "latency_ms": 6394,
+              "moment_id": "m-100-M009",
+              "outcome": "ok",
+              "output_tokens": 750,
+              "reasoning_tokens": 704
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2168,
+              "latency_ms": 4763,
+              "moment_id": "m-100-M010",
+              "outcome": "ok",
+              "output_tokens": 340,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2128,
+              "latency_ms": 5883,
+              "moment_id": "m-100-M011",
+              "outcome": "ok",
+              "output_tokens": 358,
+              "reasoning_tokens": 320
+            }
+          ]
+        }
+      ],
+      "started_at": "2026-10-13T13:16:54+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T13:20:41+00:00",
+      "matches": [
+        {
+          "match_id": "red_card_swing_seed42",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M002",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M003",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M005",
+              "minute": 38,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#213}, and {clause:players}.",
+              "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M007",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:possession}.",
+              "text": "Davel Selvado scored at 61', and Morvane Athletic have had 49% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M008",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:score}.",
+              "text": "Davel Selvado scored at 61', and the score is Brannoch FC 1–1 Morvane Athletic.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M009",
+              "minute": 81,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 14,
+              "source": "llm",
+              "template": "{clause:pressure}, and {clause:shots}.",
+              "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
+              "type": "pressure_shift"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M010",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:possession}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic have had 50% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M011",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:possession}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic have had 50% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M012",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 5,
+              "source": "llm",
+              "template": "{clause:pressure}, and {clause:score}.",
+              "text": "Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and the score is Brannoch FC 1–2 Morvane Athletic.",
+              "type": "pressure_shift"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 5151,
+              "moment_id": "m-42-red_card_swing-M002",
+              "outcome": "ok",
+              "output_tokens": 384,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2122,
+              "latency_ms": 5961,
+              "moment_id": "m-42-red_card_swing-M003",
+              "outcome": "ok",
+              "output_tokens": 605,
+              "reasoning_tokens": 512
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 3848,
+              "moment_id": "m-42-red_card_swing-M005",
+              "outcome": "ok",
+              "output_tokens": 252,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 6038,
+              "moment_id": "m-42-red_card_swing-M007",
+              "outcome": "ok",
+              "output_tokens": 583,
+              "reasoning_tokens": 512
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 5744,
+              "moment_id": "m-42-red_card_swing-M008",
+              "outcome": "ok",
+              "output_tokens": 337,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2558,
+              "latency_ms": 5689,
+              "moment_id": "m-42-red_card_swing-M009",
+              "outcome": "ok",
+              "output_tokens": 186,
+              "reasoning_tokens": 128
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2189,
+              "latency_ms": 5517,
+              "moment_id": "m-42-red_card_swing-M010",
+              "outcome": "ok",
+              "output_tokens": 413,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2312,
+              "latency_ms": 3052,
+              "moment_id": "m-42-red_card_swing-M011",
+              "outcome": "ok",
+              "output_tokens": 211,
+              "reasoning_tokens": 128
+            },
+            {
+              "call": 9,
+              "error": null,
+              "input_tokens": 2340,
+              "latency_ms": 5262,
+              "moment_id": "m-42-red_card_swing-M012",
+              "outcome": "ok",
+              "output_tokens": 453,
+              "reasoning_tokens": 384
+            }
+          ]
+        },
+        {
+          "match_id": "dominant_loss_seed7",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M003",
+              "minute": 45,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 33,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#269}, and {clause:dominance}.",
+              "text": "Ombar Belmaro shot off target at 45+1', and since 25' Vellorin FC have had 58% of the ball and a 4–0 lead in shots.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M005",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}. {clause:score}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff. The score is Vellorin FC 0–1 Tessdal Athletic.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M006",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M008",
+              "minute": 66,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 57,
+              "source": "llm",
+              "template": "{clause:dominance}, but {clause:score}. {event:m-7-dominant_loss#396}.",
+              "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, but the score is Vellorin FC 0–1 Tessdal Athletic. Orvik Hazulov had a shot saved at 64'.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M009",
+              "minute": 70,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#428}, and {clause:possession}.",
+              "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
+              "type": "penalty"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2523,
+              "latency_ms": 5609,
+              "moment_id": "m-7-dominant_loss-M003",
+              "outcome": "ok",
+              "output_tokens": 446,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2126,
+              "latency_ms": 5707,
+              "moment_id": "m-7-dominant_loss-M005",
+              "outcome": "ok",
+              "output_tokens": 482,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2127,
+              "latency_ms": 3779,
+              "moment_id": "m-7-dominant_loss-M006",
+              "outcome": "ok",
+              "output_tokens": 304,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2654,
+              "latency_ms": 6682,
+              "moment_id": "m-7-dominant_loss-M008",
+              "outcome": "ok",
+              "output_tokens": 661,
+              "reasoning_tokens": 576
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2016,
+              "latency_ms": 3684,
+              "moment_id": "m-7-dominant_loss-M009",
+              "outcome": "ok",
+              "output_tokens": 305,
+              "reasoning_tokens": 256
+            }
+          ]
+        },
+        {
+          "match_id": "natural_seed100",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M001",
+              "minute": 14,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 10,
+              "source": "llm",
+              "template": "{event:m-100#84}, and {clause:players}.",
+              "text": "Iveno Gundrel was sent off at 14', and Isteven United are down to 10 players on the pitch.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M004",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}, and {clause:possession}.",
+              "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M005",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}. {clause:possession}, and {clause:score}.",
+              "text": "Hesko Ilvanto scored at 29'. Tessdal Wanderers have had 58% of the ball since kickoff, and the score is Tessdal Wanderers 1–0 Isteven United.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M006",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:score}. {clause:team_goals}, and {clause:possession}.",
+              "text": "Quenlo Pelvisto scored at 51', and the score is Tessdal Wanderers 1–1 Isteven United. Isteven United have scored 1 goal so far, and Isteven United have had 49% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M007",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:score}.",
+              "text": "Quenlo Pelvisto scored at 51', and the score is Tessdal Wanderers 1–1 Isteven United.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M009",
+              "minute": 79,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 1,
+              "source": "llm",
+              "template": "{clause:dominance}, and {clause:score}. {event:m-100#478}.",
+              "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots, and the score is Tessdal Wanderers 1–1 Isteven United. Rastin Ymberto shot off target at 79'.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M010",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}, and {clause:score}.",
+              "text": "Brisko Ymberto scored at 90+1', and the score is Tessdal Wanderers 2–1 Isteven United.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M011",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}, and {clause:possession}.",
+              "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers have had 52% of the ball since kickoff.",
+              "type": "score_change"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2087,
+              "latency_ms": 6477,
+              "moment_id": "m-100-M001",
+              "outcome": "ok",
+              "output_tokens": 403,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2095,
+              "latency_ms": 3280,
+              "moment_id": "m-100-M004",
+              "outcome": "ok",
+              "output_tokens": 253,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2096,
+              "latency_ms": 5208,
+              "moment_id": "m-100-M005",
+              "outcome": "ok",
+              "output_tokens": 476,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2093,
+              "latency_ms": 5009,
+              "moment_id": "m-100-M006",
+              "outcome": "ok",
+              "output_tokens": 505,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2089,
+              "latency_ms": 6237,
+              "moment_id": "m-100-M007",
+              "outcome": "ok",
+              "output_tokens": 479,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2451,
+              "latency_ms": 6651,
+              "moment_id": "m-100-M009",
+              "outcome": "ok",
+              "output_tokens": 663,
+              "reasoning_tokens": 576
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2168,
+              "latency_ms": 4797,
+              "moment_id": "m-100-M010",
+              "outcome": "ok",
+              "output_tokens": 432,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2128,
+              "latency_ms": 6029,
+              "moment_id": "m-100-M011",
+              "outcome": "ok",
+              "output_tokens": 611,
+              "reasoning_tokens": 576
+            }
+          ]
+        }
+      ],
+      "started_at": "2026-10-13T13:18:46+00:00"
+    },
+    {
+      "finished_at": "2026-10-13T13:22:31+00:00",
+      "matches": [
+        {
+          "match_id": "red_card_swing_seed42",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M002",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M003",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:possession}.",
+              "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M005",
+              "minute": 38,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#213}, and {clause:players}.",
+              "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M007",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:score}.",
+              "text": "Davel Selvado scored at 61', and the score is Brannoch FC 1–1 Morvane Athletic.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M008",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:score}.",
+              "text": "Davel Selvado scored at 61', and the score is Brannoch FC 1–1 Morvane Athletic.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M009",
+              "minute": 81,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 14,
+              "source": "llm",
+              "template": "{clause:pressure}, and {clause:shots}.",
+              "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
+              "type": "pressure_shift"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M010",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:score}. {clause:possession}.",
+              "text": "Murek Ymberto scored at 84', and the score is Brannoch FC 1–2 Morvane Athletic. Morvane Athletic have had 50% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M011",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#494}, and {clause:possession}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic have had 50% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-42-red_card_swing-M012",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 5,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#493}, and {clause:pressure}.",
+              "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00.",
+              "type": "pressure_shift"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 6230,
+              "moment_id": "m-42-red_card_swing-M002",
+              "outcome": "ok",
+              "output_tokens": 486,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2122,
+              "latency_ms": 4830,
+              "moment_id": "m-42-red_card_swing-M003",
+              "outcome": "ok",
+              "output_tokens": 356,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2120,
+              "latency_ms": 6166,
+              "moment_id": "m-42-red_card_swing-M005",
+              "outcome": "ok",
+              "output_tokens": 555,
+              "reasoning_tokens": 512
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 3669,
+              "moment_id": "m-42-red_card_swing-M007",
+              "outcome": "ok",
+              "output_tokens": 239,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2117,
+              "latency_ms": 5059,
+              "moment_id": "m-42-red_card_swing-M008",
+              "outcome": "ok",
+              "output_tokens": 482,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2558,
+              "latency_ms": 3579,
+              "moment_id": "m-42-red_card_swing-M009",
+              "outcome": "ok",
+              "output_tokens": 226,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2189,
+              "latency_ms": 3931,
+              "moment_id": "m-42-red_card_swing-M010",
+              "outcome": "ok",
+              "output_tokens": 352,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2312,
+              "latency_ms": 4450,
+              "moment_id": "m-42-red_card_swing-M011",
+              "outcome": "ok",
+              "output_tokens": 377,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 9,
+              "error": null,
+              "input_tokens": 2340,
+              "latency_ms": 3478,
+              "moment_id": "m-42-red_card_swing-M012",
+              "outcome": "ok",
+              "output_tokens": 266,
+              "reasoning_tokens": 192
+            }
+          ]
+        },
+        {
+          "match_id": "dominant_loss_seed7",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M003",
+              "minute": 45,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 33,
+              "source": "llm",
+              "template": "{clause:dominance}. {clause:score}.",
+              "text": "Since 25' Vellorin FC have had 58% of the ball and a 4–0 lead in shots. The score is Vellorin FC 0–0 Tessdal Athletic.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M005",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}. {clause:score}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff. The score is Vellorin FC 0–1 Tessdal Athletic.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M006",
+              "minute": 57,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#350}, and {clause:possession}.",
+              "text": "Nolvek Ilvanto scored at 57', and Tessdal Athletic have had 39% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M008",
+              "minute": 66,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 57,
+              "source": "llm",
+              "template": "{clause:dominance}, yet {clause:score}.",
+              "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 2,
+              "fallback_reason": null,
+              "id": "m-7-dominant_loss-M009",
+              "minute": 70,
+              "ok": true,
+              "period": 2,
+              "rejections": [
+                {
+                  "attempt": 1,
+                  "claims": [
+                    {
+                      "comparison": "eq",
+                      "end": [
+                        2,
+                        70,
+                        0
+                      ],
+                      "event_ids": [
+                        "m-7-dominant_loss#428"
+                      ],
+                      "id": "penalty",
+                      "kind": "count",
+                      "metric": "penalties_saved",
+                      "start": [
+                        2,
+                        70,
+                        0
+                      ],
+                      "subject": {
+                        "player": "Alvezo Hazulov",
+                        "team": "home"
+                      },
+                      "value": 1
+                    },
+                    {
+                      "comparison": "approx",
+                      "end": [
+                        2,
+                        70,
+                        0
+                      ],
+                      "event_ids": [
+                        "m-7-dominant_loss#428"
+                      ],
+                      "id": "possession",
+                      "kind": "ratio",
+                      "metric": "possession",
+                      "start": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "subject": {
+                        "player": null,
+                        "team": "home"
+                      },
+                      "value": 0.62
+                    },
+                    {
+                      "comparison": "eq",
+                      "end": [
+                        2,
+                        70,
+                        0
+                      ],
+                      "event_ids": [
+                        "m-7-dominant_loss#428"
+                      ],
+                      "id": "score_home",
+                      "kind": "state",
+                      "metric": "score",
+                      "start": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "subject": {
+                        "player": null,
+                        "team": "home"
+                      },
+                      "value": 0
+                    },
+                    {
+                      "comparison": "eq",
+                      "end": [
+                        2,
+                        70,
+                        0
+                      ],
+                      "event_ids": [
+                        "m-7-dominant_loss#428"
+                      ],
+                      "id": "score_away",
+                      "kind": "state",
+                      "metric": "score",
+                      "start": [
+                        1,
+                        0,
+                        0
+                      ],
+                      "subject": {
+                        "player": null,
+                        "team": "away"
+                      },
+                      "value": 1
+                    }
+                  ],
+                  "codes": [
+                    "article_team"
+                  ],
+                  "lint": [
+                    {
+                      "code": "article_team",
+                      "fragment": "The {clause:score}"
+                    }
+                  ],
+                  "message": "lint article_team 'The {clause:score}'",
+                  "template": "{event:m-7-dominant_loss#428}, and {clause:possession}. The {clause:score}.",
+                  "text": null,
+                  "verify_failures": []
+                }
+              ],
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-7-dominant_loss#428}, and {clause:possession}.",
+              "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
+              "type": "penalty"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2523,
+              "latency_ms": 5495,
+              "moment_id": "m-7-dominant_loss-M003",
+              "outcome": "ok",
+              "output_tokens": 336,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2126,
+              "latency_ms": 4640,
+              "moment_id": "m-7-dominant_loss-M005",
+              "outcome": "ok",
+              "output_tokens": 410,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2127,
+              "latency_ms": 5259,
+              "moment_id": "m-7-dominant_loss-M006",
+              "outcome": "ok",
+              "output_tokens": 466,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2654,
+              "latency_ms": 5549,
+              "moment_id": "m-7-dominant_loss-M008",
+              "outcome": "ok",
+              "output_tokens": 472,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2016,
+              "latency_ms": 4563,
+              "moment_id": "m-7-dominant_loss-M009",
+              "outcome": "ok",
+              "output_tokens": 428,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2056,
+              "latency_ms": 4657,
+              "moment_id": "m-7-dominant_loss-M009",
+              "outcome": "ok",
+              "output_tokens": 424,
+              "reasoning_tokens": 384
+            }
+          ]
+        },
+        {
+          "match_id": "natural_seed100",
+          "moments": [
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M001",
+              "minute": 14,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 10,
+              "source": "llm",
+              "template": "{event:m-100#84}. {clause:players}, and {clause:possession}.",
+              "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to 10 players on the pitch, and Isteven United have had 51% of the ball since kickoff.",
+              "type": "red_card"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M004",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}, and {clause:possession}.",
+              "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M005",
+              "minute": 29,
+              "ok": true,
+              "period": 1,
+              "rejections": [],
+              "second": 28,
+              "source": "llm",
+              "template": "{event:m-100#175}, and {clause:possession}.",
+              "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M006",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:score}.",
+              "text": "Quenlo Pelvisto scored at 51', and the score is Tessdal Wanderers 1–1 Isteven United.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M007",
+              "minute": 51,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 23,
+              "source": "llm",
+              "template": "{event:m-100#317}, and {clause:score}.",
+              "text": "Quenlo Pelvisto scored at 51', and the score is Tessdal Wanderers 1–1 Isteven United.",
+              "type": "score_change"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M009",
+              "minute": 79,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 1,
+              "source": "llm",
+              "template": "{event:m-100#478}, and {clause:dominance}.",
+              "text": "Rastin Ymberto shot off target at 79', and since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots.",
+              "type": "dominance_without_reward"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M010",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}, and {clause:possession}. {clause:score}.",
+              "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers have had 52% of the ball since kickoff. The score is Tessdal Wanderers 2–1 Isteven United.",
+              "type": "goal"
+            },
+            {
+              "attempts": 1,
+              "fallback_reason": null,
+              "id": "m-100-M011",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "rejections": [],
+              "second": 13,
+              "source": "llm",
+              "template": "{event:m-100#550}. {clause:score}, and {clause:possession}.",
+              "text": "Brisko Ymberto scored at 90+1'. The score is Tessdal Wanderers 2–1 Isteven United, and Tessdal Wanderers have had 52% of the ball since kickoff.",
+              "type": "score_change"
+            }
+          ],
+          "usage": [
+            {
+              "call": 1,
+              "error": null,
+              "input_tokens": 2087,
+              "latency_ms": 5245,
+              "moment_id": "m-100-M001",
+              "outcome": "ok",
+              "output_tokens": 322,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 2,
+              "error": null,
+              "input_tokens": 2095,
+              "latency_ms": 5331,
+              "moment_id": "m-100-M004",
+              "outcome": "ok",
+              "output_tokens": 552,
+              "reasoning_tokens": 512
+            },
+            {
+              "call": 3,
+              "error": null,
+              "input_tokens": 2096,
+              "latency_ms": 3887,
+              "moment_id": "m-100-M005",
+              "outcome": "ok",
+              "output_tokens": 322,
+              "reasoning_tokens": 256
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2093,
+              "latency_ms": 5082,
+              "moment_id": "m-100-M006",
+              "outcome": "ok",
+              "output_tokens": 435,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2089,
+              "latency_ms": 2500,
+              "moment_id": "m-100-M007",
+              "outcome": "ok",
+              "output_tokens": 164,
+              "reasoning_tokens": 128
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2451,
+              "latency_ms": 3362,
+              "moment_id": "m-100-M009",
+              "outcome": "ok",
+              "output_tokens": 285,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 7,
+              "error": null,
+              "input_tokens": 2168,
+              "latency_ms": 7292,
+              "moment_id": "m-100-M010",
+              "outcome": "ok",
+              "output_tokens": 655,
+              "reasoning_tokens": 576
+            },
+            {
+              "call": 8,
+              "error": null,
+              "input_tokens": 2128,
+              "latency_ms": 4641,
+              "moment_id": "m-100-M011",
+              "outcome": "ok",
+              "output_tokens": 357,
+              "reasoning_tokens": 256
+            }
+          ]
+        }
+      ],
+      "started_at": "2026-10-13T13:20:41+00:00"
+    }
+  ]
+}

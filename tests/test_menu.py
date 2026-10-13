@@ -43,7 +43,7 @@ def _key(c):
 
 def test_corpus_covers_demo_and_injection_matches():
     assert len(_matches()) == 3 + 28 == 31
-    assert len(_menus()) > 300
+    assert len(_menus()) > 250
 
 
 def test_every_menu_claim_verifies():
@@ -78,14 +78,34 @@ def test_field_tilt_is_not_on_the_menu():
     assert not any(mc.claim.metric == "field_tilt" for _, _, menu in _menus() for mc in menu.claims)
 
 
-def test_primary_claims_for_dominance_and_pressure():
+def test_primary_claims_for_dominance_pressure_and_score_change():
     for _, m, menu in _menus():
         if m.type == "dominance_without_reward":
             assert menu.primary == (frozenset({"possession"}), frozenset({"shots_for", "shots_against"}))
         elif m.type == "pressure_shift":
             assert menu.primary == (frozenset({"pressure"}),)
+        elif m.type == "goal" and "score_change" in m.detail:
+            assert menu.primary == (frozenset({"score_home", "score_away"}),)
         else:
             assert menu.primary == ()
+
+
+def test_goal_with_score_change_carries_the_sub_label_clause():
+    seen = set()
+    for _, m, menu in _menus():
+        if m.type != "goal":
+            continue
+        change = m.detail.get("score_change")
+        clauses = menu.clause_by_id
+        if change is None:
+            assert not {"opener", "equalizer", "go_ahead", "margin"} & (set(clauses) | set(menu.by_id)), m.id
+            continue
+        kind = change["kind"]
+        seen.add(kind)
+        # The sub-label clause rests on the margin, never on the score: it cannot stand in for the score.
+        assert "margin" in clauses[kind].claim_ids and not {"score_home", "score_away"} & set(clauses[kind].claim_ids)
+        assert "score" in clauses and ("deficit" in clauses[kind].claim_ids) == bool(change.get("from_behind"))
+    assert seen == {"opener", "equalizer", "go_ahead"}
 
 
 @pytest.mark.parametrize("lang", LANGS)
@@ -160,7 +180,7 @@ def test_unknown_menu_id_is_rejected():
 
 
 def test_sentence_without_menu_fact_is_rejected():
-    codes, *_ = _check("goal", "{clause:goal}. {home} looked lively.")
+    codes, *_ = _check("goal", "{clause:goal}, and {clause:score}. {home} looked lively.")
     assert [c for c, _ in codes] == ["sentence_without_claim"]
 
 
@@ -172,14 +192,33 @@ def test_primary_claim_is_required_for_dominance_and_pressure():
     assert _check("pressure_shift", "{clause:pressure}, and {clause:shots}.")[0] == []
 
 
+def test_score_is_required_for_a_goal_that_changed_the_match_state():
+    missing = ("missing_primary_claim", "score_away,score_home")
+    assert missing in _check("goal_from_behind", "{clause:goal}, and {clause:possession}.")[0]
+    assert missing in _check("goal_from_behind", "{clause:goal}, and {clause:go_ahead}.")[0]  # sub-label is not the score
+    for template in ("{clause:go_ahead}, and {clause:score}.", "{clause:goal}, making it {score}.",
+                     "{clause:goal}: {score_named}."):
+        assert _check("goal_from_behind", template)[0] == [], template
+
+
+def test_same_team_more_than_twice_in_one_sentence_is_rejected():
+    # goal: a home goal; {clause:goal}, {clause:possession} and {score_named} each name the home team.
+    codes, *_ = _check("goal", "{clause:goal}, {clause:possession}, and {clause:score}.")
+    assert ("team_repeat", "{home}") in codes
+    assert _check("goal", "{clause:goal}, and {clause:score}. {clause:possession}.")[0] == []
+    assert ("team_repeat", "{home}") in _check("goal", "{home} lead, {clause:goal}, and {clause:score}.")[0]
+    assert _check("goal", "{home} lead, {clause:goal}, and {score}.")[0] == []
+
+
 def test_same_minute_twice_in_one_sentence_is_rejected():
-    events, m = moment_case("score_change")
+    events, m = moment_case("goal_from_behind")
     ref = f"{events[0].match_id}#{m.event_ids[-1]}"
-    codes, *_ = _check("score_change", "{event:%s}, as {clause:goals}." % ref)
+    codes, *_ = _check("goal_from_behind", "{event:%s} at {minute:goal}, and {clause:score}." % ref)
     assert "minute_repeat" in [c for c, _ in codes]
     codes, *_ = _check("dominance_without_reward", "{clause:possession}, and {clause:shots}.")
     assert "minute_repeat" in [c for c, _ in codes]  # two clauses write the same window start
-    assert "minute_repeat" not in [c for c, _ in _check("score_change", "{event:%s}. {clause:goals}." % ref)[0]]
+    codes, *_ = _check("goal_from_behind", "{event:%s}, and {clause:score}. {clause:go_ahead} at {minute:goal}." % ref)
+    assert "minute_repeat" not in [c for c, _ in codes]
 
 
 def test_menu_drafts_never_produce_evidence_mismatch():
@@ -191,7 +230,7 @@ def test_menu_drafts_never_produce_evidence_mismatch():
 
 def test_known_gap_judgement_inside_a_grounded_sentence_passes():
     """Documented gap (EVAL.md "Target for the Verifier agent"): a qualitative judgement passes inside a grounded sentence."""
-    codes, *_ = _check("goal", "{clause:possession}, and {home} were the better side.")
+    codes, *_ = _check("goal", "{clause:score}, and {home} were the better side.")
     assert codes == []
 
 

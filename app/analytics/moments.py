@@ -2,6 +2,10 @@
 
 Each moment relies only on events seen up to that point (``at_seq``); its evidence
 events (``event_ids``) are always less than or equal to ``at_seq``.
+
+One goal event yields one card: a goal that changes the match state (opener / equalizer /
+go_ahead) carries that change as a sub-label in ``detail["score_change"]``; its importance is
+the maximum of the goal and the score change importance.
 """
 
 from __future__ import annotations
@@ -19,7 +23,6 @@ MOMENT_TYPES = (
     "goal",
     "red_card",
     "penalty",
-    "score_change",
     "pressure_shift",
     "dominance_without_reward",
 )
@@ -145,33 +148,26 @@ class MomentDetector:
     def _on_goal(self, e: Event, prev_score: dict[str, int]) -> None:
         # A goal event always comes right after a shot(goal) or penalty(scored) event.
         ids = [s for s in (self._prev_seq,) if s is not None]
-        self._make(
-            "goal", e, e.team, [*ids, e.seq],
-            {"player": e.player, "score": dict(e.score)},
-        )
+        detail: dict[str, Any] = {"player": e.player, "score": dict(e.score)}
+        importance = self._importance("goal", e)
 
         before, after = _state(prev_score), _state(e.score)
         if before != after:
-            detail: dict[str, Any] = {
-                "score": dict(e.score),
-                "from_state": before,
-                "to_state": after,
-            }
+            change: dict[str, Any] = {"from_state": before, "to_state": after}
             from_behind = False
             if before == "draw":
                 if prev_score["home"] + prev_score["away"] == 0:
-                    detail["kind"] = "opener"
+                    change["kind"] = "opener"
                 else:
-                    detail["kind"] = "go_ahead"
+                    change["kind"] = "go_ahead"
                     from_behind = self._max_deficit[e.team] > 0
-                    detail["from_behind"] = from_behind
-                    detail["max_deficit"] = self._max_deficit[e.team]
+                    change["from_behind"] = from_behind
+                    change["max_deficit"] = self._max_deficit[e.team]
             else:
-                detail["kind"] = "equalizer"
-            self._make(
-                "score_change", e, e.team, [e.seq], detail,
-                importance=self._importance("score_change", e, from_behind),
-            )
+                change["kind"] = "equalizer"
+            detail["score_change"] = change
+            importance = max(importance, self._importance("score_change", e, from_behind))
+        self._make("goal", e, e.team, [*ids, e.seq], detail, importance=importance)
 
         for side in SIDES:
             deficit = e.score[other(side)] - e.score[side]

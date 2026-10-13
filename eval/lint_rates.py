@@ -19,7 +19,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from app.analytics import detect_moments
+from app.analytics import MomentDetector, detect_moments
+from app.analytics.moments import Moment
 from app.explain.claims import KICKOFF, MatchTime
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from app.explain.phrases import (
@@ -27,6 +28,7 @@ from app.explain.phrases import (
     event_word_spans,
     first_word,
     overstatement_spans,
+    sentence_starts,
 )
 from app.explain.labels import METRIC_LABELS, metric_label
 from app.explain.slots import (
@@ -50,6 +52,7 @@ DEMO_DIR = REPO_ROOT / "data" / "demo"
 V2_RUN = DOCS / "LLM_RUN.foundry-v2.json"
 V3_RUN = DOCS / "LLM_RUN.foundry-v3.json"
 V4_RUN = DOCS / "LLM_RUN.foundry-v4.json"
+V5_RUN = DOCS / "LLM_RUN.foundry-v5.json"
 V3_REVIEW = DOCS / "human_review.foundry-v3.csv"
 LANGS = ("en",)
 LABELS = ("correct", "wrong_fact", "misleading", "dull")
@@ -130,6 +133,27 @@ def llm_outputs() -> list[Text]:
     return out
 
 
+def legacy_moments(events: Sequence[Event]) -> list[Moment]:
+    """Moments as detected before foundry-v5.1, with their ids: a goal that changed the match state was a
+    `goal` card plus a separate `score_change` card on the same event. Archived runs refer to these ids."""
+    detector = MomentDetector()
+    out: list[Moment] = []
+    for m in detect_moments(events):
+        change = m.detail.get("score_change") if m.type == "goal" else None
+        if change is None:
+            out.append(m)
+            continue
+        e = events[m.at_seq]
+        detail = {k: v for k, v in m.detail.items() if k != "score_change"}
+        out.append(replace(m, importance=detector._importance("goal", e), detail=detail))
+        out.append(replace(
+            m, type="score_change", event_ids=(m.at_seq,), detail={"score": m.detail["score"], **change},
+            importance=detector._importance("score_change", e, change.get("from_behind", False)),
+        ))
+    match_id = events[0].match_id
+    return [replace(m, id=f"{match_id}-M{i:03d}") for i, m in enumerate(out, start=1)]
+
+
 def llm_v4_outputs() -> list[Text]:
     """foundry-v4's accepted templates (not used to derive the allowed list; the target of the v4.1 rules)."""
     if not V4_RUN.exists():
@@ -141,11 +165,46 @@ def llm_v4_outputs() -> list[Text]:
     for one in runs:
         for match in one["matches"]:
             events = _demo_events(match["match_id"])
-            moments = {m.id: m for m in detect_moments(events)}
+            moments = {m.id: m for m in legacy_moments(events)}
             for mo in match["moments"]:
                 if mo["source"] == "llm" and mo["template"]:
                     ctx = SlotContext.from_moment(moments[mo["id"]], events, lang)
                     out.append(Text("llm-v4", lang, mo["id"], mo["type"], mo["template"], ctx=ctx))
+    return out
+
+
+V41_RUN = DOCS / "LLM_RUN.foundry-v4.1.json"
+PUBLISHED_RUNS = {"foundry-v2": V2_RUN, "foundry-v3": V3_RUN, "foundry-v4": V4_RUN, "foundry-v4.1": V41_RUN,
+                  "foundry-v5": V5_RUN}
+
+
+def llm_published(version: str) -> list[Text]:
+    """An archived version's published LLM texts, every run (data for the v5.1 team repeat rule's false alarms)."""
+    path = PUBLISHED_RUNS[version]
+    if not path.exists():
+        return []
+    run = json.loads(path.read_text(encoding="utf-8"))
+    lang = run["meta"]["lang"]
+    out: list[Text] = []
+    for one in run.get("runs") or [run]:
+        for match in one["matches"]:
+            roster = Roster.from_events(_demo_events(match["match_id"]))
+            for mo in match["moments"]:
+                if mo["source"] == "llm" and mo["text"]:
+                    out.append(Text(version, lang, mo["id"], mo["type"], mo.get("template") or "", mo["text"], roster))
+    return out
+
+
+def team_repeats(text: str, roster: Roster, limit: int) -> list[str]:
+    """Sides whose team name a rendered text writes more than `limit` times in one sentence
+    (the foundry-v5.1 `team_repeat` rule measured on final text; the lint checks the template)."""
+    starts = sorted({0, *sentence_starts(text)})
+    out = []
+    for start, end in zip(starts, [*starts[1:], len(text)]):
+        counts: Counter[str] = Counter()
+        for m in roster.pattern.finditer(text, start, end):
+            counts.update({e.key for e in roster.aliases[m.group()] if e.kind == "team"})
+        out += ["{%s}" % side for side in ("home", "away") if counts[side] > limit]
     return out
 
 

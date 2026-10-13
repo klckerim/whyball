@@ -8,6 +8,8 @@ the moment, the verified claim menu (value, label, range, full evidence list), c
 by code, the evidence events and the squads. The model builds no claims and links no events:
 its output is only placeholder text (`{"text": ...}`) that uses menu ids.
 The pipeline renders the concrete values from the menu.
+foundry-v5.1: one goal card per goal event (a match state change is its sub-label and the score is
+mandatory) and a team named at most twice per sentence.
 
 Safety: a per-call timeout, a response token cap, a maximum number of calls per narrator
 (`BudgetExceeded` once exceeded); the token usage and duration of each call are written to
@@ -44,7 +46,7 @@ from .phrases import event_phrase, selectable
 from .slots import SlotContext, player_ids
 from .template_narrator import fmt_minute
 
-PROMPT_VERSION = "foundry-v5"
+PROMPT_VERSION = "foundry-v5.1"
 INSTALL_HINT = "For FoundryNarrator: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -232,6 +234,7 @@ Rules:
 - The same minute must not appear twice in one sentence (an {{event:}} phrase and a clause may already \
 contain a minute).
 - An {{event:}} phrase already names its player: never add that player's {{player:}} in the same sentence.
+- Name the same team at most twice in one sentence (count the team names inside clauses and {{score_named}}).
 - NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
 the words "home"/"away", metric identifiers, or event words such as \
 {event_words}.
@@ -269,6 +272,8 @@ FEEDBACK_HINTS = {
     "sentence_without_claim": "every sentence needs a menu fact: a {clause:}, {value:}, {minute:}, {event:} or {score}",
     "missing_primary_claim": "use the primary claims of this moment (claims_menu[].primary = true), e.g. via their clause",
     "minute_repeat": "the same minute appears twice in one sentence; drop one of them",
+    "team_repeat": "the same team is named more than twice in one sentence (clauses and {score_named} included); "
+                   "drop a clause or use {score} instead of {score_named}",
 }
 
 PRIMARY_RULE = {
@@ -278,6 +283,16 @@ PRIMARY_RULE = {
                       "used (e.g. {clause:pressure}).",
 }
 DEFAULT_PRIMARY_RULE = "Use the claim that describes the moment itself (its event or main clause)."
+# A goal that changed the match state (moment.detail.score_change); the clause id is the sub-label.
+SCORE_CHANGE_RULE = ("This goal changed the match state ({{clause:{kind}}} says how). The score is a primary claim "
+                     "(claims_menu[].primary = true): use {{clause:score}}, {{score}} or {{score_named}}.")
+
+
+def primary_rule(moment: Moment) -> str:
+    change = moment.detail.get("score_change") if moment.type == "goal" else None
+    if change is not None:
+        return SCORE_CHANGE_RULE.format(kind=change["kind"])
+    return PRIMARY_RULE.get(moment.type, DEFAULT_PRIMARY_RULE)
 
 
 def sentence_rule(language: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> str:
@@ -309,7 +324,7 @@ def build_messages(
         one_word=ONE_WORD[lang],
         sentence_rule=sentence_rule(lang, config),
         overstatement=OVERSTATEMENT_EXAMPLES[lang],
-        primary_rule=PRIMARY_RULE.get(moment.type, DEFAULT_PRIMARY_RULE),
+        primary_rule=primary_rule(moment),
     )
     record = moment_record(moment, events, language, menu)
     user = json.dumps(record, ensure_ascii=False, sort_keys=True)

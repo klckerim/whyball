@@ -261,3 +261,20 @@ def test_menu_drafts_never_reach_evidence_mismatch():
     reasons = [r.reason for log in logs for r in log.verification]
     assert reasons and set(reasons) == {"ok"}
     assert all(log.draft.menu is not None and log.draft.claims == () for log in logs)
+
+
+def test_side_by_side_matches_cards_by_time_and_type_across_renumbered_ids():
+    """foundry-v5.1 renumbered moment ids (score_change merged into goal): rows match by time and type."""
+    from eval.llm_run import render_side_by_side
+
+    def mo(mid, mtype, minute, text):
+        return {"id": f"m-1-{mid}", "type": mtype, "period": 2, "minute": minute, "second": 0,
+                "source": "llm", "text": text}
+
+    old = {"meta": {**_meta(), "prompt_version": "foundry-v5:fake"}, "matches": [{"match_id": "x_seed1", "moments": [
+        mo("M001", "goal", 61, "old goal"), mo("M002", "score_change", 61, "old change"),
+        mo("M003", "pressure_shift", 70, "old shift")]}]}
+    new = {"meta": {**_meta(), "prompt_version": "foundry-v5.1:fake"}, "matches": [{"match_id": "x_seed1", "moments": [
+        mo("M001", "goal", 61, "new goal"), mo("M002", "pressure_shift", 70, "new shift")]}]}
+    rows = [line for line in render_side_by_side(new, {"foundry-v5": old}) if line.startswith("| x ")]
+    assert rows == ["| x M001 | goal | old goal | new goal |", "| x M002 | pressure_shift | old shift | new shift |"]

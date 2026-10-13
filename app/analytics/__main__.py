@@ -21,14 +21,15 @@ def _score(s: dict[str, int]) -> str:
 def _headline(m: Moment) -> str:
     d = m.detail
     if m.type == "goal":
-        return f"{d['player']}  {_score(d['score'])}"
+        change = d.get("score_change")
+        if change is None:
+            return f"{d['player']}  {_score(d['score'])}"
+        flag = " (from_behind)" if change.get("from_behind") else ""
+        return f"{d['player']}  {_score(d['score'])}  {change['kind']}{flag}"
     if m.type == "red_card":
         return f"{d['player']} ({d['reason']})"
     if m.type == "penalty":
         return f"{d['player']} ({d['outcome']})"
-    if m.type == "score_change":
-        flag = " (from_behind)" if d.get("from_behind") else ""
-        return f"{d['kind']}{flag}  {_score(d['score'])}"
     if m.type == "pressure_shift":
         return f"{d['from'] or '-'} -> {d['to']}  balance {d['balance']:+.2f}"
     if m.type == "dominance_without_reward":

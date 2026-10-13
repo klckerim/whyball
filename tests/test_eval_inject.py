@@ -107,3 +107,11 @@ def test_v5_menu_column():
         assert _row(name).v5.rate == 1.0, name  # separate sentence: sentence_without_claim
     ewc = _row("event_wrong_claim")
     assert ewc.v5.rate < ewc.v41.rate  # menu evidence is broad: the wrong event is usually evidence of some claim
+
+
+def test_team_repeat_rule_has_no_false_alarms_on_clean_drafts():
+    report = _report()
+    assert report.team_repeat_disagreements == []  # template rule == count on the rendered text
+    rows = {name: (flagged, total) for name, flagged, total, _, _ in report.team_repeat}
+    assert rows["v5 menu base (clean)"] == (0, report.slotified_v5) and report.slotified_v5 == report.samples
+    assert rows["Template drafts (fallback text)"][0] == 0

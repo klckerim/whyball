@@ -32,3 +32,15 @@ def test_v41_rules_fire_on_foundry_v4_findings():
     assert fired(texts["m-100-M010"], "player_repeat") == ["{player:h03}"]
     assert fired(texts["m-100-M009"], "article_team") == ["The {home}"]
     assert "They" in fired(texts["m-42-red_card_swing-M007"], "sentence_start")
+
+
+def test_team_repeat_counts_team_names_per_sentence():
+    from eval.lint_rates import llm_published, team_repeats
+
+    texts = {t.raw: t for t in llm_published("foundry-v4.1")}
+    hit = next(raw for raw in texts if raw.startswith("Orvik Belmaro was sent off at 38'. Possession for"))
+    assert team_repeats(hit, texts[hit].roster, 2) == ["{home}"]
+    assert team_repeats(hit, texts[hit].roster, 3) == []
+    # The same names split over two sentences do not fire.
+    first, rest = hit.split(". ", 1)
+    assert team_repeats(rest.replace(", red cards", ". Red cards"), texts[hit].roster, 2) == []

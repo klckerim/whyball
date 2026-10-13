@@ -46,6 +46,8 @@ class ExplainConfig:
     slot_sentence_claim: bool = True  # every sentence rests on at least one menu claim
     slot_primary_claim: bool = True  # a dominance / pressure moment uses its primary claim
     slot_minute_repeat: bool = True  # the same minute is not written twice in one sentence
+    # --- foundry-v5.1 rules (menu drafts only) ---
+    slot_team_repeat_max: int = 2  # one team named more often than this in one sentence is rejected (0: off)
     # Sentence-start words derived from clean drafts (eval/lint_rates.py `derive_sentence_starts`).
     # Do not edit by hand; tests/test_lint_rates.py checks it equals the re-derived list.
     sentence_start_allowed_en: tuple[str, ...] = ("The",)

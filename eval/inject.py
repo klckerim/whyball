@@ -11,7 +11,7 @@ It starts from the template narrator's correct drafts:
   metric names via {label:}); checked by `check_slot_draft` with the v4 rules.
 - v4.1: the same v4 base; checked with the v4.1 rules.
 - v5: a base with menu ids (`slotify_v5`); checked by `check_menu_draft` (menu binding + v5 rules)
-  with the default rules. The model writes no claims, so injections that change a claim are "—" in v5.
+  with the default rules, i.e. the current version (`PROMPT_VERSION`, foundry-v5.1 rules included). The model writes no claims, so injections that change a claim are "—" in v5.
 Each error type is injected in each approach's own form, with the same meaning.
 
     python -m eval.inject [--quick] [--out docs/EVAL.md] [--no-write]
@@ -31,13 +31,21 @@ from pathlib import Path
 from app.analytics import detect_moments
 from app.analytics.metrics import other
 from app.analytics.moments import Moment
-from app.explain.claims import KICKOFF, Claim, Subject, measure
+from app.explain.claims import KICKOFF, Claim, Subject, VerificationResult, measure
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from app.explain.labels import WINDOW_PHRASES, metric_label, window_phrase_spans
 from app.explain.phrases import sentence_starts
-from app.explain.menu import ClaimMenu, build_menu
+from app.explain.menu import ClaimMenu, build_menu, menu_rule_issues
 from app.explain.pipeline import check_draft, check_menu_draft, check_slot_draft
-from app.explain.slots import PLACEHOLDER_RE, SlotContext, parse_placeholders, player_ids, template_sentence_starts
+from app.explain.llm_narrator import PROMPT_VERSION
+from app.explain.slots import (
+    PLACEHOLDER_RE,
+    SlotContext,
+    parse_placeholders,
+    player_ids,
+    render,
+    template_sentence_starts,
+)
 from app.explain.template_narrator import fmt_minute
 from app.explain.template_narrator import narrate as template_narrate
 from app.explain.text_lint import NUMBER_RE, NUMBER_WORDS, Roster
@@ -50,11 +58,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO_ROOT / "docs" / "EVAL.md"
 LANGS = ("en",)
 VARIANTS = ("v2", "v3", "v4", "v41", "v5")
-NAMES = {"v2": "v2", "v3": "v3", "v4": "v4", "v41": "v4.1", "v5": "v5"}
+CURRENT = "v5"  # measured with the default rules: the current prompt version
+NAMES = {"v2": "v2", "v3": "v3", "v4": "v4", "v41": "v4.1", CURRENT: PROMPT_VERSION.removeprefix("foundry-")}
 TITLES = {
     "v2": "foundry-v2 (free text)", "v3": "foundry-v3 (slot)", "v4": "foundry-v4 (slot + {event:} + strict lint)",
     "v41": "foundry-v4.1 (+ event type allow-list, player repeat, pronoun/article)",
-    "v5": "foundry-v5 (claim menu + clauses)",
+    CURRENT: f"{PROMPT_VERSION} (claim menu + clauses)",
 }
 
 # Each column is measured with its own version's rules: rules added later are switched off.
@@ -251,7 +260,6 @@ V4_BASE = {
     "goal": {"en": "{E}, making it {score_named}."},
     "penalty": {"en": "{E}."},
     "red_card": {"en": "{E}. {T} are down to {value:c2} players."},
-    "score_change": {"en": "{E}, making it {score}."},
     "pressure_shift": {
         "en": "{minute:c1} — {T} take control: {label:c1} {value:c1} in their favour. "
               "{label:c2} since {start:c2}: {T} {value:c2}, {O} {value:c3}.",
@@ -261,16 +269,13 @@ V4_BASE = {
               "ball and a {value:c2}–{value:c3} lead in {label:c2}, yet the score is {score_named}.",
     },
 }
-V4_BEHIND = {"en": " {T} had been {value:c3} down."}
-EVENT_MOMENTS = ("goal", "penalty", "red_card", "score_change")
+V4_BEHIND = {"en": " {T} had been {value:%s} down."}  # % the deficit claim's id
+EVENT_MOMENTS = ("goal", "penalty", "red_card")
 
 
 def _event_ref(sample: Sample) -> str | None:
     if sample.moment.type not in EVENT_MOMENTS:
         return None
-    match_id = sample.events[0].match_id
-    if sample.moment.type in ("score_change",):
-        return f"{match_id}#{sample.moment.event_ids[-1]}"
     return sample.claims[0].event_ids[-1]  # the counted event: goal / penalty / red card
 
 
@@ -278,8 +283,9 @@ def slotify_v4(sample: Sample) -> SlotDraft | None:
     """v4 template with the template claims; None if it fails the v4 or v4.1 rules."""
     m = sample.moment
     template = V4_BASE[m.type][sample.lang]
-    if m.type == "score_change" and m.detail.get("from_behind"):
-        template += V4_BEHIND[sample.lang]
+    if m.detail.get("score_change", {}).get("from_behind"):
+        deficit = next(i for i, c in enumerate(sample.claims) if c.metric == "min_score_margin")
+        template += V4_BEHIND[sample.lang] % _ids(sample.claims)[deficit]
     ref = _event_ref(sample)
     template = template.replace("{T}", "{" + m.team + "}").replace("{O}", "{" + other(m.team) + "}")
     if ref is not None:
@@ -300,7 +306,6 @@ V5_BASE = {
     "goal": {"en": "{E}, making it {score_named}."},
     "penalty": {"en": "{E}."},
     "red_card": {"en": "{E}. {T} are down to {value:players} players."},
-    "score_change": {"en": "{E}, making it {score}."},
     "pressure_shift": {
         "en": "{minute:pressure} — {T} take control: {label:pressure} {value:pressure} in their favour. "
               "{label:shots_for} since {start:shots_for}: {T} {value:shots_for}, {O} {value:shots_against}.",
@@ -319,7 +324,7 @@ def slotify_v5(sample: Sample) -> SlotDraft | None:
     m = sample.moment
     menu = build_menu(m, sample.events)
     template = V5_BASE[m.type][sample.lang]
-    if m.type == "score_change" and m.detail.get("from_behind"):
+    if m.detail.get("score_change", {}).get("from_behind"):
         template += V5_BEHIND[sample.lang]
     ref = _event_ref(sample)
     template = template.replace("{T}", "{" + m.team + "}").replace("{O}", "{" + other(m.team) + "}")
@@ -1094,6 +1099,10 @@ class EvalReport:
     v41_false_alarms: list[tuple[str, int, int, Counter[str]]] = field(default_factory=list)
     # v5 allowed sentence-start change ("At", "Possession" removed): same shape
     v5_false_alarms: list[tuple[str, int, int, Counter[str]]] = field(default_factory=list)
+    # v5.1 team repeat rule: dataset → (fired, total, fragments, fired texts)
+    team_repeat: list[tuple[str, int, int, Counter[str], list[str]]] = field(default_factory=list)
+    # clean v5 menu drafts where the template rule and the count on the rendered text disagree
+    team_repeat_disagreements: list[str] = field(default_factory=list)
 
 
 def _rng(moment: Moment, type_name: str, lang: str, variant: str) -> random.Random:
@@ -1216,12 +1225,44 @@ def run_eval(
             hits.update(new)
         report.v5_false_alarms.append((name, flagged, len(texts), hits))
     report.held_out = lint_rates.held_out_sentence_starts(raw, llm)
+    _team_repeat(report, samples, configs["v5"])
     for t in llm:
         hits = lint_rates.fired(t, "overstatement", configs["v4"])
         if hits:
             labels = [k for k in lint_rates.LABELS if t.label and (t.label.get(k) or "").strip() == "1"]
             report.overstatement_llm.append((t.moment_id, hits, ", ".join(labels) or "unlabelled"))
     return report
+
+
+def _team_repeat(report: EvalReport, samples: Sequence[Sample], config: ExplainConfig) -> None:
+    """Firings of the v5.1 team repeat rule on clean and accepted texts (every firing is a candidate false alarm)."""
+    limit = config.slot_team_repeat_max
+    menu_texts, menu_hits = [], Counter()
+    for s in samples:
+        if not s.slot5:
+            continue
+        d = s.slot5
+        verdicts = tuple(VerificationResult(True, "ok", c.value) for c in d.claims)
+        text = render(d.template, d.claims, d.claim_ids, verdicts, d.ctx, d.menu.clause_templates(s.lang))
+        by_rule = sorted(i.fragment for i in menu_rule_issues(d.template, d.menu, d.ctx, config)
+                         if i.code == "team_repeat")
+        by_text = sorted(lint_rates.team_repeats(text, s.roster, limit))
+        if by_rule != by_text:
+            report.team_repeat_disagreements.append(s.moment.id)
+        menu_hits.update(by_rule)
+        menu_texts += [text] if by_rule else []
+    report.team_repeat.append(("v5 menu base (clean)", len(menu_texts), report.slotified_v5, menu_hits, menu_texts))
+    datasets = [("Template drafts (fallback text)", [(s.text, s.roster) for s in samples])]
+    datasets += [(f"Real LLM, {version} published (all runs)", [(t.raw, t.roster) for t in lint_rates.llm_published(version)])
+                 for version in lint_rates.PUBLISHED_RUNS]
+    for name, texts in datasets:
+        hits: Counter[str] = Counter()
+        fired = []
+        for text, roster in texts:
+            found = lint_rates.team_repeats(text, roster, limit)
+            hits.update(found)
+            fired += [text] if found else []
+        report.team_repeat.append((name, len(fired), len(texts), hits, fired))
 
 
 # --- report ---------------------------------------------------------------------------------
@@ -1341,6 +1382,31 @@ def render_v5_sentence_starts(report: EvalReport) -> list[str]:
     return out
 
 
+def render_team_repeat(report: EvalReport) -> list[str]:
+    out = [
+        f"### False alarms of the {PROMPT_VERSION} team repeat rule",
+        "",
+        "`team_repeat` rejects a menu draft that names the same team more than "
+        f"{V5_CONFIG.slot_team_repeat_max} times in one sentence (team names inside clauses and both names of "
+        "`{score_named}` count). Clean and already accepted texts below; every firing is a candidate false alarm "
+        "(the text is correct, the rule only judges readability). Measured on the final text (team names of the "
+        "squad, per sentence); on the clean menu drafts the template rule and the count on the rendered text "
+        + ("agree on every draft." if not report.team_repeat_disagreements else
+           f"disagree on {len(report.team_repeat_disagreements)} drafts: "
+           + ", ".join(f"`{m}`" for m in report.team_repeat_disagreements) + "."),
+        "",
+        "| Dataset | Fired | Sides |",
+        "|---|---:|---|",
+    ]
+    for name, flagged, total, hits, _ in report.team_repeat:
+        out.append(f"| {name} | {_rate_cell(flagged, total)} | {_tags(hits) or '—'} |")
+    fired = [(name, text) for name, _, _, _, texts in report.team_repeat for text in dict.fromkeys(texts)]
+    if fired:
+        out += ["", "Texts it fires on (distinct):", ""]
+        out += [f"- {name}: \"{text}\"" for name, text in fired]
+    return out
+
+
 def render_human_review() -> list[str]:
     counts = lint_rates.human_review_counts()
     out = ["## Human labels: foundry-v3 (raw counts)", ""]
@@ -1400,7 +1466,7 @@ def render_window_audit(corpus: Sequence[tuple[int, str | None]]) -> list[str]:
         f"- `dominance_without_reward`: in {dc}/{dt} moments the window is clipped at the start of a half (the detector "
         "looks back 20 minutes of play; the narration uses the match clock). The text states the clipped window's start, so "
         "it is not misleading, but it does not match the detector's value (moment.detail) exactly.",
-        "- `goal`, `red_card`, `penalty`, `score_change`: claims are at the event or kickoff → now; no separate window.",
+        "- `goal`, `red_card`, `penalty`: claims are at the event or kickoff → now; no separate window.",
         "",
     ]
     return out
@@ -1486,7 +1552,7 @@ def render_markdown(report: EvalReport) -> str:
         "",
         "Error types the deterministic check (lint + placeholder binding + verify_claim) misses, per "
         "version. These are gaps a rule list cannot close; they require looking at the meaning of the sentence. This is "
-        "the list a Verifier agent should target. The current version (foundry-v4.1) comes first.",
+        f"the list a Verifier agent should target. The current version ({PROMPT_VERSION}) comes first.",
         "",
     ]
     for variant in reversed(VARIANTS):
@@ -1537,6 +1603,8 @@ def render_markdown(report: EvalReport) -> str:
         *render_v41_false_alarms(report),
         "",
         *render_v5_sentence_starts(report),
+        "",
+        *render_team_repeat(report),
         "",
         "In the template and v3 rows, the sentence-start firings come from the template narrator's own "
         "patterns (EN \"Shots since …\"). This word was deliberately left off "

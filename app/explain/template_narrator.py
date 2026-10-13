@@ -140,15 +140,18 @@ def _goal(c: _Context) -> list[Sentence]:
     team = c.names[side]
     goal_seq = c.m.event_ids[-1]
     scored = c.count("goals", Subject(side, player), c.t)
-    return [
+    sentences = [
         Sentence(
             {
                 "en": f"{c.minute} — {player} scores for {team}.",
             },
             (scored,),
         ),
-        c.score_sentence([goal_seq]),
     ]
+    change = c.m.detail.get("score_change")
+    if change is not None:
+        sentences += _score_change(c, change)
+    return [*sentences, c.score_sentence([goal_seq])]
 
 
 def _red_card(c: _Context) -> list[Sentence]:
@@ -188,32 +191,31 @@ def _penalty(c: _Context) -> list[Sentence]:
     return [Sentence({"en": en.format(**values)}, (claim,))]
 
 
-def _score_change(c: _Context) -> list[Sentence]:
-    side, d = c.m.team, c.m.detail
+def _score_change(c: _Context, change: dict) -> list[Sentence]:
+    """Sub-label sentences of a goal that changed the match state (the minute is in the goal sentence)."""
+    side = c.m.team
     team = c.names[side]
     goal_seq = c.m.event_ids[-1]
-    kind = d["kind"]
+    kind = change["kind"]
     if kind == "opener":
         claims = (
             c.state("score", side, "eq", 1, [goal_seq]),
             c.state("score", other(side), "eq", 0, [goal_seq]),
         )
-        text = {"en": f"{c.minute} — {team} open the scoring."}
+        text = {"en": f"{team} open the scoring."}
     else:
+        # The goal itself is already counted in the goal sentence.
         margin = 0 if kind == "equalizer" else 1
-        claims = (
-            c.count("goals", Subject(side), c.t),
-            c.state("score_margin", side, "eq", margin, [goal_seq]),
-        )
+        claims = (c.state("score_margin", side, "eq", margin, [goal_seq]),)
         text = (
-            {"en": f"{c.minute} — {team} draw level."}
+            {"en": f"{team} draw level."}
             if kind == "equalizer"
-            else {"en": f"{c.minute} — {team} go ahead."}
+            else {"en": f"{team} go ahead."}
         )
     sentences = [Sentence(text, claims)]
 
-    if d.get("from_behind"):
-        deficit = d["max_deficit"]
+    if change.get("from_behind"):
+        deficit = change["max_deficit"]
         conceded = measure("goals", Subject(other(side)), KICKOFF, c.t, c.events).counted
         sentences.append(
             Sentence(
@@ -223,7 +225,6 @@ def _score_change(c: _Context) -> list[Sentence]:
                 (c.state("min_score_margin", side, "eq", -deficit, conceded),),
             )
         )
-    # The score sentence is already in the goal moment of the same event; it is not repeated here.
     return sentences
 
 
@@ -287,7 +288,6 @@ BUILDERS: dict[str, Callable[[_Context], list[Sentence]]] = {
     "goal": _goal,
     "red_card": _red_card,
     "penalty": _penalty,
-    "score_change": _score_change,
     "pressure_shift": _pressure_shift,
     "dominance_without_reward": _dominance,
 }

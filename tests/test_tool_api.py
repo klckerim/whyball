@@ -14,7 +14,7 @@ from app.generator.models import read_jsonl
 
 MATCH_PATH = "data/demo/red_card_swing_seed42.jsonl"
 EVENTS = read_jsonl(DEMO_DIR / demo_filename("red_card_swing", 42))
-MOMENT = next(m for m in detect_moments(EVENTS) if m.type == "score_change")
+MOMENT = next(m for m in detect_moments(EVENTS) if m.type == "goal" and "score_change" in m.detail)
 DRAFT = TemplateNarrator(EVENTS).narrate(MOMENT, "neutral", "en")
 END = MatchTime.of(EVENTS[-1])
 

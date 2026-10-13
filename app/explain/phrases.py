@@ -53,6 +53,7 @@ NARRATABLE = frozenset(t for t, _ in _PHRASES)
 _KEY_EVENTS = frozenset({"goal", "shot", "penalty", "red_card", "yellow_card", "substitution"})
 SELECTABLE_EVENT_TYPES: dict[str, frozenset[str]] = {
     "goal": frozenset({"goal", "shot", "penalty"}),
+    # Archived runs before foundry-v5.1 have separate score_change cards (eval/lint_rates.legacy_moments).
     "score_change": frozenset({"goal", "shot", "penalty"}),
     "red_card": frozenset({"red_card", "yellow_card"}),
     "penalty": frozenset({"penalty"}),

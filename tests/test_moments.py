@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.analytics import DEFAULT_CONFIG, MOMENT_TYPES, MatchTracker, detect_moments
+from app.analytics import DEFAULT_CONFIG, MOMENT_TYPES, MatchTracker, MomentDetector, detect_moments
 from app.generator import SCENARIOS, EventType, generate_match
 from app.generator.freeze import DEMO_DIR, demo_filename
 
@@ -30,15 +30,20 @@ def _near(m, minute):
     return minute <= m.minute <= minute + 1
 
 
+def _changes(moments):
+    """Goal cards that changed the match state (score change sub-label)."""
+    return [m for m in _of(moments, "goal") if "score_change" in m.detail]
+
+
 def _score_changes(moments):
-    return [(m.detail["kind"], m.team, m.minute) for m in _of(moments, "score_change")]
+    return [(m.detail["score_change"]["kind"], m.team, m.minute) for m in _changes(moments)]
 
 
 def _assert_score_changes(moments, expected):
     actual = _score_changes(moments)
     assert len(actual) == len(expected), actual
-    for (kind, team, minute), m in zip(expected, _of(moments, "score_change")):
-        assert (m.detail["kind"], m.team) == (kind, team), actual
+    for (kind, team, minute), m in zip(expected, _changes(moments)):
+        assert (m.detail["score_change"]["kind"], m.team) == (kind, team), actual
         assert _near(m, minute), actual
 
 
@@ -74,6 +79,26 @@ def test_moment_invariants(seed, scenario):
     assert [m.at_seq for m in _of(moments, "red_card")] == reds
     pens = [e.seq for e in events if e.type is EventType.PENALTY]
     assert [m.at_seq for m in _of(moments, "penalty")] == pens
+    # One card per goal event: no other moment is anchored on a goal.
+    goal_seqs = {e.seq for e in goals}
+    assert all(m.type == "goal" for m in moments if m.at_seq in goal_seqs)
+
+
+@pytest.mark.parametrize("seed,scenario", CASES)
+def test_goal_card_importance_is_the_max_of_goal_and_score_change(seed, scenario):
+    events = generate_match(seed, scenario)
+    detector = MomentDetector()
+    for e in events:
+        detector.process(e)
+    for m in _of(detector.moments, "goal"):
+        e = events[m.at_seq]
+        goal = detector._importance("goal", e)
+        change = m.detail.get("score_change")
+        if change is None:
+            assert m.importance == goal
+        else:
+            score_change = detector._importance("score_change", e, change.get("from_behind", False))
+            assert m.importance == max(goal, score_change)
 
 
 @pytest.mark.parametrize("seed,scenario", CASES)
@@ -100,9 +125,9 @@ def test_late_comeback(seed):
     _assert_score_changes(
         moments, [("opener", "away", 18), ("equalizer", "home", 83), ("go_ahead", "home", 89)]
     )
-    winner = _of(moments, "score_change")[-1]
-    assert winner.detail["from_behind"] is True
-    assert winner.detail["max_deficit"] == 2
+    winner = _changes(moments)[-1]
+    assert winner.detail["score_change"]["from_behind"] is True
+    assert winner.detail["score_change"]["max_deficit"] == 2
     assert all(m.importance < winner.importance for m in moments if m is not winner)
 
 
@@ -117,9 +142,9 @@ def test_red_card_swing(seed):
     _assert_score_changes(
         moments, [("opener", "home", 22), ("equalizer", "away", 61), ("go_ahead", "away", 84)]
     )
-    winner = _of(moments, "score_change")[-1]
-    assert winner.detail["from_behind"] is True
-    assert winner.detail["max_deficit"] == 1
+    winner = _changes(moments)[-1]
+    assert winner.detail["score_change"]["from_behind"] is True
+    assert winner.detail["score_change"]["max_deficit"] == 1
 
     assert any(m.at_seq > reds[0].at_seq for m in _of(moments, "pressure_shift", "away"))
 

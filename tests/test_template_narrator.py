@@ -72,12 +72,15 @@ def test_penalty(seed, scenario, outcome, en):
         ("go_ahead", "2 goals down"),
     ],
 )
-def test_score_change(kind, en):
+def test_goal_with_score_change(kind, en):
     events, m, n = _find(
-        42, "late_comeback", lambda m: m.type == "score_change" and m.detail["kind"] == kind
+        42, "late_comeback", lambda m: m.type == "goal" and m.detail.get("score_change", {}).get("kind") == kind
     )
-    _assert_published(n, [_team(events, m.team)])
-    assert en in n.published("en")
+    _assert_published(n, [m.detail["player"], _team(events, m.team)])
+    text = n.published("en")
+    assert en in text
+    # One card: the goal sentence, the sub-label and the score; the minute is written once.
+    assert text.count(f"{m.minute}'") == 1 and "–" in text
 
 
 def test_pressure_shift():
@@ -129,7 +132,7 @@ def test_every_moment_in_many_matches_fully_verifies():
             types.add(m.type)
     assert total > 0
     assert types == {
-        "goal", "red_card", "penalty", "score_change", "pressure_shift", "dominance_without_reward"
+        "goal", "red_card", "penalty", "pressure_shift", "dominance_without_reward"
     }
 
 

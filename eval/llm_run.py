@@ -13,7 +13,7 @@ are written only to this JSON; they never enter the cache or the published recor
 
 JSON format: `{"meta": {...}, "runs": [{"started_at", "finished_at", "matches"}]}`;
 the old single-run format (`{"meta", "matches"}`) is read too. The version comparison is read
-from the archived earlier versions (docs/LLM_RUN.foundry-v3.json, -v4.json).
+from the archived earlier versions (docs/LLM_RUN.foundry-v3.json, -v4.json, ...).
 """
 
 from __future__ import annotations
@@ -48,11 +48,13 @@ BASELINES = {
     "foundry-v3": DOCS / "LLM_RUN.foundry-v3.json",
     "foundry-v4": DOCS / "LLM_RUN.foundry-v4.json",
     "foundry-v4.1": DOCS / "LLM_RUN.foundry-v4.1.json",
+    "foundry-v5": DOCS / "LLM_RUN.foundry-v5.json",
 }
 REVIEW_COLUMNS = ("moment_id", "text", "correct", "wrong_fact", "misleading", "dull")
-# Rules added / changed in foundry-v4.1 / v5 (live firing table)
+# Rules added / changed in foundry-v4.1 / v5 / v5.1 (live firing table)
 NEW_RULES = ("event_type_not_allowed", "player_repeat", "article_team", "sentence_start",
-             "unknown_claim_id", "sentence_without_claim", "missing_primary_claim", "minute_repeat")
+             "unknown_claim_id", "sentence_without_claim", "missing_primary_claim", "minute_repeat",
+             "team_repeat")
 
 
 # --- attempt record ------------------------------------------------------------------------------
@@ -394,20 +396,28 @@ def render_code_frequency(run: dict[str, Any], baselines: dict[str, dict[str, An
     return [*out, ""]
 
 
+def _card_key(match_id: str, mo: dict[str, Any]) -> tuple[Any, ...]:
+    """Moment ids are renumbered between versions (foundry-v5.1 merged score_change into goal): match by time and type."""
+    return (match_id, mo["period"], mo["minute"], mo["second"], mo["type"])
+
+
 def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
     """Published text of the same moments, version by version (last run for multi-run versions)."""
     version = run["meta"]["prompt_version"].split(":", 1)[0]
     versions = [*baselines.items(), (version, run)]
-    texts: dict[str, dict[str, tuple[str, str]]] = {}
+    texts: dict[tuple[Any, ...], dict[str, tuple[str, str]]] = {}
     for label, r in versions:
         for m in runs_of(r)[-1]["matches"]:
             for mo in m["moments"]:
-                texts.setdefault(mo["id"], {})[label] = (mo["source"], mo["text"])
+                texts.setdefault(_card_key(m["match_id"], mo), {})[label] = (mo["source"], mo["text"])
     order = [(m["match_id"], mo) for m in runs_of(run)[-1]["matches"] for mo in m["moments"]]
     out = [
         "## Side by side: the same moments, version by version",
         "",
-        "Published text; the last run for multi-run versions. *(fallback)* = template fallback.",
+        "Published text; the last run for multi-run versions. *(fallback)* = template fallback. Rows are matched "
+        "by match, time and moment type (ids are renumbered between versions). Before foundry-v5.1 a goal that "
+        "changed the match state also had a separate `score_change` card; those cards have no row here, the goal "
+        "row shows the earlier goal card.",
         "",
         "| Moment | Type | " + " | ".join(label for label, _ in versions) + " |",
         "|---|---|" + "---|" * len(versions),
@@ -415,7 +425,7 @@ def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]
     for match_id, mo in order:
         cells = []
         for label, _ in versions:
-            source, text = texts.get(mo["id"], {}).get(label, (None, None))
+            source, text = texts.get(_card_key(match_id, mo), {}).get(label, (None, None))
             mark = "*(fallback)* " if source == "template_fallback" else ""
             cells.append(f"{mark}{_cell(text)}" if text is not None else "—")
         out.append(f"| {match_id.split('_seed')[0]} {_short(mo['id'])} | {mo['type']} | " + " | ".join(cells) + " |")
@@ -465,7 +475,7 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
     """Live firing of the v4.1 rules: attempts that contain the rule, and attempts rejected by that rule alone."""
     rejected = [rej for rr in runs_of(run) for _, _, rej in _rejected(rr["matches"]) if "lint" in rej]
     out = [
-        "## Live firing of the foundry-v4.1 / v5 rules",
+        "## Live firing of the foundry-v4.1 / v5 / v5.1 rules",
         "",
         "This rule only = the rule was the attempt's only rejection reason (no other lint or verify error): "
         "without the rule it would have been published. A correct rejection if it is the pattern the rule targets, "

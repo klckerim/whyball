@@ -131,7 +131,7 @@ def test_on_attempt_reports_accepted_and_narrator_errors():
 
 
 def test_record_round_trips_through_json():
-    events, moment = moment_case("score_change")
+    events, moment = moment_case("goal_from_behind")
     record = run_moment(moment, FakeNarrator(events, "fixes_after_feedback"), events)
     assert NarrationRecord.from_dict(json.loads(json.dumps(record.to_dict()))) == record
 
