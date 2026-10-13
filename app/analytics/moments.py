@@ -17,7 +17,7 @@ from typing import Any
 from app.generator.models import Event, EventType
 
 from .config import DEFAULT_CONFIG, AnalyticsConfig
-from .metrics import CORNER, ENTRY, GOAL, SHOT, SIDES, TOUCH, MatchTracker, other
+from .metrics import CORNER, ENTRY, GOAL, SHOT, SIDES, TOUCH, MatchTracker, other, stated
 
 MOMENT_TYPES = (
     "goal",
@@ -160,6 +160,8 @@ class MomentDetector:
                     change["kind"] = "opener"
                 else:
                     change["kind"] = "go_ahead"
+                    # from_behind: the team trailed at some earlier point of the match (not necessarily just
+                    # before this goal: the score before it was level); max_deficit is that largest deficit.
                     from_behind = self._max_deficit[e.team] > 0
                     change["from_behind"] = from_behind
                     change["max_deficit"] = self._max_deficit[e.team]
@@ -209,7 +211,7 @@ class MomentDetector:
             {
                 "from": self._last_shift_side,
                 "to": side,
-                "balance": round(balance, c.summary_decimals),
+                "balance": stated(balance),
                 "window_min": c.pressure_window_min,
             },
         )
@@ -243,7 +245,7 @@ class MomentDetector:
             "dominance_without_reward", e, side, evidence,
             {
                 "shots": {side: counts[SHOT][side], opp: counts[SHOT][opp]},
-                "possession": round(possession, c.summary_decimals),
+                "possession": stated(possession),
                 "score": dict(tr.score),
                 "window_min": c.dominance_window_min,
             },

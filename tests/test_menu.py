@@ -277,3 +277,66 @@ def test_rendered_menu_drafts_pass_text_lint_end_to_end():
         for m, r in run_match(events, FoundryNarrator(events, FakeChatClient(responder(events)))):
             assert (r.source, r.attempts) == ("llm", 1), m.id
             assert lint_text(r.text, r.claims, roster, language="en").ok, (m.id, r.text)
+
+
+def _rendered_clause(events, m, menu, cid):
+    ctx = SlotContext.from_moment(m, events, "en")
+    return preview(menu, ctx)[cid]
+
+
+def test_dominance_claims_match_the_moment_detail():
+    """Analytics ↔ menu: possession and shots over the detector's own window (also across half-time)."""
+    from app.explain.slots import format_value
+
+    crossed = 0
+    for events, m, menu in _menus():
+        if m.type != "dominance_without_reward":
+            continue
+        by, d, opp = menu.by_id, m.detail, "away" if m.team == "home" else "home"
+        assert by["possession"].value == d["possession"], m.id
+        assert format_value("possession", by["possession"].value, "en") == f"{d['possession']:.0%}", m.id
+        assert (by["shots_for"].value, by["shots_against"].value) == (d["shots"][m.team], d["shots"][opp]), m.id
+        crossed += m.period == 2 and by["possession"].start.period == 1
+    assert crossed >= 3  # e.g. m-3-dominant_loss M004: 7–0 shots (the clock-clipped window gave 2–0)
+
+
+def test_pressure_claim_matches_the_moment_detail_at_the_event():
+    """The pressure claim is measured up to the end of the moment's second; the detector evaluates at the event.
+    They agree unless a later event shares that second (known gap: a claim has no end seq)."""
+    from app.explain.claims import _visible
+
+    differ = 0
+    for events, m, menu in _menus():
+        if m.type != "pressure_shift" or "pressure" not in menu.by_id:
+            continue
+        sign = 1 if m.team == "home" else -1
+        same_second = [e for e in _visible(events, menu.by_id["pressure"].end) if e.seq > m.at_seq]
+        if same_second:
+            differ += menu.by_id["pressure"].value != m.detail["balance"] * sign
+        else:
+            assert menu.by_id["pressure"].value == m.detail["balance"] * sign, m.id
+    assert differ <= 3
+
+
+def test_from_behind_clause_says_trailed_earlier():
+    """m-42 M008: level 1–1 before the goal, behind 1–0 earlier; the clause must not read "1 goal down just before"."""
+    events = read_jsonl(next(p for _, _, p in demo_paths() if "red_card_swing" in p.name))
+    m = next(m for m in detect_moments(events) if m.id.endswith("M008"))
+    text = _rendered_clause(events, m, build_menu(m, events), "go_ahead")
+    assert text == "Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match"
+    assert "after being" not in text and "down" not in text
+
+
+def test_go_ahead_without_from_behind_only_says_went_ahead():
+    seen = 0
+    for events, m, menu in _menus():
+        change = m.detail.get("score_change") if m.type == "goal" else None
+        if not change or change["kind"] != "go_ahead":
+            continue
+        text = _rendered_clause(events, m, menu, "go_ahead")
+        if change["from_behind"]:
+            assert "came from behind" in text and "deficit" in menu.clause_by_id["go_ahead"].claim_ids
+        else:
+            seen += 1
+            assert text.endswith("went ahead") and "behind" not in text and "trailed" not in text, m.id
+    assert seen > 0

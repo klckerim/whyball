@@ -21,7 +21,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from app.analytics.metrics import other
+from app.analytics.config import DEFAULT_CONFIG as ANALYTICS_CONFIG
+from app.analytics.metrics import other, stated
 from app.analytics.moments import Moment
 from app.generator.models import Event
 
@@ -127,7 +128,7 @@ class _Builder:
         self.clause("score", (SCORE_IDS["home"], SCORE_IDS["away"]), "the score is {score_named}")
 
     def possession(self, start: MatchTime = KICKOFF) -> None:
-        value = round(self.c.measured("possession", self.side, start), 2)
+        value = stated(self.c.measured("possession", self.side, start))
         claim = Claim("ratio", Subject(self.side), "possession", "approx", value, start, self.c.t,
                       (self.c.ref(self.m.at_seq),))
         if start == KICKOFF:
@@ -153,6 +154,9 @@ _CHANGE_CLAUSES = {
     "equalizer": "{T} drew level",
     "go_ahead": "{T} went ahead",
 }
+# from_behind (detector): the team trailed at some earlier point, not necessarily just before this goal (the score
+# before it was level), so the clause never reads as "was down just before".
+_FROM_BEHIND_CLAUSE = "{T} came from behind to take the lead, having trailed by {value:deficit} %s earlier in the match"
 
 
 def _goal(b: _Builder) -> None:
@@ -181,7 +185,7 @@ def _score_change(b: _Builder, change: dict) -> None:
         conceded = measure("goals", Subject(b.opp), KICKOFF, b.c.t, b.c.events).counted
         b.add("deficit", b.c.state("min_score_margin", b.side, "eq", -deficit, conceded))
         claim_ids += ("deficit",)
-        en += " after being {value:deficit} %s down" % ("goal" if deficit == 1 else "goals")
+        en = _FROM_BEHIND_CLAUSE % ("goal" if deficit == 1 else "goals")
     b.clause(kind, claim_ids, en)
 
 
@@ -228,7 +232,7 @@ def _shots(b: _Builder, start: MatchTime, lead_form: bool) -> None:
 
 
 def _pressure_shift(b: _Builder) -> None:
-    balance = round(b.c.measured("pressure_balance", b.side), 2)
+    balance = stated(b.c.measured("pressure_balance", b.side))
     b.add("pressure", b.c.state("pressure_balance", b.side, "approx", balance, b.m.event_ids),
           "{T} lead the {label:pressure} at {value:pressure}")
     _shots(b, _since(b.c.t, b.c.config.context_minutes), lead_form=False)
@@ -236,7 +240,7 @@ def _pressure_shift(b: _Builder) -> None:
 
 
 def _dominance(b: _Builder) -> None:
-    start = _since(b.c.t, b.c.config.dominance_context_minutes)
+    start = b.c.detector_window(ANALYTICS_CONFIG.dominance_window_min)  # the moment detail's window
     b.possession(start)
     _shots(b, start, lead_form=True)
     # Both primary claims share one window: it is written once (two clauses side by side repeat the minute).

@@ -1629,8 +1629,7 @@ def render_window_audit(corpus: Sequence[tuple[int, str | None]]) -> list[str]:
         "",
         "Findings:",
         "",
-        "- `dominance_without_reward`: the possession and shot claims already share one window "
-        "(`dominance_context_minutes`); the bug was in the EN sentence (\"58% of possession and 4–0 shots since 25'\" "
+        "- `dominance_without_reward`: the possession and shot claims share one window; the bug was in the EN sentence (\"58% of possession and 4–0 shots since 25'\" "
         "tied the window to the shots only). Fix: the window is written before both values "
         "(\"since 25' they have had 58% of the ball and a 4–0 lead in shots\").",
         "- `pressure_shift`: the `pressure_balance` claim carries `start = kickoff`, but `measure` ignores the start; "
@@ -1644,9 +1643,12 @@ def render_window_audit(corpus: Sequence[tuple[int, str | None]]) -> list[str]:
            f"{audit['clamp_example'][2]} s)" if audit["clamp_example"] else "")
         + ". The two values then come from different windows (minutes played ↔ match clock); the shot window is "
         "stated in the text, so the reader can tell them apart.",
-        f"- `dominance_without_reward`: in {dc}/{dt} moments the window is clipped at the start of a half (the detector "
-        "looks back 20 minutes of play; the narration uses the match clock). The text states the clipped window's start, so "
-        "it is not misleading, but it does not match the detector's value (moment.detail) exactly.",
+        f"- `dominance_without_reward`: since the analytics ↔ menu fix the window is the detector's own "
+        "(`MatchTracker.window_start`, 20 minutes of play, inclusive start one second after the detector's exclusive "
+        "boundary), so possession and shots count the same events as moment.detail; in the second half it can start in "
+        f"the first (\"since 45+2'\"). Moments whose claim window differs from the detector's: {dc}/{dt}. Before the "
+        "fix the narration used the match clock, clipped at 45' and inclusive of the boundary second "
+        "(m-3-dominant_loss M004: detector 7–0 shots and 82%, menu 2–0 and 77%).",
         "- `goal`, `red_card`, `penalty`: claims are at the event or kickoff → now; no separate window.",
         "",
     ]

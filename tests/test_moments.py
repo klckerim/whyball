@@ -228,3 +228,44 @@ def test_cli_jsonl_and_input_file():
     from_file = _cli("--input", str(DEMO_DIR / demo_filename("red_card_swing", 42)), "--jsonl")
     assert from_seed == from_file
     assert [json.loads(line) for line in from_seed] == [m.to_dict() for m in moments]
+
+
+def test_window_start_is_the_inclusive_start_of_the_window():
+    """`window_start` (match clock) holds exactly the records of `window` (played seconds, exclusive start)."""
+    from app.analytics.metrics import SECOND_HALF_START
+
+    events = generate_match(3, "dominant_loss")  # a dominance window that reaches into the first half
+    tracker = MatchTracker()
+    clock_of = {}
+    crossed = 0
+    for e in events:
+        tracker.update(e)
+        clock_of[e.seq] = (e.period, e.minute, e.second)
+        if tracker.played < 20 * 60 or e.type is EventType.HALF_TIME:
+            continue
+        start = tracker.window_start(20)
+        inside = {r.seq for r in tracker.window(20)}
+        assert inside == {r.seq for r in tracker.records if clock_of[r.seq] >= start}, e.seq
+        crossed += e.period == 2 and start[0] == 1
+    assert crossed > 0
+    assert tracker.clock(tracker.first_half_played)[0] == 1  # the half-time second is still the first half
+    assert tracker.clock(tracker.first_half_played + 1) == (2, SECOND_HALF_START // 60, 1)
+
+
+def test_possession_and_balance_are_rounded_once_from_the_raw_value():
+    from app.analytics.metrics import stated
+
+    assert stated(0.6146788990825688) == 0.61  # round(…, 3) first gave 0.615 → "62%"
+    assert stated(0.5652173913043478) == 0.57  # round(…, 3) first gave 0.565 → "+0.56"
+    m = next(m for m in detect_moments(generate_match(7, "dominant_loss")) if m.id.endswith("M003"))
+    assert m.detail["possession"] == 0.59  # 56/95 touches over the last 20 minutes played
+
+
+def test_from_behind_means_trailed_earlier_not_just_before_the_goal():
+    """m-42 M008: 1–1 before the goal; the scoring team had trailed 1–0 earlier in the match."""
+    events = generate_match(42, "red_card_swing")
+    m = next(m for m in detect_moments(events) if m.id.endswith("M008"))
+    change = m.detail["score_change"]
+    prev = events[m.at_seq - 1].score
+    assert change["kind"] == "go_ahead" and prev["home"] == prev["away"] == 1
+    assert change["from_behind"] is True and change["max_deficit"] == 1

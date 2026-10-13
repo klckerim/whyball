@@ -69,7 +69,7 @@ def test_penalty(seed, scenario, outcome, en):
     [
         ("opener", "open the scoring"),
         ("equalizer", "draw level"),
-        ("go_ahead", "2 goals down"),
+        ("go_ahead", "come from behind to take the lead, having trailed by 2 goals earlier in the match"),
     ],
 )
 def test_goal_with_score_change(kind, en):

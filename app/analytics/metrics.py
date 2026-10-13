@@ -24,6 +24,16 @@ TOUCHES = (EventType.PASS, EventType.DRIBBLE)
 SHOT, ENTRY, CORNER, TOUCH, GOAL = "shot", "entry", "corner", "touch", "goal"
 
 
+# Possession and pressure balance as a moment states them (detail, narration): a whole percent / two decimals.
+STATED_DECIMALS = 2
+
+
+def stated(value: float) -> float:
+    """The value as stated, rounded once from the raw value (rounding an already rounded value can flip a digit:
+    0.6147 → 0.615 → "62%")."""
+    return round(value, STATED_DECIMALS)
+
+
 def other(side: str) -> str:
     return "away" if side == "home" else "home"
 
@@ -147,6 +157,18 @@ class MatchTracker:
             out.append(r)
         out.reverse()
         return out
+
+    def clock(self, played: int) -> tuple[int, int, int]:
+        """(period, minute, second) on the match clock of a played second (up to the current one)."""
+        if self.first_half_played is None or played <= self.first_half_played:
+            return 1, played // 60, played % 60
+        clock = SECOND_HALF_START + played - self.first_half_played
+        return 2, clock // 60, clock % 60
+
+    def window_start(self, minutes: float) -> tuple[int, int, int]:
+        """Match clock of the first second inside `window(minutes)`: an inclusive start for a claim window that
+        holds the same events. In the second half it can reach back into the first (played time)."""
+        return self.clock(max(0, int(self.played - minutes * 60) + 1))
 
     def window_counts(self, minutes: float) -> dict[str, dict[str, int]]:
         counts = {k: {"home": 0, "away": 0} for k in (SHOT, ENTRY, CORNER, TOUCH, GOAL)}

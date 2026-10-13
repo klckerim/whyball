@@ -9,7 +9,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from app.analytics.metrics import other
+from app.analytics.config import DEFAULT_CONFIG as ANALYTICS_CONFIG
+from app.analytics.metrics import MatchTracker, other, stated
 from app.analytics.moments import Moment
 from app.generator.models import Event
 
@@ -100,6 +101,14 @@ class _Context:
 
     def ref(self, seq: int) -> str:
         return f"{self.match_id}#{seq}"
+
+    def detector_window(self, minutes: float) -> MatchTime:
+        """Inclusive start of the detector's window ending at the moment (played minutes, so in the second half
+        it can start in the first): claims over it count the same events as the moment detail."""
+        tracker = MatchTracker(ANALYTICS_CONFIG)
+        for e in self.events[: self.m.at_seq + 1]:
+            tracker.update(e)
+        return MatchTime(*tracker.window_start(minutes))
 
     def count(self, metric: str, subject: Subject, start: MatchTime) -> Claim:
         """A count claim whose value and evidence are measured from the events."""
@@ -192,7 +201,7 @@ def _penalty(c: _Context) -> list[Sentence]:
 
 
 def _score_change(c: _Context, change: dict) -> list[Sentence]:
-    """Sub-label sentences of a goal that changed the match state (the minute is in the goal sentence)."""
+    """Sub-label sentence of a goal that changed the match state (the minute is in the goal sentence)."""
     side = c.m.team
     team = c.names[side]
     goal_seq = c.m.event_ids[-1]
@@ -212,26 +221,20 @@ def _score_change(c: _Context, change: dict) -> list[Sentence]:
             if kind == "equalizer"
             else {"en": f"{team} go ahead."}
         )
-    sentences = [Sentence(text, claims)]
-
     if change.get("from_behind"):
+        # from_behind (detector): the team trailed at some earlier point; the score before this goal was level.
         deficit = change["max_deficit"]
         conceded = measure("goals", Subject(other(side)), KICKOFF, c.t, c.events).counted
-        sentences.append(
-            Sentence(
-                {
-                    "en": f"They had been {deficit} goal{'s' if deficit > 1 else ''} down.",
-                },
-                (c.state("min_score_margin", side, "eq", -deficit, conceded),),
-            )
-        )
-    return sentences
+        claims += (c.state("min_score_margin", side, "eq", -deficit, conceded),)
+        text = {"en": f"{team} come from behind to take the lead, having trailed by {deficit} "
+                      f"goal{'s' if deficit > 1 else ''} earlier in the match."}
+    return [Sentence(text, claims)]
 
 
 def _pressure_shift(c: _Context) -> list[Sentence]:
     side = c.m.team
     team, opp = c.names[side], c.names[other(side)]
-    balance = round(c.measured("pressure_balance", side), 2)
+    balance = stated(c.measured("pressure_balance", side))
     start = _since(c.t, c.config.context_minutes)
     shots = c.count("shots", Subject(side), start)
     opp_shots = c.count("shots", Subject(other(side)), start)
@@ -256,8 +259,8 @@ def _dominance(c: _Context) -> list[Sentence]:
     side = c.m.team
     team = c.names[side]
     home, away = c.names["home"], c.names["away"]
-    start = _since(c.t, c.config.dominance_context_minutes)
-    pct = round(c.measured("possession", side, start) * 100)
+    start = c.detector_window(ANALYTICS_CONFIG.dominance_window_min)
+    pct = round(stated(c.measured("possession", side, start)) * 100)
     shots = c.count("shots", Subject(side), start)
     opp_shots = c.count("shots", Subject(other(side)), start)
     h, a = c.measured("score", "home"), c.measured("score", "away")
@@ -275,7 +278,8 @@ def _dominance(c: _Context) -> list[Sentence]:
     return [
         Sentence(
             {
-                "en": f"{c.minute} — {team} dominate without reward: since {start.minute}' they have had "
+                "en": f"{c.minute} — {team} dominate without reward: since {fmt_minute(start.period, start.minute)} "
+                      f"they have had "
                       f"{pct}% of the ball and a {s:g}–{o:g} lead in shots, yet the score is "
                       f"{home} {h:g}–{a:g} {away}.",
             },

@@ -19,7 +19,7 @@ class ExplainConfig:
 
     # --- narrator ---
     context_minutes: int = 10  # the "since X'" range in the pressure shift sentence
-    dominance_context_minutes: int = 20
+    # dominance: the detector's own window (AnalyticsConfig.dominance_window_min), see _Context.detector_window
     full_squad: int = 11  # for players_on_pitch when meta has no squad
 
     # --- narration pipeline ---

@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 
 from app.analytics import MomentDetector, detect_moments
+from app.analytics.config import DEFAULT_CONFIG as ANALYTICS_CONFIG
+from app.analytics.metrics import MatchTracker
 from app.analytics.moments import Moment
 from app.explain.claims import KICKOFF, MatchTime
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
@@ -42,7 +44,7 @@ from app.explain.slots import (
     sentence_start_issues,
     template_sentence_starts,
 )
-from app.explain.template_narrator import narrate
+from app.explain.template_narrator import fmt_minute, narrate
 from app.explain.text_lint import NUMBER_RE, NUMBER_WORDS, Roster, _number_words, bare_surname_spans
 from app.generator import generate_match
 from app.generator.models import Event, read_jsonl
@@ -448,7 +450,7 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
                 for c in s.claims:
                     stated = None
                     if _window(c) == "window (X' → now)":
-                        stated = f"since {c.start.minute}'" in s.text["en"]
+                        stated = f"since {fmt_minute(c.start.period, c.start.minute)}" in s.text["en"]
                     elif c.metric == "pressure_balance":  # the window is inside the label
                         stated = all(metric_label(c.metric, lang) in s.text[lang] for lang in LANGS)
                     key = (m.type, c.metric, c.kind, _window(c))
@@ -457,10 +459,15 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
                     entry[1] += bool(stated)
             t = MatchTime(m.period, m.minute, m.second)
             if m.type in ("pressure_shift", "dominance_without_reward"):
-                minutes = config.context_minutes if m.type == "pressure_shift" else config.dominance_context_minutes
                 windowed = next(c for s in n.sentences for c in s.claims if c.metric in ("shots", "possession"))
                 span = (t.minute - windowed.start.minute) * 60 + (t.second - windowed.start.second)
-                clamped = span < minutes * 60
+                if m.type == "pressure_shift":
+                    clamped = span < config.context_minutes * 60
+                else:  # since the fix: the detector's own window (can start in the first half)
+                    tracker = MatchTracker()
+                    for e in events[: m.at_seq + 1]:
+                        tracker.update(e)
+                    clamped = windowed.start != MatchTime(*tracker.window_start(ANALYTICS_CONFIG.dominance_window_min))
                 if m.type == "pressure_shift":
                     pressure_total += 1
                     clamped_pressure += clamped
