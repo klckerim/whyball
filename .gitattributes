@@ -1,2 +1,4 @@
 # Demo fixtures are checked with SHA-256; line-ending conversion would break the hash.
 data/demo/*.jsonl -text
+# The publication store is checked byte for byte against its build.
+data/demo_narration/*.json -text

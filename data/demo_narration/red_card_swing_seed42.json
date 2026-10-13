@@ -1,0 +1,1145 @@
+{
+  "event_match_id": "m-42-red_card_swing",
+  "events_file": "data/demo/red_card_swing_seed42.jsonl",
+  "events_sha256": "f3cd306f12138b06f85977f661ea45b55ace86fd2ece07903df5535a2d48db40",
+  "final_score": {
+    "away": 2,
+    "home": 1
+  },
+  "match_id": "red_card_swing_seed42",
+  "moments": [
+    {
+      "at_seq": 87,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.75",
+          "end": "13'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#55",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Telmon Quessel",
+              "second": 54,
+              "seq": 55,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#57",
+              "minute": 9,
+              "minute_label": "9'",
+              "period": 1,
+              "player": "Branto Ilvanto",
+              "second": 12,
+              "seq": 57,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#59",
+              "minute": 9,
+              "minute_label": "9'",
+              "period": 1,
+              "player": "Branto Ilvanto",
+              "second": 12,
+              "seq": 59,
+              "team": "home",
+              "type": "corner"
+            },
+            {
+              "id": "m-42-red_card_swing#69",
+              "minute": 10,
+              "minute_label": "10'",
+              "period": 1,
+              "player": "Quenlo Tolvaro",
+              "second": 43,
+              "seq": 69,
+              "team": "home",
+              "type": "pass"
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.75
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "13'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#57",
+              "minute": 9,
+              "minute_label": "9'",
+              "period": 1,
+              "player": "Branto Ilvanto",
+              "second": 12,
+              "seq": 57,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "3'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "13'",
+          "evidence": [],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "3'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M001",
+      "importance": 0.45,
+      "minute": 13,
+      "minute_label": "13'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 56,
+      "source": "template",
+      "team": "home",
+      "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play is +0.75 in their favour. Shots since 3': Brannoch FC 1, Morvane Athletic 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 127,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "22'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Murek Brestani",
+          "start": "22'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "approx",
+          "display": "55%",
+          "end": "22'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.55
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "22'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "22'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M002",
+      "importance": 0.8,
+      "minute": 22,
+      "minute_label": "22'",
+      "period": 1,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "team": "home",
+      "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff. The score is Brannoch FC 1–0 Morvane Athletic.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 176,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+1.00",
+          "end": "32'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#161",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Nolvek Kaspet",
+              "second": 20,
+              "seq": 161,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#165",
+              "minute": 30,
+              "minute_label": "30'",
+              "period": 1,
+              "player": "Quenlo Ymberto",
+              "second": 17,
+              "seq": 165,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#167",
+              "minute": 30,
+              "minute_label": "30'",
+              "period": 1,
+              "player": "Davel Selvado",
+              "second": 50,
+              "seq": 167,
+              "team": "away",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#170",
+              "minute": 31,
+              "minute_label": "31'",
+              "period": 1,
+              "player": "Silvek Ostrevik",
+              "second": 6,
+              "seq": 170,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#174",
+              "minute": 31,
+              "minute_label": "31'",
+              "period": 1,
+              "player": "Nolvek Kaspet",
+              "second": 46,
+              "seq": 174,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#176",
+              "minute": 32,
+              "minute_label": "32'",
+              "period": 1,
+              "player": "Pernat Dremmet",
+              "second": 10,
+              "seq": 176,
+              "team": "away",
+              "type": "shot"
+            }
+          ],
+          "id": "pressure_balance_away",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "2",
+          "end": "32'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#167",
+              "minute": 30,
+              "minute_label": "30'",
+              "period": 1,
+              "player": "Davel Selvado",
+              "second": 50,
+              "seq": 167,
+              "team": "away",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#176",
+              "minute": 32,
+              "minute_label": "32'",
+              "period": 1,
+              "player": "Pernat Dremmet",
+              "second": 10,
+              "seq": 176,
+              "team": "away",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "22'",
+          "team": "away",
+          "value": 2.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "32'",
+          "evidence": [],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "22'",
+          "team": "home",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M003",
+      "importance": 0.45,
+      "minute": 32,
+      "minute_label": "32'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 10,
+      "source": "template",
+      "team": "away",
+      "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 213,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "38'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#213",
+              "minute": 38,
+              "minute_label": "38'",
+              "period": 1,
+              "player": "Orvik Belmaro",
+              "second": 0,
+              "seq": 213,
+              "team": "home",
+              "type": "red_card"
+            }
+          ],
+          "id": "sent_off",
+          "kind": "count",
+          "label": "red cards",
+          "metric": "red_cards",
+          "player": "Orvik Belmaro",
+          "start": "38'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "10",
+          "end": "38'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#213",
+              "minute": 38,
+              "minute_label": "38'",
+              "period": 1,
+              "player": "Orvik Belmaro",
+              "second": 0,
+              "seq": 213,
+              "team": "home",
+              "type": "red_card"
+            }
+          ],
+          "id": "players",
+          "kind": "state",
+          "label": "players on the pitch",
+          "metric": "players_on_pitch",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 10.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M004",
+      "importance": 0.65,
+      "minute": 38,
+      "minute_label": "38'",
+      "period": 1,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "team": "home",
+      "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
+      "trace": [],
+      "type": "red_card"
+    },
+    {
+      "at_seq": 270,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.67",
+          "end": "45'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#230",
+              "minute": 41,
+              "minute_label": "41'",
+              "period": 1,
+              "player": "Nolvek Kaspet",
+              "second": 8,
+              "seq": 230,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#234",
+              "minute": 41,
+              "minute_label": "41'",
+              "period": 1,
+              "player": "Davel Selvado",
+              "second": 53,
+              "seq": 234,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#244",
+              "minute": 44,
+              "minute_label": "44'",
+              "period": 1,
+              "player": "Edrin Gundrel",
+              "second": 0,
+              "seq": 244,
+              "team": "away",
+              "type": "dribble"
+            },
+            {
+              "id": "m-42-red_card_swing#248",
+              "minute": 44,
+              "minute_label": "44'",
+              "period": 1,
+              "player": "Pernat Dremmet",
+              "second": 37,
+              "seq": 248,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#260",
+              "minute": 46,
+              "minute_label": "45+2'",
+              "period": 1,
+              "player": "Haldin Marvetti",
+              "second": 26,
+              "seq": 260,
+              "team": "away",
+              "type": "pass"
+            }
+          ],
+          "id": "pressure_balance_away",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.67
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "45'",
+          "evidence": [],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "45'",
+          "team": "away",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "45'",
+          "evidence": [],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "45'",
+          "team": "home",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M005",
+      "importance": 0.45,
+      "minute": 45,
+      "minute_label": "45'",
+      "period": 2,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 31,
+      "source": "template",
+      "team": "away",
+      "text": "45' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +0.67 in their favour. Shots since 45': Morvane Athletic 0, Brannoch FC 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 359,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "61'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#359",
+              "minute": 61,
+              "minute_label": "61'",
+              "period": 2,
+              "player": "Davel Selvado",
+              "second": 0,
+              "seq": 359,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Davel Selvado",
+          "start": "61'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "61'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#359",
+              "minute": 61,
+              "minute_label": "61'",
+              "period": 2,
+              "player": "Davel Selvado",
+              "second": 0,
+              "seq": 359,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "61'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#359",
+              "minute": 61,
+              "minute_label": "61'",
+              "period": 2,
+              "player": "Davel Selvado",
+              "second": 0,
+              "seq": 359,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "61'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#359",
+              "minute": 61,
+              "minute_label": "61'",
+              "period": 2,
+              "player": "Davel Selvado",
+              "second": 0,
+              "seq": 359,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M006",
+      "importance": 0.8,
+      "minute": 61,
+      "minute_label": "61'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "team": "away",
+      "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC 1–1 Morvane Athletic.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 476,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.83",
+          "end": "81'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#453",
+              "minute": 77,
+              "minute_label": "77'",
+              "period": 2,
+              "player": "Telmon Quessel",
+              "second": 53,
+              "seq": 453,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#459",
+              "minute": 78,
+              "minute_label": "78'",
+              "period": 2,
+              "player": "Telmon Quessel",
+              "second": 30,
+              "seq": 459,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#464",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Murek Brestani",
+              "second": 29,
+              "seq": 464,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#467",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Branto Sorkani",
+              "second": 56,
+              "seq": 467,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#468",
+              "minute": 80,
+              "minute_label": "80'",
+              "period": 2,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 468,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#469",
+              "minute": 80,
+              "minute_label": "80'",
+              "period": 2,
+              "player": "Quenlo Tolvaro",
+              "second": 0,
+              "seq": 469,
+              "team": "home",
+              "type": "corner"
+            }
+          ],
+          "id": "pressure",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.83
+        },
+        {
+          "comparison": "eq",
+          "display": "2",
+          "end": "81'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#464",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Murek Brestani",
+              "second": 29,
+              "seq": 464,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#468",
+              "minute": 80,
+              "minute_label": "80'",
+              "period": 2,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 468,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_for",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "71'",
+          "team": "home",
+          "value": 2.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "81'",
+          "evidence": [],
+          "id": "shots_against",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "71'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M007",
+      "importance": 0.6,
+      "minute": 81,
+      "minute_label": "81'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 14,
+      "source": "llm",
+      "team": "home",
+      "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 494,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#494",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 494,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Murek Ymberto",
+          "start": "84'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#494",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 494,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "deficit",
+          "kind": "state",
+          "label": "largest deficit",
+          "metric": "min_score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": -1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#494",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 494,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "2",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#494",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 494,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 2.0
+        },
+        {
+          "comparison": "approx",
+          "display": "50%",
+          "end": "84'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#494",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 494,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.5
+        }
+      ],
+      "id": "m-42-red_card_swing-M008",
+      "importance": 1.0,
+      "minute": 84,
+      "minute_label": "84'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "team": "away",
+      "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match. The score is Brannoch FC 1–2 Morvane Athletic and Morvane Athletic have had 50% of the ball since kickoff.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 522,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+1.00",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#493",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 493,
+              "team": "away",
+              "type": "shot"
+            },
+            {
+              "id": "m-42-red_card_swing#515",
+              "minute": 88,
+              "minute_label": "88'",
+              "period": 2,
+              "player": "Quenlo Ymberto",
+              "second": 37,
+              "seq": 515,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-42-red_card_swing#521",
+              "minute": 89,
+              "minute_label": "89'",
+              "period": 2,
+              "player": "Pernat Dremmet",
+              "second": 57,
+              "seq": 521,
+              "team": "away",
+              "type": "pass"
+            }
+          ],
+          "id": "pressure",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#493",
+              "minute": 84,
+              "minute_label": "84'",
+              "period": 2,
+              "player": "Murek Ymberto",
+              "second": 0,
+              "seq": 493,
+              "team": "away",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_for",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "80'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "90+1'",
+          "evidence": [],
+          "id": "shots_against",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "80'",
+          "team": "home",
+          "value": 0.0
+        }
+      ],
+      "id": "m-42-red_card_swing-M009",
+      "importance": 0.6,
+      "minute": 90,
+      "minute_label": "90+1'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 5,
+      "source": "llm",
+      "team": "away",
+      "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",
+      "trace": [],
+      "type": "pressure_shift"
+    }
+  ],
+  "prompt_version": "foundry-v5.2:gpt-5-mini",
+  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+  "teams": {
+    "away": "Morvane Athletic",
+    "home": "Brannoch FC"
+  }
+}

@@ -1,0 +1,1167 @@
+{
+  "event_match_id": "m-100",
+  "events_file": "data/demo/natural_seed100.jsonl",
+  "events_sha256": "8ee57c212c353c85d6d322f7185677d5a7d5236a5435031db01303b9dadfd15b",
+  "final_score": {
+    "away": 1,
+    "home": 2
+  },
+  "match_id": "natural_seed100",
+  "moments": [
+    {
+      "at_seq": 84,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "14'",
+          "evidence": [
+            {
+              "id": "m-100#84",
+              "minute": 14,
+              "minute_label": "14'",
+              "period": 1,
+              "player": "Iveno Gundrel",
+              "second": 10,
+              "seq": 84,
+              "team": "away",
+              "type": "red_card"
+            }
+          ],
+          "id": "sent_off",
+          "kind": "count",
+          "label": "red cards",
+          "metric": "red_cards",
+          "player": "Iveno Gundrel",
+          "start": "14'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "10",
+          "end": "14'",
+          "evidence": [
+            {
+              "id": "m-100#84",
+              "minute": 14,
+              "minute_label": "14'",
+              "period": 1,
+              "player": "Iveno Gundrel",
+              "second": 10,
+              "seq": 84,
+              "team": "away",
+              "type": "red_card"
+            }
+          ],
+          "id": "players",
+          "kind": "state",
+          "label": "players on the pitch",
+          "metric": "players_on_pitch",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 10.0
+        },
+        {
+          "comparison": "approx",
+          "display": "51%",
+          "end": "14'",
+          "evidence": [
+            {
+              "id": "m-100#84",
+              "minute": 14,
+              "minute_label": "14'",
+              "period": 1,
+              "player": "Iveno Gundrel",
+              "second": 10,
+              "seq": 84,
+              "team": "away",
+              "type": "red_card"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.51
+        }
+      ],
+      "id": "m-100-M001",
+      "importance": 0.65,
+      "minute": 14,
+      "minute_label": "14'",
+      "period": 1,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 10,
+      "source": "llm",
+      "team": "away",
+      "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to 10 players on the pitch, and Isteven United have had 51% of the ball since kickoff.",
+      "trace": [],
+      "type": "red_card"
+    },
+    {
+      "at_seq": 98,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+1.00",
+          "end": "16'",
+          "evidence": [
+            {
+              "id": "m-100#67",
+              "minute": 11,
+              "minute_label": "11'",
+              "period": 1,
+              "player": "Alvezo Belmaro",
+              "second": 18,
+              "seq": 67,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#91",
+              "minute": 15,
+              "minute_label": "15'",
+              "period": 1,
+              "player": "Rastin Ostrevik",
+              "second": 42,
+              "seq": 91,
+              "team": "away",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#95",
+              "minute": 16,
+              "minute_label": "16'",
+              "period": 1,
+              "player": "Hesko Hazulov",
+              "second": 14,
+              "seq": 95,
+              "team": "away",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#98",
+              "minute": 16,
+              "minute_label": "16'",
+              "period": 1,
+              "player": "Haldin Ymberto",
+              "second": 48,
+              "seq": 98,
+              "team": "away",
+              "type": "pass"
+            }
+          ],
+          "id": "pressure_balance_away",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "16'",
+          "evidence": [
+            {
+              "id": "m-100#95",
+              "minute": 16,
+              "minute_label": "16'",
+              "period": 1,
+              "player": "Hesko Hazulov",
+              "second": 14,
+              "seq": 95,
+              "team": "away",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "6'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "16'",
+          "evidence": [],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "6'",
+          "team": "home",
+          "value": 0.0
+        }
+      ],
+      "id": "m-100-M002",
+      "importance": 0.45,
+      "minute": 16,
+      "minute_label": "16'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 48,
+      "source": "template",
+      "team": "away",
+      "text": "16' — Isteven United take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 6': Isteven United 1, Tessdal Wanderers 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 174,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.78",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#153",
+              "minute": 26,
+              "minute_label": "26'",
+              "period": 1,
+              "player": "Rastin Ymberto",
+              "second": 1,
+              "seq": 153,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#157",
+              "minute": 26,
+              "minute_label": "26'",
+              "period": 1,
+              "player": "Viktal Ilvanto",
+              "second": 42,
+              "seq": 157,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#168",
+              "minute": 28,
+              "minute_label": "28'",
+              "period": 1,
+              "player": "Silvek Brestani",
+              "second": 41,
+              "seq": 168,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#170",
+              "minute": 28,
+              "minute_label": "28'",
+              "period": 1,
+              "player": "Pernat Ilvanto",
+              "second": 54,
+              "seq": 170,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#174",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 174,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.78
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#174",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 174,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "19'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "29'",
+          "evidence": [],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "19'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-100-M003",
+      "importance": 0.45,
+      "minute": 29,
+      "minute_label": "29'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 28,
+      "source": "template",
+      "team": "home",
+      "text": "29' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.78 in their favour. Shots since 19': Tessdal Wanderers 1, Isteven United 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 175,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#175",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 175,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Hesko Ilvanto",
+          "start": "29'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#175",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 175,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "team_goals",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#175",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 175,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#175",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 175,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "29'",
+          "evidence": [
+            {
+              "id": "m-100#175",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 175,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-100-M004",
+      "importance": 0.8,
+      "minute": 29,
+      "minute_label": "29'",
+      "period": 1,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 28,
+      "source": "llm",
+      "team": "home",
+      "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers 1–0 Isteven United.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 317,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "51'",
+          "evidence": [
+            {
+              "id": "m-100#317",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 317,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Quenlo Pelvisto",
+          "start": "51'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "approx",
+          "display": "49%",
+          "end": "51'",
+          "evidence": [
+            {
+              "id": "m-100#317",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 317,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.49
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "51'",
+          "evidence": [
+            {
+              "id": "m-100#317",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 317,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "51'",
+          "evidence": [
+            {
+              "id": "m-100#317",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 317,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "51'",
+          "evidence": [
+            {
+              "id": "m-100#317",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 317,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-100-M005",
+      "importance": 0.8,
+      "minute": 51,
+      "minute_label": "51'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 23,
+      "source": "llm",
+      "team": "away",
+      "text": "Quenlo Pelvisto scored at 51', and Isteven United have had 49% of the ball since kickoff. The score is Tessdal Wanderers 1–1 Isteven United, and Isteven United drew level.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 353,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.57",
+          "end": "59'",
+          "evidence": [
+            {
+              "id": "m-100#324",
+              "minute": 53,
+              "minute_label": "53'",
+              "period": 2,
+              "player": "Hesko Ilvanto",
+              "second": 28,
+              "seq": 324,
+              "team": "home",
+              "type": "pass"
+            },
+            {
+              "id": "m-100#325",
+              "minute": 53,
+              "minute_label": "53'",
+              "period": 2,
+              "player": "Orvik Lunsko",
+              "second": 48,
+              "seq": 325,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#327",
+              "minute": 53,
+              "minute_label": "53'",
+              "period": 2,
+              "player": "Zandro Marvetti",
+              "second": 48,
+              "seq": 327,
+              "team": "home",
+              "type": "corner"
+            },
+            {
+              "id": "m-100#334",
+              "minute": 55,
+              "minute_label": "55'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 9,
+              "seq": 334,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#338",
+              "minute": 56,
+              "minute_label": "56'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 4,
+              "seq": 338,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#346",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Silvek Hostrav",
+              "second": 45,
+              "seq": 346,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#353",
+              "minute": 59,
+              "minute_label": "59'",
+              "period": 2,
+              "player": "Silvek Hostrav",
+              "second": 2,
+              "seq": 353,
+              "team": "home",
+              "type": "pass"
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.57
+        },
+        {
+          "comparison": "eq",
+          "display": "4",
+          "end": "59'",
+          "evidence": [
+            {
+              "id": "m-100#325",
+              "minute": 53,
+              "minute_label": "53'",
+              "period": 2,
+              "player": "Orvik Lunsko",
+              "second": 48,
+              "seq": 325,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#334",
+              "minute": 55,
+              "minute_label": "55'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 9,
+              "seq": 334,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#338",
+              "minute": 56,
+              "minute_label": "56'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 4,
+              "seq": 338,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#346",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Silvek Hostrav",
+              "second": 45,
+              "seq": 346,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "49'",
+          "team": "home",
+          "value": 4.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "59'",
+          "evidence": [
+            {
+              "id": "m-100#316",
+              "minute": 51,
+              "minute_label": "51'",
+              "period": 2,
+              "player": "Quenlo Pelvisto",
+              "second": 23,
+              "seq": 316,
+              "team": "away",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "49'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-100-M006",
+      "importance": 0.45,
+      "minute": 59,
+      "minute_label": "59'",
+      "period": 2,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 2,
+      "source": "template",
+      "team": "home",
+      "text": "59' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.57 in their favour. Shots since 49': Tessdal Wanderers 4, Isteven United 1.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 478,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "61%",
+          "end": "79'",
+          "evidence": [
+            {
+              "id": "m-100#478",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 1,
+              "seq": 478,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "59'",
+          "team": "home",
+          "value": 0.61
+        },
+        {
+          "comparison": "eq",
+          "display": "4",
+          "end": "79'",
+          "evidence": [
+            {
+              "id": "m-100#420",
+              "minute": 70,
+              "minute_label": "70'",
+              "period": 2,
+              "player": "Hesko Ilvanto",
+              "second": 1,
+              "seq": 420,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#425",
+              "minute": 71,
+              "minute_label": "71'",
+              "period": 2,
+              "player": "Orvik Lunsko",
+              "second": 0,
+              "seq": 425,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#452",
+              "minute": 74,
+              "minute_label": "74'",
+              "period": 2,
+              "player": "Orvik Lunsko",
+              "second": 49,
+              "seq": 452,
+              "team": "home",
+              "type": "shot"
+            },
+            {
+              "id": "m-100#478",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 1,
+              "seq": 478,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "shots_for",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "59'",
+          "team": "home",
+          "value": 4.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "79'",
+          "evidence": [],
+          "id": "shots_against",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "59'",
+          "team": "away",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "79'",
+          "evidence": [
+            {
+              "id": "m-100#478",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 1,
+              "seq": 478,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "79'",
+          "evidence": [
+            {
+              "id": "m-100#478",
+              "minute": 79,
+              "minute_label": "79'",
+              "period": 2,
+              "player": "Rastin Ymberto",
+              "second": 1,
+              "seq": 478,
+              "team": "home",
+              "type": "shot"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-100-M007",
+      "importance": 0.65,
+      "minute": 79,
+      "minute_label": "79'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 1,
+      "source": "llm",
+      "team": "home",
+      "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots, yet the score is Tessdal Wanderers 1–1 Isteven United.",
+      "trace": [],
+      "type": "dominance_without_reward"
+    },
+    {
+      "at_seq": 550,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-100#550",
+              "minute": 90,
+              "minute_label": "90+1'",
+              "period": 2,
+              "player": "Brisko Ymberto",
+              "second": 13,
+              "seq": 550,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Brisko Ymberto",
+          "start": "90+1'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-100#550",
+              "minute": 90,
+              "minute_label": "90+1'",
+              "period": 2,
+              "player": "Brisko Ymberto",
+              "second": 13,
+              "seq": 550,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "approx",
+          "display": "52%",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-100#550",
+              "minute": 90,
+              "minute_label": "90+1'",
+              "period": 2,
+              "player": "Brisko Ymberto",
+              "second": 13,
+              "seq": 550,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.52
+        },
+        {
+          "comparison": "eq",
+          "display": "2",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-100#550",
+              "minute": 90,
+              "minute_label": "90+1'",
+              "period": 2,
+              "player": "Brisko Ymberto",
+              "second": 13,
+              "seq": 550,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 2.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "90+1'",
+          "evidence": [
+            {
+              "id": "m-100#550",
+              "minute": 90,
+              "minute_label": "90+1'",
+              "period": 2,
+              "player": "Brisko Ymberto",
+              "second": 13,
+              "seq": 550,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-100-M008",
+      "importance": 0.95,
+      "minute": 90,
+      "minute_label": "90+1'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 13,
+      "source": "llm",
+      "team": "home",
+      "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had 52% of the ball since kickoff, and the score is Tessdal Wanderers 2–1 Isteven United.",
+      "trace": [],
+      "type": "goal"
+    }
+  ],
+  "prompt_version": "foundry-v5.2:gpt-5-mini",
+  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+  "teams": {
+    "away": "Isteven United",
+    "home": "Tessdal Wanderers"
+  }
+}
