@@ -233,7 +233,7 @@ Rules:
 contain a minute).
 - An {{event:}} phrase already names its player: never add that player's {{player:}} in the same sentence.
 - NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
-the words "home"/"away" (or "ev sahibi"/"deplasman"), metric identifiers, or event words such as \
+the words "home"/"away", metric identifiers, or event words such as \
 {event_words}.
 - Name teams only with {{home}}/{{away}}: no pronouns ("they", "their", "them"), no article ("the {{home}}").
 - {sentence_rule}
