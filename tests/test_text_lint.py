@@ -1,7 +1,9 @@
+from dataclasses import replace
+
 import pytest
 
 from app.analytics import detect_moments
-from app.explain import Claim, MatchTime, Subject
+from app.explain import DEFAULT_EXPLAIN_CONFIG, Claim, MatchTime, Subject
 from app.explain.narrator import TemplateNarrator
 from app.explain.text_lint import Roster, lint_text
 from app.generator import generate_match
@@ -94,10 +96,24 @@ def test_surname_and_city_aliases_are_recognised():
     player = GOAL.detail["player"]
     surname, city = player.split()[-1], HOME.rsplit(" ", 1)[0]
     claims = [_claim(team="home", player=player)]
-    assert lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER).ok
+    assert lint_text(f"22' — {player} scores for {city}.", claims, ROSTER).ok
+    # Yalnızca soyad reddedilir (aynı soyad iki takımda olabilir); v2 davranışı bayrakla.
+    assert _codes(lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER)) == [("bare_surname", surname)]
+    v2 = replace(DEFAULT_EXPLAIN_CONFIG, lint_bare_surname=False)
+    assert lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER, v2).ok
     other = next(p for p in TEAMS["away"]["lineup"] if p.split()[-1] != surname)
-    result = lint_text(f"22' — {other.split()[-1]} scores.", claims, ROSTER)
+    result = lint_text(f"22' — {other.split()[-1]} scores.", claims, ROSTER, v2)
     assert _codes(result) == [("unsupported_name", other.split()[-1])]
+
+
+def test_bare_surname_shared_across_teams_is_rejected():
+    # Her demo maçında iki takımda ortak soyad var; yalnızca soyad hangi oyuncu olduğunu belirlemez.
+    home = {p.split()[-1]: p for p in [*TEAMS["home"]["lineup"], *TEAMS["home"]["bench"]]}
+    away = {p.split()[-1]: p for p in [*TEAMS["away"]["lineup"], *TEAMS["away"]["bench"]]}
+    surname = sorted(home.keys() & away.keys())[0]
+    claims = [_claim(team="home", player=home[surname])]
+    assert ("bare_surname", surname) in _codes(lint_text(f"{surname} was everywhere.", claims, ROSTER))
+    assert lint_text(f"{home[surname]} was everywhere.", claims, ROSTER).ok
 
 
 def test_minute_formats():

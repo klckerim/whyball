@@ -41,9 +41,10 @@ from .narrator import (
     NarratorError,
     NarratorTimeout,
 )
+from .phrases import event_phrase
 from .slots import METRIC_LABELS, player_ids
 
-PROMPT_VERSION = "foundry-v3"
+PROMPT_VERSION = "foundry-v4"
 INSTALL_HINT = "FoundryNarrator için: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -62,6 +63,7 @@ def moment_record(moment: Moment, events: Sequence[Event], language: str = "en")
     by_seq = {e.seq: e for e in events}
     ids = player_ids(events)
     id_of = {name: pid for pid, name in ids.items()}
+    teams = {side: events[0].data["teams"][side]["name"] for side in SIDES}
     record_events = []
     for seq in dict.fromkeys(moment.event_ids):
         e = by_seq[seq]
@@ -73,6 +75,7 @@ def moment_record(moment: Moment, events: Sequence[Event], language: str = "en")
             "player": id_of.get(e.player) if e.player else None,
             "outcome": e.outcome,
             "score_after": e.score,
+            "phrase": event_phrase(e, teams, language),  # {event:<id>} bu metne render edilir
         })
     return {
         "match_id": match_id,
@@ -247,24 +250,41 @@ class FoundryChatClientAdapter:
 
 SYSTEM_PROMPT = """You narrate one moment of a synthetic football match for WhyBall. You write a \
 TEMPLATE with placeholders plus CLAIMS. Code fills every concrete value from verified claims and the \
-match state; a deterministic verifier rejects anything unverifiable.
+match data; a deterministic verifier rejects anything unverifiable.
 
 Use ONLY the moment record in the user message (moment, metrics_at_moment, events, squads, \
 metric_labels). No outside knowledge. Do not invent facts.
 
 Write {language_name}: 1-2 short, natural sentences, persona: {persona}.
 
-NEVER write digits, number words, team names, player names, minutes, scores, the words \
-"home"/"away" (or "ev sahibi"/"deplasman"), or metric identifiers such as field_tilt. Use placeholders:
+Events come ONLY from {{event:<event id>}}: code renders the event's standard phrase, shown in \
+events[].phrase (e.g. "Murek Brestani was sent off at 38'"). You write only connecting words and plain \
+comments around placeholders. NEVER name an event type or a player's role yourself: no words such as \
+{event_words}. Metric names come from {{label:<claim_id>}}.
+
+NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
+the words "home"/"away" (or "ev sahibi"/"deplasman"), or metric identifiers such as field_tilt. \
+Use placeholders:
+- {{event:<event id>}}: an event's phrase; copy the id exactly from events[].id. The event must be in the \
+event_ids of one of your claims.
 - {{home}}, {{away}}: team names.
-- {{score}}: the score at this moment, rendered by code in home-away order with team names.
-- {{player:<id>}}: a player by squad id (e.g. h07); that player must be the subject of one of your claims.
+- {{score}}: the score at this moment as digits in home-away order, e.g. "1–0" (no team names).
+- {{score_named}}: the same score with both team names, e.g. "Brannoch FC 1–0 Morvane Athletic". It \
+already names both teams, so never attach a team placeholder to it.
+- {{player:<id>}}: a player by squad id (e.g. h07), rendered as the full name; that player must be the \
+subject of one of your claims.
 - {{minute:<claim_id>}}: the end minute of a claim; {{start:<claim_id>}}: its start minute.
 - {{value:<claim_id>}}: the verified value of a claim (code formats percentages and signs).
-- {{label:<claim_id>}}: the readable name of a claim's metric.
-Describe metrics in plain words (see metric_labels), e.g. "{{home}} have had {{value:c2}} of the ball".
-Example template: "{{player:h07}} scored for {{home}} at {{minute:c1}}, making it {{score}}." with claim \
-c1 = count goals, subject player h07, start = end = the goal's time, event_ids = [the goal event].
+- {{label:<claim_id>}}: the readable name of a claim's metric (see metric_labels).
+{sentence_rule}
+Stay factual: no hype or judgement such as {overstatement}. Exception: "dominate" only for a \
+dominance_without_reward moment, "take control"/"momentum" only for a pressure_shift moment.
+
+Examples:
+- "{{event:<goal event id>}}, making it {{score}}." with claim c1 = count goals, subject = the scorer's \
+team and squad id, start = end = the goal's time, event_ids = [the goal event].
+- "{{home}} have had {{value:c2}} of the ball since kickoff." with claim c2 = ratio possession, subject \
+home, start = kickoff, end = moment time, value from metrics_at_moment.
 
 Claims. Each claim has a unique short id (c1, c2, ...). Times are {{period, minute, second}}; \
 start <= end; end must not be later than the moment time.
@@ -282,6 +302,39 @@ subject.team is "home" or "away"; subject.player is a squad id or null.
 
 Respond only with JSON matching the schema."""
 
+# Prompt'taki okunur listeler; denetimin kendisi phrases.py sözlükleriyle yapılır.
+EVENT_WORD_EXAMPLES = {
+    "en": "goal, scored, shot, saved, penalty, missed, sent off, card, booked, foul, corner, offside, "
+          "substitute, equalised, levelled, conceded, assist, header, keeper",
+    "tr": "gol, şut, penaltı, kurtardı, kaçırdı, kart, atıldı, faul, korner, ofsayt, eşitledi, kaleci, "
+          "asist, vuruş",
+}
+OVERSTATEMENT_EXAMPLES = {
+    "en": '"deep into stoppage", "dominate", "take control", "stunning", "dramatic", "relentless", '
+          '"against the run of play", "last-gasp", "winner", "decisive", "completely", "comfortably", "deserved"',
+    "tr": '"domine etti", "ezici", "kontrolü ele aldı", "muhteşem", "inanılmaz", "dramatik", "son nefeste", '
+          '"galibiyet golü", "kritik", "tamamen", "rahat", "hak etti"',
+}
+ONE_WORD = {"en": "one", "tr": "bir"}
+FEEDBACK_HINTS = {
+    "event_word": "describe events only with {event:<id>} and metric names with {label:<claim_id>}",
+    "event_not_evidence": "an {event:} must be one of the event_ids of your claims",
+    "unsupported_event": "this event type has no phrase; cite a different event",
+    "sentence_start": "start every sentence with a placeholder or an allowed word",
+    "overstatement": "remove the hype/judgement wording",
+    "raw_number": "use placeholders instead of digits or number words",
+}
+
+
+def sentence_rule(language: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> str:
+    words = config.sentence_start_allowed_tr if language == "tr" else config.sentence_start_allowed_en
+    if not words:
+        return "Every sentence must start with a placeholder."
+    return "Every sentence must start with a placeholder or one of: " + ", ".join(
+        f'"{w}"' for w in words
+    ) + "."
+
+
 LANGUAGE_NAMES = {"en": "English", "tr": "Turkish"}
 
 
@@ -291,10 +344,16 @@ def build_messages(
     persona: str,
     language: str,
     feedback: Feedback | None = None,
+    config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
 ) -> list[dict[str, str]]:
+    lang = language if language in EVENT_WORD_EXAMPLES else "en"
     system = SYSTEM_PROMPT.format(
         language_name=LANGUAGE_NAMES.get(language, language),
         persona=persona,
+        event_words=EVENT_WORD_EXAMPLES[lang],
+        one_word=ONE_WORD[lang],
+        sentence_rule=sentence_rule(lang, config),
+        overstatement=OVERSTATEMENT_EXAMPLES[lang],
         metrics=", ".join(f"{m} ({k})" for m, k in METRIC_KINDS.items()),
         comparisons=", ".join(COMPARISONS),
     )
@@ -307,6 +366,8 @@ def build_messages(
                 line += f" claim[{item.claim_index}]"
             if item.fragment:
                 line += f" fragment={item.fragment!r}"
+            if item.code in FEEDBACK_HINTS:
+                line += f" ({FEEDBACK_HINTS[item.code]})"
             lines.append(line)
         user += "\n\nFEEDBACK\n" + "\n".join(lines)
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -390,7 +451,7 @@ class FoundryNarrator:
             )
         self.calls += 1
         model = self.response_model(moment)
-        messages = build_messages(moment, self.events, persona, language, feedback)
+        messages = build_messages(moment, self.events, persona, language, feedback, cfg)
         started = time.perf_counter()
         call = self.client.complete(
             messages, response_model=model, max_tokens=cfg.llm_max_tokens,

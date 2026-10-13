@@ -61,8 +61,7 @@ def goal_slot(moment=MOMENT, events=EVENTS, value=1):
     player, side = moment.detail["player"], moment.team
     ref = f"{events[0].match_id}#{moment.event_ids[-1]}"
     claim = Claim("count", Subject(side, player), "goals", "eq", value, t, t, (ref,))
-    pid = {name: p for p, name in player_ids(events).items()}[player]
-    return f"{{player:{pid}}} scored for {{{side}}} at {{minute:c1}}, making it {{score}}.", (claim,), ("c1",)
+    return f"{{event:{ref}}}, making it {{score_named}}.", (claim,), ("c1",)
 
 
 class Sleep:
@@ -110,7 +109,7 @@ def responder(events):
         claim = Claim("state", Subject("home"), "score", "eq", record["metrics_at_moment"]["score"]["home"],
                       KICKOFF, end, (ref,))
         assert moment.id == record["moment"]["id"]
-        return slot_json("It is {score} at {minute:c1}.", (claim,), ("c1",), events)
+        return slot_json("{score_named} at {minute:c1}.", (claim,), ("c1",), events)
 
     return respond
 
@@ -122,11 +121,14 @@ def test_prompt_contains_only_the_moment_record():
     system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
     assert "Turkish" in system and "analyst" in system and "No outside knowledge" in system
     assert "NEVER write digits" in system and "{score}" in system
+    assert "{event:<event id>}" in system and "{score_named}" in system
+    assert "leaving" not in system  # bozuk "leaving X with {score}" kalıbı örneklerde yok
     record = json.loads(user)
     assert record == moment_record(MOMENT, EVENTS, "tr")
     assert [e["id"] for e in record["events"]] == [f"{MATCH_ID}#{s}" for s in MOMENT.event_ids]
     assert {e["player"] for e in record["events"]} == {ID_OF[MOMENT.detail["player"]]}
     assert record["metrics_at_moment"] == MOMENT.metrics
+    assert record["events"][-1]["phrase"] == f"{MOMENT.detail['player']} gol attı (22')"
     assert record["metric_labels"]["possession"] == "topa sahip olma"
     assert record["squads"]["home"][0] == {"id": "h01", "name": IDS["h01"]}
     allowed = {f"{MATCH_ID}#{s}" for s in MOMENT.event_ids}
@@ -187,8 +189,8 @@ def test_pipeline_renders_slots_from_verified_claims():
     teams = EVENTS[0].data["teams"]
     home, away = teams["home"]["name"], teams["away"]["name"]
     assert (record.source, record.attempts, record.ok) == ("llm", 1, True)
-    assert record.template.startswith("{player:")
-    assert record.text == f"{MOMENT.detail['player']} scored for {home} at 22', making it {home} 1–0 {away}."
+    assert record.template.startswith("{event:")
+    assert record.text == f"{MOMENT.detail['player']} scored at 22', making it {home} 1–0 {away}."
     assert [c.metric for c in record.claims] == ["goals", "score", "score"]  # + otomatik skor iddiaları
 
 
@@ -205,8 +207,8 @@ def test_away_goal_score_is_rendered_home_first():
 def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v3"
-    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v3:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v4"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v4:gpt-x"
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 
@@ -225,9 +227,24 @@ def test_raw_values_in_template_are_rejected_then_fixed():
 
 def test_unbound_placeholder_is_rejected():
     template, claims, ids = goal_slot()
-    bad = slot_json(template.replace("{minute:c1}", "{minute:c9}"), claims, ids)
+    bad = slot_json(template + " {home} lead at {minute:c9}.", claims, ids)
     record = run_moment(MOMENT, _narrator(FakeChatClient(bad, slot_json(template, claims, ids))), EVENTS)
     assert record.attempts == 2 and "unbound_placeholder" in record.trace[3]["codes"]
+
+
+def test_free_role_verb_is_rejected_then_event_placeholder_accepted():
+    # v3'te yayınlanan rol hatası: "{player:h02} saved a penalty at {minute:c1}" (h02 penaltıyı kullanandı).
+    events, moment = moment_case("penalty")
+    t = MatchTime(moment.period, moment.minute, moment.second)
+    taker, outcome = moment.detail["player"], moment.detail["outcome"]
+    ref = f"{events[0].match_id}#{moment.event_ids[-1]}"
+    claim = Claim("count", Subject(moment.team, taker), f"penalties_{outcome}", "eq", 1, t, t, (ref,))
+    pid = {name: p for p, name in player_ids(events).items()}[taker]
+    bad = slot_json(f"{{player:{pid}}} saved a penalty at {{minute:c1}}.", (claim,), ("c1",), events)
+    good = slot_json(f"{{event:{ref}}}.", (claim,), ("c1",), events)
+    record = run_moment(moment, FoundryNarrator(events, FakeChatClient(bad, good)), events)
+    assert record.attempts == 2 and "event_word" in record.trace[3]["codes"]
+    assert record.text.startswith(taker) and "saved a penalty" not in record.text
 
 
 # --- bozuk JSON --------------------------------------------------------------------------

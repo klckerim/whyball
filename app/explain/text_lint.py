@@ -72,7 +72,7 @@ WORD_VALUES = {w: i for words in NUMBER_WORDS.values() for i, w in enumerate(wor
 
 @dataclass(frozen=True)
 class LintIssue:
-    code: str  # unsupported_number | unsupported_name | unknown_name
+    code: str  # unsupported_number | unsupported_name | unknown_name | bare_surname | ... (slot lint)
     fragment: str
     start: int
     end: int
@@ -105,6 +105,7 @@ class Roster:
 
     def __init__(self, teams: dict[str, str], players: Sequence[str]) -> None:
         self.aliases: dict[str, set[Entity]] = {}
+        self.full_names = frozenset(players)
         for side, name in teams.items():
             entity = Entity("team", side)
             self._add(name, entity)
@@ -129,6 +130,20 @@ class Roster:
         return cls({side: teams[side]["name"] for side in ("home", "away")}, players)
 
 
+def bare_surname_spans(text: str, roster: Roster) -> list[tuple[int, int]]:
+    """Oyuncunun tam adı değil yalnızca soyadıyla anıldığı aralıklar (takım takma adları hariç)."""
+    out = []
+    for m in roster.pattern.finditer(text):
+        entities = roster.aliases[m.group()]
+        if (
+            m.group() not in roster.full_names
+            and any(e.kind == "player" for e in entities)
+            and not any(e.kind == "team" for e in entities)
+        ):
+            out.append((m.start(), m.end()))
+    return out
+
+
 def _is_sentence_start(text: str, pos: int) -> bool:
     before = text[:pos].rstrip()
     return not before or before[-1] in SENTENCE_BREAKS
@@ -148,10 +163,15 @@ def _capitalized_groups(text: str) -> list[tuple[int, int, list[str]]]:
     return groups
 
 
-def _number_words(text: str, language: str | None) -> list[tuple[int, int, int]]:
-    """(başlangıç, bitiş, değer) — belirsiz kelimeler yalnızca sayılabilir isimden önceyse."""
+def _number_words(text: str, language: str | None, strict: bool = False) -> list[tuple[int, int, int]]:
+    """(başlangıç, bitiş, değer) — belirsiz kelimeler yalnızca sayılabilir isimden önceyse.
+
+    `strict`: bağlamdan bağımsız, her sayı kelimesi ("one of", "bir ara" dahil).
+    """
     scan = text.replace("İ", "i").lower()  # aynı uzunluk; TR büyük İ
-    if language in AMBIGUOUS_NUMBER_WORDS:
+    if strict:
+        ambiguous: frozenset[str] = frozenset()
+    elif language in AMBIGUOUS_NUMBER_WORDS:
         ambiguous = AMBIGUOUS_NUMBER_WORDS[language]
     else:
         ambiguous = AMBIGUOUS_ANY_LANGUAGE.union(*AMBIGUOUS_NUMBER_WORDS.values())
@@ -178,10 +198,14 @@ def lint_text(
     teams = {c.subject.team for c in claims if c.subject.team}
     players = {c.subject.player for c in claims if c.subject.player}
 
-    # 1) Bilinen isimler: bir iddianın öznesi olmalı. Sonra maskelenir.
+    # 1) Bilinen isimler: bir iddianın öznesi olmalı; oyuncu yalnızca soyadla anılamaz
+    # (aynı soyad iki takımda olabilir). Sonra maskelenir.
     masked = list(text)
+    bare = set(bare_surname_spans(text, roster))
     for m in roster.pattern.finditer(text):
         entities = roster.aliases[m.group()]
+        if config.lint_bare_surname and (m.start(), m.end()) in bare:
+            issues.append(LintIssue("bare_surname", m.group(), m.start(), m.end(), "name"))
         if not any(
             (e.kind == "team" and e.key in teams) or (e.kind == "player" and e.key in players)
             for e in entities

@@ -1,23 +1,23 @@
 moment_id,text,correct,wrong_fact,misleading,dull
-m-42-red_card_swing-M002,"Murek Brestani scored at 22', making it Brannoch FC 1–0 Morvane Athletic. Brannoch FC have had 55% of the ball since kickoff.",1,,,
-m-42-red_card_swing-M003,"Murek Brestani scored for Brannoch FC at 22', making it Brannoch FC 1–0 Morvane Athletic. Brannoch FC have had 55% of the ball and show a +0.33 pressure balance.",1,,,1
-m-42-red_card_swing-M005,"Orvik Belmaro was sent off at 38', leaving Brannoch FC with Brannoch FC 1–0 Morvane Athletic. Morvane Athletic have had 46% of the ball since kickoff.",,,1,
-m-42-red_card_swing-M007,"Davel Selvado scored at 61', making it Brannoch FC 1–1 Morvane Athletic. Brannoch FC have had 51% of the ball while Morvane Athletic lead the pressure balance at +1.00.",1,,,
-m-42-red_card_swing-M008,"Davel Selvado scored for Morvane Athletic at 61', making it Brannoch FC 1–1 Morvane Athletic. Morvane Athletic have had 49% of the ball since kickoff.",1,,,1
-m-42-red_card_swing-M009,"Murek Brestani had 2 shots for Brannoch FC at 80', and Brannoch FC had 50% of the ball; the score was Brannoch FC 1–1 Morvane Athletic.",,,1,
-m-42-red_card_swing-M010,"Murek Ymberto scored for Morvane Athletic at 84', making it Brannoch FC 1–2 Morvane Athletic.",1,,,
-m-42-red_card_swing-M011,"Murek Ymberto scored for Morvane Athletic at 84', making it Brannoch FC 1–2 Morvane Athletic.",1,,,1
-m-42-red_card_swing-M012,"90+1' — Morvane Athletic take control: pressure balance +1.00 in their favour. Shots since 80': Morvane Athletic 1, Brannoch FC 0.",1,,,
-m-7-dominant_loss-M003,"45+1' — Vellorin FC dominate without reward: 58% of possession and 4–0 shots since 25', yet the score is Vellorin FC 0–0 Tessdal Athletic.",,,1,
-m-7-dominant_loss-M005,"Nolvek Ilvanto scored at 57', making it Vellorin FC 0–1 Tessdal Athletic.",1,,,
-m-7-dominant_loss-M006,"Nolvek Ilvanto scored for Tessdal Athletic at 57', making it Vellorin FC 0–1 Tessdal Athletic. Vellorin FC have had 61% of the ball and pressure balance is +1.00 for Tessdal Athletic.",1,,,1
-m-7-dominant_loss-M008,Alvezo Hazulov registered 2 of the shots between 58' and 66'. Vellorin FC have had 62% of the ball and remain behind at Vellorin FC 0–1 Tessdal Athletic.,1,,,
-m-7-dominant_loss-M009,"Alvezo Hazulov saved a penalty at 70', keeping the score Vellorin FC 0–1 Tessdal Athletic. Vellorin FC have had 62% of the ball since kickoff.",,1,,
-m-100-M001,"Iveno Gundrel was shown a red card at 14', leaving the match at Tessdal Wanderers 0–0 Isteven United. Isteven United have had 51% of the ball up to that point.",1,,,
-m-100-M004,"Hesko Ilvanto scored for Tessdal Wanderers at 29', making it Tessdal Wanderers 1–0 Isteven United.",1,,,
-m-100-M005,"Hesko Ilvanto scored at 29', putting Tessdal Wanderers in front as Tessdal Wanderers 1–0 Isteven United. Tessdal Wanderers have had 58% of the ball since kick-off.",1,,,1
-m-100-M006,"Quenlo Pelvisto levelled the match at 51', making it Tessdal Wanderers 1–1 Isteven United.",1,,,
-m-100-M007,"Quenlo Pelvisto scored for Isteven United at 51', making it Tessdal Wanderers 1–1 Isteven United. Isteven United have had 49% of the ball since kickoff and show a pressure balance of +0.07.",1,,,1
-m-100-M009,"Rastin Ymberto took a shot off target at 79', leaving it Tessdal Wanderers 1–1 Isteven United. Tessdal Wanderers have had 54% of the ball since kickoff.",,,1,1
-m-100-M010,"Brisko Ymberto scored deep into stoppage, making it Tessdal Wanderers 2–1 Isteven United at 90+1'. Tessdal Wanderers have had 52% of the ball.",,,1,
-m-100-M011,"Brisko Ymberto scored for Tessdal Wanderers at 90+1', making it Tessdal Wanderers 2–1 Isteven United. Tessdal Wanderers have had 52% of the ball up to that point.",1,,,1
+m-42-red_card_swing-M002,"Murek Brestani scored at 22', making it 1–0. Brannoch FC have had 55% of the ball since kickoff.",,,,
+m-42-red_card_swing-M003,"Murek Brestani scored at 22', making it 1–0. Possession since kickoff: Brannoch FC have had 55% of the ball.",,,,
+m-42-red_card_swing-M005,Orvik Belmaro was sent off at 38'. Brannoch FC have had 54% of the ball since kickoff.,,,,
+m-42-red_card_swing-M007,"Davel Selvado scored at 61', making it 1–1. They have had 49% of the ball since kickoff.",,,,
+m-42-red_card_swing-M008,"Davel Selvado scored at 61', making it Brannoch FC 1–1 Morvane Athletic. Possession since kickoff is 51% for Brannoch FC.",,,,
+m-42-red_card_swing-M009,"81' — Brannoch FC take control: pressure balance +0.83 in their favour. Shots since 71': Brannoch FC 2, Morvane Athletic 0.",,,,
+m-42-red_card_swing-M010,84' — Murek Ymberto scores for Morvane Athletic. Brannoch FC 1–2 Morvane Athletic.,,,,
+m-42-red_card_swing-M011,"Murek Ymberto scored at 84', making it 1–2. They have had 50% of the ball since kickoff.",,,,
+m-42-red_card_swing-M012,Possession has been 51% for Morvane Athletic since kickoff. The territorial share is 71% and Pernat Dremmet completed a pass at 89'. They have pressure balance of +1.00.,,,,
+m-7-dominant_loss-M003,"45+1' — Vellorin FC dominate without reward: since 25' they have had 58% of the ball and a 4–0 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",,,,
+m-7-dominant_loss-M005,"Nolvek Ilvanto scored at 57', making it 0–1. Possession since kickoff: Vellorin FC have had 61% of the ball.",,,,
+m-7-dominant_loss-M006,"Nolvek Ilvanto scored at 57', making it 0–1. Vellorin FC have had 61% of the ball since kickoff.",,,,
+m-7-dominant_loss-M008,"Korin Zerimek had a shot blocked at 66'. They registered 5 shots between 58' and 66', and Vellorin FC have had 62% of the ball since kickoff.",,,,
+m-7-dominant_loss-M009,"70' — Penalty for Vellorin FC, but Alvezo Hazulov sees the kick saved.",,,,
+m-100-M001,Iveno Gundrel was sent off at 14'. Isteven United have had 51% of the ball since kickoff.,,,,
+m-100-M004,"Hesko Ilvanto scored at 29', making it 1–0. At 29' Tessdal Wanderers have had 58% of the ball since kickoff.",,,,
+m-100-M005,"Hesko Ilvanto scored at 29', making it 1–0. Possession has been 58% for Tessdal Wanderers since kickoff.",,,,
+m-100-M006,"Quenlo Pelvisto scored at 51', making it 1–1. Possession has been 51% for Tessdal Wanderers since kickoff.",,,,
+m-100-M007,"Quenlo Pelvisto scored at 51', making it 1–1. Tessdal Wanderers have had 51% of the ball since kickoff.",,,,
+m-100-M009,"Rastin Ymberto shot off target at 79'. The Tessdal Wanderers have had 54% of the ball since kickoff, with pressure balance at +1.00.",,,,
+m-100-M010,"Brisko Ymberto scored at 90+1' by Brisko Ymberto, making it 2–1. Possession since kickoff: Tessdal Wanderers have had 52% of the ball.",,,,
+m-100-M011,"Brisko Ymberto scored at 90+1', making it 2–1.",,,,

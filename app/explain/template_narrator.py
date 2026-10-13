@@ -175,7 +175,7 @@ _PENALTY_TEXT = {
     ),
     "saved": (
         "{minute} — Penalty for {team}, but {player} sees the kick saved.",
-        "{minute} — {team} penaltı kazandı, ancak kaleci {player} vuruşunu kurtardı.",
+        "{minute} — {team} penaltı kazandı, ancak {player} penaltıyı kullandı, vuruş kurtarıldı.",
     ),
     "missed": (
         "{minute} — Penalty for {team}, but {player} misses.",
@@ -278,11 +278,12 @@ def _dominance(c: _Context) -> list[Sentence]:
         c.state("score_margin", side, "lte", 0, anchor),
     )
     s, o = shots.value, opp_shots.value
+    # Possession ve şutlar aynı pencereden; pencere iki değerden önce yazılır ki ikisine de bağlansın.
     return [
         Sentence(
             {
-                "en": f"{c.minute} — {team} dominate without reward: {pct}% of possession and "
-                      f"{s:g}–{o:g} shots since {start.minute}', yet the score is "
+                "en": f"{c.minute} — {team} dominate without reward: since {start.minute}' they have had "
+                      f"{pct}% of the ball and a {s:g}–{o:g} lead in shots, yet the score is "
                       f"{home} {h:g}–{a:g} {away}.",
                 "tr": f"{c.minute} — {team} üstün ama sonuç alamıyor: {start.minute}. dakikadan "
                       f"bu yana %{pct} topa sahip olma ve {s:g}–{o:g} şut, skor ise "

@@ -4,6 +4,7 @@ import pytest
 
 from app.analytics import detect_moments
 from app.explain import MatchTime, build_narration, narrate
+from app.explain.claims import KICKOFF
 from app.explain.template_narrator import LANGS
 from app.generator import EventType, generate_match
 from app.generator.freeze import demo_paths
@@ -52,7 +53,7 @@ def test_red_card():
     "seed,scenario,outcome,en,tr",
     [
         (42, "late_comeback", "scored", "scores from the spot", "gole çevirdi"),
-        (7, "dominant_loss", "saved", "saved", "kurtardı"),
+        (7, "dominant_loss", "saved", "sees the kick saved", "penaltıyı kullandı, vuruş kurtarıldı"),
     ],
 )
 def test_penalty(seed, scenario, outcome, en, tr):
@@ -61,6 +62,14 @@ def test_penalty(seed, scenario, outcome, en, tr):
     )
     _assert_published(n, [m.detail["player"], _team(events, m.team)])
     assert en in n.published("en") and tr in n.published("tr")
+
+
+def test_saved_penalty_keeps_taker_role_in_turkish():
+    # foundry-v3 öncesi TR metni penaltıyı kullananı "kaleci" diye anıyordu (rol ters).
+    _, m, n = _find(7, "dominant_loss", lambda m: m.type == "penalty" and m.detail["outcome"] == "saved")
+    tr = n.published("tr")
+    assert "kaleci" not in tr
+    assert f"{m.detail['player']} penaltıyı kullandı" in tr
 
 
 @pytest.mark.parametrize(
@@ -91,6 +100,21 @@ def test_dominance_without_reward():
     assert "without reward" in n.published("en") and "sonuç alamıyor" in n.published("tr")
 
 
+def test_dominance_possession_and_shots_share_one_stated_window():
+    # M003 (dominant_loss/7): "58% of possession and 4–0 shots since 25'" pencereyi yalnızca şutlara bağlıyordu.
+    _, m, n = _find(7, "dominant_loss", lambda m: m.type == "dominance_without_reward")
+    (sentence,) = n.sentences
+    poss, shots, opp = sentence.claims[:3]
+    assert poss.metric == "possession" and shots.metric == opp.metric == "shots"
+    assert (poss.start, poss.end) == (shots.start, shots.end) == (opp.start, opp.end)
+    pct = f"{round(poss.value * 100)}%"
+    en = sentence.text["en"]
+    window = en.index(f"since {poss.start.minute}'")
+    assert window < en.index(pct) < en.index(f"{shots.value:g}–{opp.value:g}")
+    tr = sentence.text["tr"]
+    assert tr.index(f"{poss.start.minute}. dakikadan bu yana") < tr.index(f"%{round(poss.value * 100)}")
+
+
 # --- toplu ----------------------------------------------------------------------------
 
 
@@ -117,6 +141,18 @@ def test_every_moment_in_many_matches_fully_verifies():
     assert types == {
         "goal", "red_card", "penalty", "score_change", "pressure_shift", "dominance_without_reward"
     }
+
+
+def test_every_windowed_claim_states_its_window():
+    """Başlangıcı maç başı ya da olay anı olmayan her count/ratio iddiasının penceresi cümlede yazılı."""
+    for events in _all_matches():
+        for m in detect_moments(events):
+            for s in narrate(m, events).sentences:
+                for c in s.claims:
+                    if c.kind == "state" or c.start == KICKOFF or c.start == c.end:
+                        continue
+                    assert f"since {c.start.minute}'" in s.text["en"], (m.id, c.describe())
+                    assert f"{c.start.minute}. dakikadan" in s.text["tr"], (m.id, c.describe())
 
 
 # --- yayın filtresi, determinizm, ileriye bakma ---------------------------------------

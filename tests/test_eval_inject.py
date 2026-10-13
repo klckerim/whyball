@@ -1,8 +1,9 @@
 from functools import cache
 
-from eval.inject import INJECTION_TYPES, QUICK_CORPUS, render_markdown, render_table, run_eval, uncaught
+from eval.inject import INJECTION_TYPES, QUICK_CORPUS, VARIANTS, render_markdown, render_table, run_eval, uncaught
 
-NEW_TYPES = ("score_order_reversed", "raw_side_label", "free_number")
+SLOT_TYPES = ("score_order_reversed", "raw_side_label", "free_number")
+V4_TYPES = ("sentence_start_fabricated", "sentence_start_fabricated_name", "number_words")
 
 
 @cache
@@ -17,34 +18,49 @@ def _row(name):
 def test_every_injection_type_is_measured():
     assert [r.spec.name for r in _report().results] == [t.name for t in INJECTION_TYPES]
     for r in _report().results:
-        assert r.v3.applicable > 0
-        assert r.v2.applicable > 0 or r.spec.v2 is None
+        for variant in VARIANTS:
+            injector = getattr(r.spec, variant)
+            assert getattr(r, variant).applicable > 0 or injector is None, (r.spec.name, variant)
 
 
 def test_all_drafts_slotify_and_control_has_no_false_alarms():
     report = _report()
-    assert report.slotified == report.samples
+    assert report.slotified == report.slotified_v4 == report.samples
     control = _row("control")
-    assert control.v2.caught == control.v3.caught == 0
+    assert control.v2.caught == control.v3.caught == control.v4.caught == 0
 
 
-def test_new_types_are_caught_by_slots_but_not_free_text():
-    for name in NEW_TYPES:
+def test_slot_types_are_caught_by_slots_but_not_free_text():
+    for name in SLOT_TYPES:
         row = _row(name)
-        assert row.v3.rate == 1.0, name
+        assert row.v3.rate == row.v4.rate == 1.0, name
         assert row.v2.rate < row.v3.rate, name
 
 
-def test_claim_tampering_caught_in_both():
+def test_v4_rules_close_v3_gaps():
+    for name in V4_TYPES:
+        row = _row(name)
+        assert row.v4.rate == 1.0 and row.v3.rate < 1.0, name
+
+
+def test_role_reversal_and_overstatement_improve_but_misses_are_reported():
+    for name in ("role_reversed", "qualitative_overstatement"):
+        row = _row(name)
+        assert row.v2.rate == row.v3.rate == 0.0, name
+        assert 0.0 < row.v4.rate < 1.0, name  # bilerek listede olmayan ifadeler kaçar
+        assert row.v4.missed_tags, name
+
+
+def test_claim_tampering_caught_everywhere():
     row = _row("number_text_and_claim")
-    assert row.v2.rate > 0.9 and row.v3.rate > 0.9
+    assert min(row.v2.rate, row.v3.rate, row.v4.rate) > 0.9
 
 
 def test_known_gaps_are_reported():
-    v2 = {r.spec.name for r in uncaught(_report(), "v2")}
-    v3 = {r.spec.name for r in uncaught(_report(), "v3")}
-    assert {"unsupported_sentence_qualitative", "sentence_start_fabricated"} <= v2 & v3
-    assert "wrong_slot_binding" in v3 and "control" not in v2 | v3
+    gaps = {v: {r.spec.name for r in uncaught(_report(), v)} for v in VARIANTS}
+    assert {"unsupported_sentence_qualitative", "sentence_start_fabricated"} <= gaps["v2"] & gaps["v3"]
+    assert {"wrong_slot_binding", "unsupported_sentence_qualitative"} <= gaps["v4"]
+    assert "control" not in gaps["v2"] | gaps["v3"] | gaps["v4"]
 
 
 def test_report_is_deterministic_and_complete():
@@ -53,5 +69,9 @@ def test_report_is_deterministic_and_complete():
     table = render_table(_report())
     for spec in INJECTION_TYPES:
         assert f"`{spec.name}`" in table
-    assert "| v2 yakalama |" in table.splitlines()[0] and "v3 yakalama" in table
-    assert "## Yakalanmayan türler: foundry-v2" in first and "## Yakalanmayan türler: foundry-v3" in first
+    assert "| v2 yakalama |" in table.splitlines()[0] and "v4 yakalama" in table
+    for title in ("foundry-v2", "foundry-v3", "foundry-v4"):
+        assert f"## Yakalanmayan türler: {title}" in first
+    for section in ("## v4 lint kuralları ve yanlış alarm", "## Nitel abartı yasak listesi",
+                    "## Şablon pencere denetimi", "## İnsan etiketleri: foundry-v3"):
+        assert section in first
