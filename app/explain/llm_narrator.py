@@ -10,6 +10,8 @@ its output is only placeholder text (`{"text": ...}`) that uses menu ids.
 The pipeline renders the concrete values from the menu.
 foundry-v5.1: one goal card per goal event (a match state change is its sub-label and the score is
 mandatory) and a team named at most twice per sentence.
+foundry-v5.2: a dominance card must state the score and a pressure card the window's shot balance; the score
+line does not count toward the team repeat limit (docs/EVAL.md: the v5.1 line made the model drop the score).
 
 Safety: a per-call timeout, a response token cap, a maximum number of calls per narrator
 (`BudgetExceeded` once exceeded); the token usage and duration of each call are written to
@@ -46,7 +48,7 @@ from .phrases import event_phrase, selectable
 from .slots import SlotContext, player_ids
 from .template_narrator import fmt_minute
 
-PROMPT_VERSION = "foundry-v5.1"
+PROMPT_VERSION = "foundry-v5.2"
 INSTALL_HINT = "For FoundryNarrator: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -234,7 +236,9 @@ Rules:
 - The same minute must not appear twice in one sentence (an {{event:}} phrase and a clause may already \
 contain a minute).
 - An {{event:}} phrase already names its player: never add that player's {{player:}} in the same sentence.
-- Name the same team at most twice in one sentence (count the team names inside clauses and {{score_named}}).
+- Name the same team at most twice in one sentence, counting the team names inside clauses. The score \
+({{clause:score}}, {{score_named}}) does not count: never drop the score or a primary claim to meet this; drop an \
+extra clause or start a new sentence instead.
 - NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
 the words "home"/"away", metric identifiers, or event words such as \
 {event_words}.
@@ -272,15 +276,17 @@ FEEDBACK_HINTS = {
     "sentence_without_claim": "every sentence needs a menu fact: a {clause:}, {value:}, {minute:}, {event:} or {score}",
     "missing_primary_claim": "use the primary claims of this moment (claims_menu[].primary = true), e.g. via their clause",
     "minute_repeat": "the same minute appears twice in one sentence; drop one of them",
-    "team_repeat": "the same team is named more than twice in one sentence (clauses and {score_named} included); "
-                   "drop a clause or use {score} instead of {score_named}",
+    "team_repeat": "the same team is named more than twice in one sentence (the score does not count); "
+                   "drop an extra clause or split the sentence, never the score or a primary claim",
 }
 
 PRIMARY_RULE = {
-    "dominance_without_reward": "This moment's primary claims (claims_menu[].primary = true): possession AND "
-                                "the shot balance must both be used; {clause:dominance} contains both.",
-    "pressure_shift": "This moment's primary claim (claims_menu[].primary = true): the pressure balance must be "
-                      "used (e.g. {clause:pressure}).",
+    "dominance_without_reward": "This moment's primary claims (claims_menu[].primary = true): possession, the "
+                                "shot balance AND the score must all be used. {clause:dominance} contains the "
+                                "first two; add {clause:score}, {score} or {score_named} "
+                                "(e.g. \"{clause:dominance}, yet {clause:score}.\").",
+    "pressure_shift": "This moment's primary claims (claims_menu[].primary = true): the pressure balance AND the "
+                      "shot balance of the window must both be used: {clause:pressure} and {clause:shots}.",
 }
 DEFAULT_PRIMARY_RULE = "Use the claim that describes the moment itself (its event or main clause)."
 # A goal that changed the match state (moment.detail.score_change); the clause id is the sub-label.

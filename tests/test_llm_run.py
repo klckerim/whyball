@@ -278,3 +278,27 @@ def test_side_by_side_matches_cards_by_time_and_type_across_renumbered_ids():
         mo("M001", "goal", 61, "new goal"), mo("M002", "pressure_shift", 70, "new shift")]}]}
     rows = [line for line in render_side_by_side(new, {"foundry-v5": old}) if line.startswith("| x ")]
     assert rows == ["| x M001 | goal | old goal | new goal |", "| x M002 | pressure_shift | old shift | new shift |"]
+
+
+def test_primary_usage_counts_main_claims_per_card_type():
+    """foundry-v5.2 table: the main claims of each card type, measured on the model template."""
+    import copy
+    from pathlib import Path
+
+    from eval.llm_run import render_primary_usage
+
+    v51 = json.loads((Path(__file__).resolve().parents[1] / "docs" / "LLM_RUN.foundry-v5.1.json").read_text())
+    new = copy.deepcopy(v51)
+    new["meta"]["prompt_version"] = "foundry-v5.2:fake"
+    for m in new["runs"][0]["matches"]:
+        for mo in m["moments"]:
+            if mo["id"] == "m-7-dominant_loss-M007":
+                mo["template"] = "{clause:dominance}, yet {clause:score}."
+            if mo["id"] == "m-42-red_card_swing-M009":
+                mo["source"] = "template_fallback"
+    rows = render_primary_usage(new, {"foundry-v5.1": v51, "foundry-v4": v51})  # pre-menu versions are left out
+    assert "| Card | Main claim | foundry-v5.1 | foundry-v5.2 |" in rows
+    assert "| dominance_without_reward | score | 0/3 (0%) | 1/3 (33%) |" in rows
+    assert "| dominance_without_reward | possession | 3/3 (100%) | 3/3 (100%) |" in rows
+    assert "| pressure_shift | shot balance | 0/2 (0%) | 0/1 (0%) |" in rows
+    assert "| **Fallback cards** | | 0 | pressure_shift 1 |" in rows

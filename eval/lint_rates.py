@@ -31,6 +31,7 @@ from app.explain.phrases import (
     sentence_starts,
 )
 from app.explain.labels import METRIC_LABELS, metric_label
+from app.explain.menu import ClaimMenu, build_menu
 from app.explain.slots import (
     PLACEHOLDER_RE,
     SIDE_LABEL_RE,
@@ -53,6 +54,7 @@ V2_RUN = DOCS / "LLM_RUN.foundry-v2.json"
 V3_RUN = DOCS / "LLM_RUN.foundry-v3.json"
 V4_RUN = DOCS / "LLM_RUN.foundry-v4.json"
 V5_RUN = DOCS / "LLM_RUN.foundry-v5.json"
+V51_RUN = DOCS / "LLM_RUN.foundry-v5.1.json"
 V3_REVIEW = DOCS / "human_review.foundry-v3.csv"
 LANGS = ("en",)
 LABELS = ("correct", "wrong_fact", "misleading", "dull")
@@ -175,7 +177,7 @@ def llm_v4_outputs() -> list[Text]:
 
 V41_RUN = DOCS / "LLM_RUN.foundry-v4.1.json"
 PUBLISHED_RUNS = {"foundry-v2": V2_RUN, "foundry-v3": V3_RUN, "foundry-v4": V4_RUN, "foundry-v4.1": V41_RUN,
-                  "foundry-v5": V5_RUN}
+                  "foundry-v5": V5_RUN, "foundry-v5.1": V51_RUN}
 
 
 def llm_published(version: str) -> list[Text]:
@@ -195,9 +197,65 @@ def llm_published(version: str) -> list[Text]:
     return out
 
 
-def team_repeats(text: str, roster: Roster, limit: int) -> list[str]:
+def _scoreline(roster: Roster) -> re.Pattern[str]:
+    """A rendered {score_named}: "<home> 1–0 <away>" (full team names)."""
+    names = {side: max((a for a, es in roster.aliases.items() if any(e.kind == "team" and e.key == side for e in es)),
+                       key=len) for side in ("home", "away")}
+    return re.compile(re.escape(names["home"]) + r" \d+–\d+ " + re.escape(names["away"]))
+
+
+@dataclass(frozen=True)
+class MenuDraft:
+    """A published card of a v5+ run, re-bound to today's menu (`source` llm: the model's template)."""
+
+    version: str
+    run: int
+    match_id: str
+    moment: Moment
+    template: str
+    text: str
+    menu: ClaimMenu
+    ctx: SlotContext
+    source: str = "llm"
+    state_change: bool = False  # a goal that changed the match state (from today's detector, also for legacy runs)
+
+
+def menu_drafts(version: str, path: Path | None = None, run: dict | None = None,
+                fallbacks: bool = False) -> list[MenuDraft]:
+    """Published LLM templates of a v5+ run; a run with separate score_change cards uses `legacy_moments`
+    (those cards themselves are skipped: since foundry-v5.1 they are part of the goal card).
+    `fallbacks`: template fallback cards too (empty template)."""
+    if run is None:
+        path = path or PUBLISHED_RUNS[version]
+        if not path.exists():
+            return []
+        run = json.loads(path.read_text(encoding="utf-8"))
+    lang = run["meta"]["lang"]
+    runs = run.get("runs") or [run]
+    legacy = any(mo["type"] == "score_change" for one in runs for m in one["matches"] for mo in m["moments"])
+    out: list[MenuDraft] = []
+    for i, one in enumerate(runs, start=1):
+        for match in one["matches"]:
+            events = _demo_events(match["match_id"])
+            moments = {m.id: m for m in (legacy_moments(events) if legacy else detect_moments(events))}
+            changes = {m.at_seq for m in detect_moments(events) if "score_change" in m.detail}
+            for mo in match["moments"]:
+                llm = mo["source"] == "llm" and mo.get("template")
+                if mo["type"] == "score_change" or not (llm or (fallbacks and mo["source"] == "template_fallback")):
+                    continue
+                m = moments[mo["id"]]
+                out.append(MenuDraft(version, i, match["match_id"], m, mo.get("template") or "", mo["text"],
+                                     build_menu(m, events), SlotContext.from_moment(m, events, lang),
+                                     mo["source"], m.type == "goal" and m.at_seq in changes))
+    return out
+
+
+def team_repeats(text: str, roster: Roster, limit: int, exclude_score: bool = False) -> list[str]:
     """Sides whose team name a rendered text writes more than `limit` times in one sentence
-    (the foundry-v5.1 `team_repeat` rule measured on final text; the lint checks the template)."""
+    (the `team_repeat` rule measured on final text; the lint checks the template).
+    `exclude_score`: the score line's names do not count (foundry-v5.2, `slot_team_repeat_exempt="score"`)."""
+    if exclude_score:
+        text = _scoreline(roster).sub(lambda m: "x" * len(m.group()), text)
     starts = sorted({0, *sentence_starts(text)})
     out = []
     for start, end in zip(starts, [*starts[1:], len(text)]):

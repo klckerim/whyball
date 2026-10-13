@@ -258,11 +258,14 @@ BUILDERS = {
     "pressure_shift": _pressure_shift,
     "dominance_without_reward": _dominance,
 }
-PRIMARY: dict[str, tuple[frozenset[str], ...]] = {
-    "dominance_without_reward": (frozenset({"possession"}), frozenset({"shots_for", "shots_against"})),
-    "pressure_shift": (frozenset({"pressure"}),),
-}
 SCORE_GROUP = frozenset(SCORE_IDS.values())
+SHOTS_GROUP = frozenset({"shots_for", "shots_against"})
+# foundry-v5.2: a dominance card states the score (without it the "without reward" is lost) and a pressure card
+# states the window's shot balance.
+PRIMARY: dict[str, tuple[frozenset[str], ...]] = {
+    "dominance_without_reward": (frozenset({"possession"}), SHOTS_GROUP, SCORE_GROUP),
+    "pressure_shift": (frozenset({"pressure"}), SHOTS_GROUP),
+}
 
 
 def primary_groups(moment: Moment) -> tuple[frozenset[str], ...]:
@@ -425,11 +428,29 @@ def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
     return out
 
 
+def _repeat_exempt(ph, menu: ClaimMenu, mode: str) -> bool:
+    """Placeholders whose team names `team_repeat` does not count (`ExplainConfig.slot_team_repeat_exempt`)."""
+    if mode == "none":
+        return False
+    if ph.kind == "score_named" or (ph.kind == "clause" and ph.arg == "score"):
+        return True
+    if mode == "score+primary" and ph.kind == "clause" and ph.arg in menu.clause_by_id:
+        ids = set(menu.clause_by_id[ph.arg].claim_ids)
+        return any(ids & group for group in menu.primary if group != SCORE_GROUP)
+    return False
+
+
+def team_counts(placeholders, menu: ClaimMenu, ctx: SlotContext, mode: str) -> list[str]:
+    """Sides one sentence's placeholders name, as `team_repeat` counts them."""
+    return [side for ph in placeholders if not _repeat_exempt(ph, menu, mode) for side in _teams(ph.raw, menu, ctx)]
+
+
 def menu_rule_issues(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[LintIssue]:
     """Each sentence rests on a menu claim; the primary claim is used; a minute appears once per sentence;
-    a team is named at most `slot_team_repeat_max` times per sentence."""
+    a team is named at most `slot_team_repeat_max` times per sentence (foundry-v5.2: the score line does
+    not count, see `slot_team_repeat_exempt`)."""
     placeholders = parse_placeholders(template)[0]
     issues: list[LintIssue] = []
     for start, end in template_sentences(template):
@@ -445,7 +466,7 @@ def menu_rule_issues(
                         issues.append(LintIssue("minute_repeat", ph.raw, ph.start, ph.end, "minute"))
                     seen.add(minute)
         if config.slot_team_repeat_max:
-            sides = [side for ph in inside for side in _teams(ph.raw, menu, ctx)]
+            sides = team_counts(inside, menu, ctx, config.slot_team_repeat_exempt)
             for side in ("home", "away"):
                 if sides.count(side) > config.slot_team_repeat_max:
                     issues.append(LintIssue("team_repeat", "{%s}" % side, start, end, "name"))

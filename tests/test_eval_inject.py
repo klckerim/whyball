@@ -109,6 +109,21 @@ def test_v5_menu_column():
     assert ewc.v5.rate < ewc.v41.rate  # menu evidence is broad: the wrong event is usually evidence of some claim
 
 
+def test_team_repeat_variants_and_new_primary_claims():
+    report = _report()
+    rows = {(v.mode, v.limit): v for v in report.team_repeat_variants}
+    chosen = rows[("score", 2)]
+    assert chosen.minimum_rejected == 0 and chosen.minimum_total == report.slotified_v5  # no false alarm
+    assert rows[("none", 2)].minimum_rejected > 0  # v5.1 rejects pressure + shots + score in one sentence
+    # A and B agree on every valid draft; C lets the prose name a team three times.
+    a = rows[("score+primary", 2)]
+    assert (a.space_passed, a.space_monotone) == (chosen.space_passed, chosen.space_monotone)
+    assert chosen.space_prose_monotone == 0 and rows[("none", 3)].space_prose_monotone > 0
+    assert report.primary_v52_base == (0, report.slotified_v5)
+    fired = {version: n for version, n, _, _ in report.primary_v52}
+    assert fired["foundry-v5.1"] == 5  # the 3 dominance cards without the score + 2 pressure cards without shots
+
+
 def test_team_repeat_rule_has_no_false_alarms_on_clean_drafts():
     report = _report()
     assert report.team_repeat_disagreements == []  # template rule == count on the rendered text

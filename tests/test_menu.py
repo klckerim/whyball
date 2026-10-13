@@ -81,9 +81,10 @@ def test_field_tilt_is_not_on_the_menu():
 def test_primary_claims_for_dominance_pressure_and_score_change():
     for _, m, menu in _menus():
         if m.type == "dominance_without_reward":
-            assert menu.primary == (frozenset({"possession"}), frozenset({"shots_for", "shots_against"}))
+            assert menu.primary == (frozenset({"possession"}), frozenset({"shots_for", "shots_against"}),
+                                    frozenset({"score_home", "score_away"}))
         elif m.type == "pressure_shift":
-            assert menu.primary == (frozenset({"pressure"}),)
+            assert menu.primary == (frozenset({"pressure"}), frozenset({"shots_for", "shots_against"}))
         elif m.type == "goal" and "score_change" in m.detail:
             assert menu.primary == (frozenset({"score_home", "score_away"}),)
         else:
@@ -160,11 +161,11 @@ def test_label_agrees_only_right_after_its_value():
 # --- menu draft rules -------------------------------------------------------------------
 
 
-def _check(mtype, template, lang="en"):
+def _check(mtype, template, config=None, lang="en"):
     events, m = moment_case(mtype)
     menu = build_menu(m, events)
     ctx = SlotContext.from_moment(m, events, lang)
-    items, issues, results, claims, ids = check_menu_draft(template, menu, ctx)
+    items, issues, results, claims, ids = check_menu_draft(template, menu, ctx, *([config] if config else []))
     return [(i.code, i.fragment) for i in items], results, ids, (events, m, menu)
 
 
@@ -192,6 +193,24 @@ def test_primary_claim_is_required_for_dominance_and_pressure():
     assert _check("pressure_shift", "{clause:pressure}, and {clause:shots}.")[0] == []
 
 
+def test_dominance_card_must_state_the_score():
+    # foundry-v5.2: without the score the "without reward" is lost (v5.1 live: 0/3 dominance cards had it).
+    missing = ("missing_primary_claim", "score_away,score_home")
+    assert missing in _check("dominance_without_reward", "{clause:dominance}.")[0]
+    assert missing in _check("dominance_without_reward", "{clause:dominance}, and {clause:margin}.")[0]
+    for template in ("{clause:dominance}, yet {clause:score}.", "{clause:dominance}, yet it is {score}.",
+                     "{clause:dominance}. {score_named}."):
+        assert _check("dominance_without_reward", template)[0] == [], template
+
+
+def test_pressure_card_must_state_the_shot_balance():
+    # foundry-v5.2: the pressure balance alone (+ an unrelated event) is rejected.
+    missing = ("missing_primary_claim", "shots_against,shots_for")
+    assert missing in _check("pressure_shift", "{clause:pressure}.")[0]
+    assert missing in _check("pressure_shift", "{clause:pressure}, and {clause:score}.")[0]
+    assert _check("pressure_shift", "{clause:pressure}, and {clause:shots}, and {clause:score}.")[0] == []
+
+
 def test_score_is_required_for_a_goal_that_changed_the_match_state():
     missing = ("missing_primary_claim", "score_away,score_home")
     assert missing in _check("goal_from_behind", "{clause:goal}, and {clause:possession}.")[0]
@@ -202,12 +221,25 @@ def test_score_is_required_for_a_goal_that_changed_the_match_state():
 
 
 def test_same_team_more_than_twice_in_one_sentence_is_rejected():
-    # goal: a home goal; {clause:goal}, {clause:possession} and {score_named} each name the home team.
-    codes, *_ = _check("goal", "{clause:goal}, {clause:possession}, and {clause:score}.")
+    # goal: a home goal; {clause:goal}, {clause:team_goals} and {clause:possession} each name the home team.
+    codes, *_ = _check("goal", "{clause:goal}, {clause:team_goals}, and {clause:possession}.")
     assert ("team_repeat", "{home}") in codes
     assert _check("goal", "{clause:goal}, and {clause:score}. {clause:possession}.")[0] == []
-    assert ("team_repeat", "{home}") in _check("goal", "{home} lead, {clause:goal}, and {clause:score}.")[0]
+    assert ("team_repeat", "{home}") in _check("goal", "{home} lead, {clause:goal}, and {clause:possession}.")[0]
     assert _check("goal", "{home} lead, {clause:goal}, and {score}.")[0] == []
+
+
+def test_score_line_does_not_count_toward_team_repeat():
+    # foundry-v5.2 (variant B, docs/EVAL.md): {score_named} / {clause:score} do not count; v5.1 ("none") did.
+    from dataclasses import replace
+
+    from app.explain.config import DEFAULT_EXPLAIN_CONFIG
+
+    template = "{home} lead, {clause:goal}, and {clause:score}."
+    assert _check("goal", template)[0] == []
+    assert _check("goal", "{clause:goal}, {clause:possession}, and {score_named}.")[0] == []
+    v51 = replace(DEFAULT_EXPLAIN_CONFIG, slot_team_repeat_exempt="none")
+    assert ("team_repeat", "{home}") in _check("goal", template, v51)[0]
 
 
 def test_same_minute_twice_in_one_sentence_is_rejected():

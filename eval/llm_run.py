@@ -34,7 +34,10 @@ from typing import Any
 from app.analytics.moments import Moment
 from app.explain.claims import KICKOFF, Claim, MatchTime, measure, parse_ref
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
+from app.explain.menu import SCORE_GROUP, SHOTS_GROUP
+from app.explain.menu import _referenced as referenced_claims
 from app.explain.pipeline import AttemptLog, NarrationRecord, run_match
+from app.explain.slots import parse_placeholders
 from app.explain.template_narrator import fmt_minute
 from app.generator.freeze import demo_paths
 from app.generator.models import Event, read_jsonl
@@ -49,9 +52,10 @@ BASELINES = {
     "foundry-v4": DOCS / "LLM_RUN.foundry-v4.json",
     "foundry-v4.1": DOCS / "LLM_RUN.foundry-v4.1.json",
     "foundry-v5": DOCS / "LLM_RUN.foundry-v5.json",
+    "foundry-v5.1": DOCS / "LLM_RUN.foundry-v5.1.json",
 }
 REVIEW_COLUMNS = ("moment_id", "text", "correct", "wrong_fact", "misleading", "dull")
-# Rules added / changed in foundry-v4.1 / v5 / v5.1 (live firing table)
+# Rules added / changed in foundry-v4.1 / v5 / v5.1 / v5.2 (live firing table)
 NEW_RULES = ("event_type_not_allowed", "player_repeat", "article_team", "sentence_start",
              "unknown_claim_id", "sentence_without_claim", "missing_primary_claim", "minute_repeat",
              "team_repeat")
@@ -432,6 +436,79 @@ def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]
     return [*out, ""]
 
 
+# Main claims per card type (foundry-v5.2 definition): (card, claim name, menu claim ids; one of them must be used).
+MAIN_CLAIMS = (
+    ("dominance_without_reward", "possession", frozenset({"possession"})),
+    ("dominance_without_reward", "shot balance", SHOTS_GROUP),
+    ("dominance_without_reward", "score", SCORE_GROUP),
+    ("pressure_shift", "pressure balance", frozenset({"pressure"})),
+    ("pressure_shift", "shot balance", SHOTS_GROUP),
+    ("goal (match state change)", "goal", frozenset({"goal"})),
+    ("goal (match state change)", "score", SCORE_GROUP),
+    ("goal (no state change)", "goal", frozenset({"goal"})),
+    ("red_card", "sending-off", frozenset({"sent_off"})),
+    ("penalty", "penalty", frozenset({"penalty"})),
+)
+USAGE_FROM = "foundry-v5"  # first version with menu templates
+
+
+def _card(d) -> str:
+    if d.moment.type == "goal":
+        return "goal (match state change)" if d.state_change else "goal (no state change)"
+    return d.moment.type
+
+
+def primary_usage(label: str, run: dict[str, Any]) -> tuple[dict[tuple[str, str], tuple[int, int]], Counter[str]]:
+    """(card, claim) → (LLM texts that use the claim, LLM texts); fallback cards per card type."""
+    from eval.lint_rates import menu_drafts
+
+    usage: dict[tuple[str, str], list[int]] = {(c, n): [0, 0] for c, n, _ in MAIN_CLAIMS}
+    fallbacks: Counter[str] = Counter()
+    for d in menu_drafts(label, run=run, fallbacks=True):
+        card = _card(d)
+        if d.source != "llm":
+            fallbacks[card] += 1
+            continue
+        used = referenced_claims(parse_placeholders(d.template)[0], d.menu)
+        for c, name, ids in MAIN_CLAIMS:
+            if c == card:
+                usage[(c, name)][0] += bool(used & ids)
+                usage[(c, name)][1] += 1
+    return {k: (u, n) for k, (u, n) in usage.items()}, fallbacks
+
+
+def render_primary_usage(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
+    version = run["meta"]["prompt_version"].split(":", 1)[0]
+    versions = [(label, b) for label, b in baselines.items() if label >= USAGE_FROM] + [(version, run)]
+    measured = [(label, *primary_usage(label, r), len(runs_of(r))) for label, r in versions]
+    out = [
+        "## Main claim usage per card type",
+        "",
+        "Share of published LLM texts (all runs) that use the card's main claim, for the menu versions. The claim "
+        "is used when a placeholder refers to it (a clause, value, `{event:}` or `{score}`/`{score_named}`), "
+        "measured on the model template against today's menu. Rows follow the foundry-v5.2 definition: "
+        "dominance needs possession, shot balance and score; pressure needs pressure and shot balance; a goal that "
+        "changed the match state needs the score (v5: its goal card; v5's separate score_change cards are left out). "
+        "Fallback cards are not in the shares (the template states every main claim).",
+        "",
+        "| Card | Main claim | " + " | ".join(f"{label} ({n} runs)" if n > 1 else label
+                                           for label, _, _, n in measured) + " |",
+        "|---|---|" + "---:|" * len(measured),
+    ]
+    for card, name, _ in MAIN_CLAIMS:
+        if not any(usage[(card, name)][1] for _, usage, _, _ in measured):
+            continue  # no such card in the demo matches
+        cells = [_share_cell(*usage[(card, name)]) for _, usage, _, _ in measured]
+        out.append(f"| {card} | {name} | " + " | ".join(cells) + " |")
+    out.append("| **Fallback cards** | | " + " | ".join(
+        (", ".join(f"{c} {n}" for c, n in sorted(fb.items())) or "0") for _, _, fb, _ in measured) + " |")
+    return [*out, ""]
+
+
+def _share_cell(used: int, total: int) -> str:
+    return f"{used}/{total} ({used / total * 100:.0f}%)" if total else "—"
+
+
 def render_evidence_groups(run: dict[str, Any]) -> list[str]:
     """evidence_mismatch rejections: which events the model cited for which claim, and what the verifier counted."""
     groups: Counter[tuple[str, ...]] = Counter()
@@ -475,7 +552,7 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
     """Live firing of the v4.1 rules: attempts that contain the rule, and attempts rejected by that rule alone."""
     rejected = [rej for rr in runs_of(run) for _, _, rej in _rejected(rr["matches"]) if "lint" in rej]
     out = [
-        "## Live firing of the foundry-v4.1 / v5 / v5.1 rules",
+        "## Live firing of the foundry-v4.1 / v5 / v5.1 / v5.2 rules",
         "",
         "This rule only = the rule was the attempt's only rejection reason (no other lint or verify error): "
         "without the rule it would have been published. A correct rejection if it is the pattern the rule targets, "
@@ -543,6 +620,7 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
 
     out += [*render_comparison(run, baselines), ""]
     out += render_code_frequency(run, baselines)
+    out += render_primary_usage(run, baselines)
     out += render_side_by_side(run, baselines)
     out += render_evidence_groups(run)
     out += render_rule_hits(run)

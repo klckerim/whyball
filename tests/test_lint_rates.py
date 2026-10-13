@@ -44,3 +44,27 @@ def test_team_repeat_counts_team_names_per_sentence():
     # The same names split over two sentences do not fire.
     first, rest = hit.split(". ", 1)
     assert team_repeats(rest.replace(", red cards", ". Red cards"), texts[hit].roster, 2) == []
+
+
+def test_team_repeat_can_leave_out_the_score_line():
+    from eval.lint_rates import llm_published, team_repeats
+
+    # foundry-v5.2 (slot_team_repeat_exempt="score"): the score line's names do not count.
+    texts = {t.raw: t for t in llm_published("foundry-v5.1")}
+    raw = next(r for r in texts if r.startswith("Murek Ymberto scored at 84'"))
+    roster = texts[raw].roster
+    tripled = raw.replace("Morvane Athletic went ahead", "Morvane Athletic lead, Morvane Athletic went ahead")
+    assert team_repeats(tripled, roster, 2) == ["{away}"]
+    first = "Morvane Athletic lead, and the score is Brannoch FC 1–2 Morvane Athletic and Morvane Athletic push."
+    assert team_repeats(first, roster, 2) == ["{away}"]
+    assert team_repeats(first, roster, 2, exclude_score=True) == []
+
+
+def test_menu_drafts_replay_archived_templates_against_todays_menu():
+    from eval.lint_rates import menu_drafts
+
+    v5 = menu_drafts("foundry-v5")  # legacy ids: score_change cards are skipped, goal cards keep their state change
+    assert v5 and all(d.moment.type != "score_change" for d in v5)
+    assert any(d.state_change for d in v5 if d.moment.type == "goal")
+    v51 = menu_drafts("foundry-v5.1")
+    assert len(v51) == 15 and {d.run for d in v51} == {1}

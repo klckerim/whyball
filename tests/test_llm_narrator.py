@@ -90,7 +90,9 @@ def responder(events):
         moment = moments[record["moment"]["id"]]
         clauses = {c["id"] for c in record["clauses"]}
         assert {c["id"] for c in record["claims_menu"]} and moment.id == record["moment"]["id"]
-        for first in ("dominance", "pressure", "goal", "goals", "sent_off", "penalty"):
+        if "pressure" in clauses:  # foundry-v5.2: pressure and shot balance; the score line does not count
+            return text_json("{clause:pressure}, and {clause:shots}, and {clause:score}.")
+        for first in ("dominance", "goal", "goals", "sent_off", "penalty"):
             if first in clauses:
                 return text_json(f"{{clause:{first}}}, and {{clause:score}}.")
         return text_json("{clause:score}.")
@@ -138,7 +140,14 @@ def test_v5_prompt_rules():
     assert "Every sentence must use at least one menu fact" in system
     assert '"At"' not in system and '"Possession"' not in system and '"They"' not in system
     events, pressure = moment_case("pressure_shift")
-    assert "pressure balance must be used" in build_messages(pressure, events, "neutral", "en")[0]["content"]
+    pressure_prompt = build_messages(pressure, events, "neutral", "en")[0]["content"]
+    assert "the pressure balance AND the shot balance of the window must both be used" in pressure_prompt
+    events, dominance = moment_case("dominance_without_reward")
+    assert "possession, the shot balance AND the score must all be used" in build_messages(
+        dominance, events, "neutral", "en")[0]["content"]
+    # foundry-v5.2: the team repeat line no longer counts the score (v5.1: the model dropped it)
+    assert "The score ({clause:score}, {score_named}) does not count" in system
+    assert "never drop the score" in system and "count the team names inside clauses and {score_named}" not in system
 
 
 def test_response_schema_has_no_claims_or_event_ids():
@@ -199,8 +208,8 @@ def test_away_goal_score_is_rendered_home_first():
 def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v5.1"
-    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v5.1:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v5.2"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v5.2:gpt-x"
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 

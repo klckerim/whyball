@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import random
 import re
 from collections import Counter
@@ -35,7 +36,7 @@ from app.explain.claims import KICKOFF, Claim, Subject, VerificationResult, meas
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from app.explain.labels import WINDOW_PHRASES, metric_label, window_phrase_spans
 from app.explain.phrases import sentence_starts
-from app.explain.menu import ClaimMenu, build_menu, menu_rule_issues
+from app.explain.menu import ClaimMenu, build_menu, menu_rule_issues, team_counts
 from app.explain.pipeline import check_draft, check_menu_draft, check_slot_draft
 from app.explain.llm_narrator import PROMPT_VERSION
 from app.explain.slots import (
@@ -1103,6 +1104,28 @@ class EvalReport:
     team_repeat: list[tuple[str, int, int, Counter[str], list[str]]] = field(default_factory=list)
     # clean v5 menu drafts where the template rule and the count on the rendered text disagree
     team_repeat_disagreements: list[str] = field(default_factory=list)
+    # foundry-v5.2 team repeat variants (TEAM_REPEAT_MODES): one row per mode
+    team_repeat_variants: list[RepeatVariant] = field(default_factory=list)
+    # foundry-v5.2 primary claims on archived published templates: version → (fired, total, firings)
+    primary_v52: list[tuple[str, int, int, list[tuple[lint_rates.MenuDraft, str]]]] = field(default_factory=list)
+    primary_v52_base: tuple[int, int] = (0, 0)  # clean v5 menu base: (fired, total)
+
+
+@dataclass
+class RepeatVariant:
+    """One team repeat variant (exempt mode, limit) on the required minimum and the one-sentence draft space."""
+
+    name: str
+    mode: str
+    limit: int
+    minimum_rejected: int = 0
+    minimum_total: int = 0
+    minimum_examples: list[str] = field(default_factory=list)
+    space_valid: int = 0  # drafts that pass every other menu rule
+    space_rejected: int = 0  # ... that team_repeat rejects
+    space_passed: int = 0
+    space_monotone: int = 0  # passed drafts with a team named 3+ times in the rendered sentence
+    space_prose_monotone: int = 0  # ... 3+ times outside the score line
 
 
 def _rng(moment: Moment, type_name: str, lang: str, variant: str) -> random.Random:
@@ -1226,6 +1249,8 @@ def run_eval(
         report.v5_false_alarms.append((name, flagged, len(texts), hits))
     report.held_out = lint_rates.held_out_sentence_starts(raw, llm)
     _team_repeat(report, samples, configs["v5"])
+    _team_repeat_variants(report, samples, configs["v5"])
+    _primary_v52(report, samples, configs["v5"])
     for t in llm:
         hits = lint_rates.fired(t, "overstatement", configs["v4"])
         if hits:
@@ -1234,9 +1259,95 @@ def run_eval(
     return report
 
 
+# foundry-v5.2 team repeat variants: (name, ExplainConfig.slot_team_repeat_exempt, slot_team_repeat_max).
+TEAM_REPEAT_VARIANTS = (
+    ("foundry-v5.1: everything counts, limit 2", "none", 2),
+    ("A: score line and primary clauses do not count, limit 2", "score+primary", 2),
+    ("B: score line does not count, limit 2", "score", 2),
+    ("C: everything counts, limit 3", "none", 3),
+)
+# Clauses of a card's primary claims (besides the score), as the prompt suggests them.
+PRIMARY_CLAUSES = {"dominance_without_reward": ("dominance",), "pressure_shift": ("pressure", "shots")}
+
+
+def required_minimum(s: Sample) -> str:
+    """One sentence with only what a card needs: its event, the match-state sub-label, the primary clauses and
+    the score clause. A rule that rejects it contradicts the primary rule."""
+    m, menu = s.moment, s.slot5.menu
+    ref = _event_ref(s)
+    parts = ["{event:%s}" % ref] if ref else []
+    if m.type == "goal" and "score_change" in m.detail:
+        parts.append("{clause:%s}" % m.detail["score_change"]["kind"])
+    parts += ["{clause:%s}" % c for c in PRIMARY_CLAUSES.get(m.type, ()) if c in menu.clause_by_id]
+    parts.append("{clause:score}")
+    return ", and ".join(parts) + "."
+
+
+def draft_space(s: Sample) -> list[str]:
+    """One-sentence drafts: the card's event (if any) + 1-4 menu clauses joined with ", and"."""
+    ref = _event_ref(s)
+    clauses = [c.id for c in s.slot5.menu.clauses]
+    out = []
+    for k in range(1, 5):
+        for combo in itertools.combinations(clauses, k):
+            parts = (["{event:%s}" % ref] if ref else []) + ["{clause:%s}" % c for c in combo]
+            out.append(", and ".join(parts) + ".")
+    return out
+
+
+def _team_repeat_variants(report: EvalReport, samples: Sequence[Sample], config: ExplainConfig) -> None:
+    rows = [RepeatVariant(name, mode, limit) for name, mode, limit in TEAM_REPEAT_VARIANTS]
+    off = replace(config, slot_team_repeat_max=0)
+    for s in samples:
+        if not s.slot5:
+            continue
+        menu, ctx = s.slot5.menu, s.slot5.ctx
+        minimum = required_minimum(s)
+        for row in rows:
+            variant = replace(config, slot_team_repeat_exempt=row.mode, slot_team_repeat_max=row.limit)
+            items, *_ = check_menu_draft(minimum, menu, ctx, variant)
+            row.minimum_total += 1
+            if any(i.code == "team_repeat" for i in items):
+                row.minimum_rejected += 1
+                row.minimum_examples.append(f"{s.moment.id} ({s.moment.type}): `{minimum}`")
+        for template in draft_space(s):
+            items, _, _, claims, ids = check_menu_draft(template, menu, ctx, off)
+            if items:
+                continue
+            placeholders = parse_placeholders(template)[0]
+            verdicts = tuple(VerificationResult(True, "ok", c.value) for c in claims)
+            text = render(template, claims, ids, verdicts, ctx, menu.clause_templates(s.lang))
+            monotone = bool(lint_rates.team_repeats(text, s.roster, 2))
+            prose = bool(lint_rates.team_repeats(text, s.roster, 2, exclude_score=True))
+            for row in rows:
+                sides = team_counts(placeholders, menu, ctx, row.mode)
+                row.space_valid += 1
+                if any(sides.count(side) > row.limit for side in ("home", "away")):
+                    row.space_rejected += 1
+                else:
+                    row.space_passed += 1
+                    row.space_monotone += monotone
+                    row.space_prose_monotone += prose
+    report.team_repeat_variants = rows
+
+
+def _primary_v52(report: EvalReport, samples: Sequence[Sample], config: ExplainConfig) -> None:
+    """foundry-v5.2 primary claims (dominance: + score; pressure: + shot balance) on clean and archived drafts."""
+    base = [s for s in samples if s.slot5]
+    fired = sum(any(i.code == "missing_primary_claim" for i in menu_rule_issues(s.slot5.template, s.slot5.menu,
+                                                                                s.slot5.ctx, config)) for s in base)
+    report.primary_v52_base = (fired, len(base))
+    for version in ("foundry-v5", "foundry-v5.1"):
+        drafts = lint_rates.menu_drafts(version)
+        hits = [(d, i.fragment) for d in drafts for i in menu_rule_issues(d.template, d.menu, d.ctx, config)
+                if i.code == "missing_primary_claim"]
+        report.primary_v52.append((version, len({id(d) for d, _ in hits}), len(drafts), hits))
+
+
 def _team_repeat(report: EvalReport, samples: Sequence[Sample], config: ExplainConfig) -> None:
-    """Firings of the v5.1 team repeat rule on clean and accepted texts (every firing is a candidate false alarm)."""
+    """Firings of the team repeat rule on clean and accepted texts (every firing is a candidate false alarm)."""
     limit = config.slot_team_repeat_max
+    exclude_score = config.slot_team_repeat_exempt == "score"
     menu_texts, menu_hits = [], Counter()
     for s in samples:
         if not s.slot5:
@@ -1246,7 +1357,7 @@ def _team_repeat(report: EvalReport, samples: Sequence[Sample], config: ExplainC
         text = render(d.template, d.claims, d.claim_ids, verdicts, d.ctx, d.menu.clause_templates(s.lang))
         by_rule = sorted(i.fragment for i in menu_rule_issues(d.template, d.menu, d.ctx, config)
                          if i.code == "team_repeat")
-        by_text = sorted(lint_rates.team_repeats(text, s.roster, limit))
+        by_text = sorted(lint_rates.team_repeats(text, s.roster, limit, exclude_score))
         if by_rule != by_text:
             report.team_repeat_disagreements.append(s.moment.id)
         menu_hits.update(by_rule)
@@ -1259,7 +1370,7 @@ def _team_repeat(report: EvalReport, samples: Sequence[Sample], config: ExplainC
         hits: Counter[str] = Counter()
         fired = []
         for text, roster in texts:
-            found = lint_rates.team_repeats(text, roster, limit)
+            found = lint_rates.team_repeats(text, roster, limit, exclude_score)
             hits.update(found)
             fired += [text] if found else []
         report.team_repeat.append((name, len(fired), len(texts), hits, fired))
@@ -1387,8 +1498,9 @@ def render_team_repeat(report: EvalReport) -> list[str]:
         f"### False alarms of the {PROMPT_VERSION} team repeat rule",
         "",
         "`team_repeat` rejects a menu draft that names the same team more than "
-        f"{V5_CONFIG.slot_team_repeat_max} times in one sentence (team names inside clauses and both names of "
-        "`{score_named}` count). Clean and already accepted texts below; every firing is a candidate false alarm "
+        f"{V5_CONFIG.slot_team_repeat_max} times in one sentence (team names inside clauses count; since "
+        "foundry-v5.2 the score line, `{score_named}` / `{clause:score}`, does not). "
+        "Clean and already accepted texts below; every firing is a candidate false alarm "
         "(the text is correct, the rule only judges readability). Measured on the final text (team names of the "
         "squad, per sentence); on the clean menu drafts the template rule and the count on the rendered text "
         + ("agree on every draft." if not report.team_repeat_disagreements else
@@ -1404,6 +1516,75 @@ def render_team_repeat(report: EvalReport) -> list[str]:
     if fired:
         out += ["", "Texts it fires on (distinct):", ""]
         out += [f"- {name}: \"{text}\"" for name, text in fired]
+    return out
+
+
+def render_team_repeat_variants(report: EvalReport) -> list[str]:
+    out = [
+        "### foundry-v5.2: which team names the team repeat rule counts",
+        "",
+        "In the foundry-v5.1 live run the score disappeared from all dominance cards; the prompt line \"count the "
+        "team names inside clauses and {score_named}\" made the score the cheapest thing to drop. Variants measured "
+        "on the 248 corpus moments (deterministic, no model):",
+        "",
+        "- *Required minimum*: one sentence with only what the card needs: its event, the match-state sub-label, "
+        "the primary clauses and the score (`{clause:pressure}, and {clause:shots}, and {clause:score}.`, "
+        "`{clause:dominance}, and {clause:score}.`, `{event:<goal>}, and {clause:go_ahead}, and {clause:score}.`). "
+        "A rejection is a certain false alarm: the rule contradicts the primary rule.",
+        "- *Draft space*: the card's event + 1–4 menu clauses joined with \", and\" (one sentence), kept only if it "
+        "passes every other menu rule. *Repeats* = passed drafts whose rendered sentence names a team 3+ times "
+        "(as the reader sees it, score line included); *in prose* = 3+ times outside the score line.",
+        "",
+        "| Variant | Required minimum rejected (false alarm) | Draft space rejected | Passed with repeats | "
+        "Passed with repeats in prose |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for v in report.team_repeat_variants:
+        chosen = (v.mode, v.limit) == (V5_CONFIG.slot_team_repeat_exempt, V5_CONFIG.slot_team_repeat_max)
+        name = f"**{v.name}** (chosen)" if chosen else v.name
+        out.append(f"| {name} | {_rate_cell(v.minimum_rejected, v.minimum_total)} | "
+                   f"{_rate_cell(v.space_rejected, v.space_valid)} | {_rate_cell(v.space_monotone, v.space_passed)} | "
+                   f"{_rate_cell(v.space_prose_monotone, v.space_passed)} |")
+    examples = sorted({e.split(": ", 1)[1] for v in report.team_repeat_variants for e in v.minimum_examples})
+    if examples:
+        out += ["", "Required minimums the rule rejects: " + "; ".join(examples) + "."]
+    out += [
+        "",
+        "Choice: **B**. foundry-v5.1 rejects the required minimum of every pressure card that adds the score "
+        "(the pressure clause, the shot clause and the score line each name the leading team). A and B never "
+        "reject the required minimum and are equal on the whole draft space: every primary clause names its team "
+        "once, and the drafts where A's extra exemption would matter already fail another rule (two clauses that "
+        "write the same window start → `minute_repeat`). B is the narrower rule (A would also let a hand-written "
+        "`{home}`/`{away}` pass next to two primary clauses), and its prompt line is one fact the model can apply "
+        "(\"the score does not count\"); A's needs the model to know which clauses are primary. C (count everything, "
+        "limit 3) also never rejects the minimum but lets the prose itself name a team three times "
+        "(`{event}, and {clause:goal}, and {clause:team_goals}, and {clause:possession}`). The cost of B: the score "
+        "line may add a third name to a sentence (\"Passed with repeats\"); the prompt line tells the model to drop an "
+        "extra clause or start a new sentence instead of dropping the score.",
+    ]
+    return out
+
+
+def render_primary_v52(report: EvalReport) -> list[str]:
+    fired, total = report.primary_v52_base
+    out = [
+        "### foundry-v5.2: new primary claims (dominance: the score; pressure: the window's shot balance)",
+        "",
+        "`missing_primary_claim` now also fires when a dominance_without_reward card lacks the score "
+        "(`{clause:score}`, `{score}` or `{score_named}`) or a pressure_shift card lacks the shot balance "
+        f"(`{{clause:shots}}`). Clean v5 menu base: {_rate_cell(fired, total)} fired (false alarms). "
+        "Archived published templates, replayed against today's menu (a firing = a published text that would now "
+        "be rejected; a false alarm only if the text states the claim another way, e.g. the margin clause instead "
+        "of the score):",
+        "",
+        "| Version (all runs) | Fired | False alarm | Firings |",
+        "|---|---:|---:|---|",
+    ]
+    for version, n, total, hits in report.primary_v52:
+        false = [d for d, frag in hits if "score" in frag and "{clause:margin}" in d.template]
+        firings = "<br>".join(f"run {d.run} {d.moment.id.rsplit('-', 1)[-1]} {d.moment.type} (`{frag}`): "
+                              f"\"{d.text}\"" for d, frag in hits) or "—"
+        out.append(f"| {version} | {_rate_cell(n, total)} | {len(false)} | {firings} |")
     return out
 
 
@@ -1605,6 +1786,10 @@ def render_markdown(report: EvalReport) -> str:
         *render_v5_sentence_starts(report),
         "",
         *render_team_repeat(report),
+        "",
+        *render_team_repeat_variants(report),
+        "",
+        *render_primary_v52(report),
         "",
         "In the template and v3 rows, the sentence-start firings come from the template narrator's own "
         "patterns (EN \"Shots since …\"). This word was deliberately left off "
