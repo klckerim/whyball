@@ -25,6 +25,10 @@ from .template_narrator import narrate as template_narrate
 class Draft:
     text: str
     claims: tuple[Claim, ...]
+    # Slot tabanlı taslak: `template` yer tutuculu metin, `claim_ids` iddia başına id.
+    # Nihai metni pipeline doğrulamadan sonra render eder (bkz. slots.py).
+    template: str | None = None
+    claim_ids: tuple[str, ...] = ()
 
 
 class NarratorError(Exception):

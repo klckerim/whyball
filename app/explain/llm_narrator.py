@@ -4,10 +4,11 @@
 yer `FoundryChatClientAdapter`'dır; testler sahte istemci kullanır.
 
 Modele yalnızca moment kaydı verilir (momentin dayanak olayları, o anki
-metrikler, kadro). Çıktı her moment için üretilen kapalı bir JSON şemasına
-zorlanır: iddia türü, metrik, karşılaştırma ve oyuncu enum'dur; dayanak olay
-id'leri yalnızca verilen olaylardan seçilebilir. Taslak pipeline'da yine
-text_lint + verify_claim'den geçer.
+metrikler, kadro). Model somut değer yazmaz: metin yer tutuculu bir şablondur
+(bkz. slots.py), gerçek değerleri pipeline doğrulanmış iddialardan render eder.
+Çıktı her moment için üretilen kapalı bir JSON şemasına zorlanır: iddia türü,
+metrik, karşılaştırma ve oyuncu id'si enum'dur; dayanak olay id'leri yalnızca
+verilen olaylardan seçilebilir.
 
 Güvenlik: çağrı başına zaman aşımı, yanıt token üst sınırı, anlatıcı başına
 maksimum çağrı sayısı (aşılınca `BudgetExceeded`), her çağrının token
@@ -40,8 +41,9 @@ from .narrator import (
     NarratorError,
     NarratorTimeout,
 )
+from .slots import METRIC_LABELS, player_ids
 
-PROMPT_VERSION = "foundry-v2"
+PROMPT_VERSION = "foundry-v3"
 INSTALL_HINT = "FoundryNarrator için: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -54,11 +56,12 @@ def _time(period: int, minute: int, second: int) -> dict[str, int]:
     return {"period": period, "minute": minute, "second": second}
 
 
-def moment_record(moment: Moment, events: Sequence[Event]) -> dict[str, Any]:
+def moment_record(moment: Moment, events: Sequence[Event], language: str = "en") -> dict[str, Any]:
     """Modelin görebileceği tek bilgi: moment, dayanak olayları, o anki metrikler, kadro."""
     match_id = events[0].match_id
     by_seq = {e.seq: e for e in events}
-    teams = events[0].data["teams"]
+    ids = player_ids(events)
+    id_of = {name: pid for pid, name in ids.items()}
     record_events = []
     for seq in dict.fromkeys(moment.event_ids):
         e = by_seq[seq]
@@ -67,7 +70,7 @@ def moment_record(moment: Moment, events: Sequence[Event]) -> dict[str, Any]:
             "type": e.type.value,
             "time": _time(e.period, e.minute, e.second),
             "team": e.team,
-            "player": e.player,
+            "player": id_of.get(e.player) if e.player else None,
             "outcome": e.outcome,
             "score_after": e.score,
         })
@@ -84,19 +87,11 @@ def moment_record(moment: Moment, events: Sequence[Event]) -> dict[str, Any]:
         "metrics_at_moment": moment.metrics,
         "events": record_events,
         "squads": {
-            side: {
-                "name": teams[side]["name"],
-                "lineup": teams[side]["lineup"],
-                "bench": teams[side]["bench"],
-            }
+            side: [{"id": pid, "name": name} for pid, name in ids.items() if pid[0] == side[0]]
             for side in SIDES
         },
+        "metric_labels": METRIC_LABELS.get(language, METRIC_LABELS["en"]),
     }
-
-
-def _squad_players(events: Sequence[Event]) -> list[str]:
-    teams = events[0].data["teams"]
-    return [p for side in SIDES for p in (*teams[side]["lineup"], *teams[side]["bench"])]
 
 
 # --- kapalı çıktı şeması ------------------------------------------------------------------
@@ -110,7 +105,9 @@ class TimeOut(BaseModel):
 
 
 def draft_model_for(event_ids: Sequence[str], players: Sequence[str]) -> type[BaseModel]:
-    """Bu moment için kapalı şema: event_ids yalnızca verilen olaylardan, oyuncu kadrodan.
+    """Bu moment için kapalı şema: event_ids yalnızca verilen olaylardan, oyuncu kadro id'lerinden.
+
+    `text` yer tutuculu şablondur; her iddianın şablonda başvurulan bir `id`'si vardır.
 
     Strict structured output uyumu: tüm alanlar zorunlu (null'lanabilirler `| None`,
     varsayılan yok), ek alan yok, minItems gibi anahtar kelimeler yok.
@@ -125,6 +122,7 @@ def draft_model_for(event_ids: Sequence[str], players: Sequence[str]) -> type[Ba
     )
     claim = create_model(
         "ClaimOut", __config__=forbid,
+        id=(str, ...),
         kind=(Literal[KINDS], ...),  # type: ignore[valid-type]
         subject=(subject, ...),
         metric=(Literal[tuple(METRIC_KINDS)], ...),  # type: ignore[valid-type]
@@ -137,20 +135,21 @@ def draft_model_for(event_ids: Sequence[str], players: Sequence[str]) -> type[Ba
     return create_model("DraftOut", __config__=forbid, text=(str, ...), claims=(list[claim], ...))
 
 
-def parse_draft(model: type[BaseModel], raw: str) -> Draft:
+def parse_draft(model: type[BaseModel], raw: str, players: dict[str, str]) -> Draft:
+    """Model çıktısı → slot taslağı. Oyuncu id'leri doğrulayıcı için ada çevrilir."""
     out: Any = model.model_validate_json(raw)
-    return Draft(
-        out.text,
-        tuple(
-            Claim(
-                c.kind, Subject(c.subject.team, c.subject.player), c.metric, c.comparison, c.value,
-                MatchTime(c.start.period, c.start.minute, c.start.second),
-                MatchTime(c.end.period, c.end.minute, c.end.second),
-                tuple(c.event_ids),
-            )
-            for c in out.claims
-        ),
+    claims = tuple(
+        Claim(
+            c.kind,
+            Subject(c.subject.team, players[c.subject.player] if c.subject.player else None),
+            c.metric, c.comparison, c.value,
+            MatchTime(c.start.period, c.start.minute, c.start.second),
+            MatchTime(c.end.period, c.end.minute, c.end.second),
+            tuple(c.event_ids),
+        )
+        for c in out.claims
     )
+    return Draft(out.text, claims, template=out.text, claim_ids=tuple(c.id for c in out.claims))
 
 
 # --- istemci katmanı --------------------------------------------------------------------
@@ -166,7 +165,12 @@ class ChatResult:
 
 class ChatClient(Protocol):
     async def complete(
-        self, messages: list[dict[str, str]], *, response_model: type[BaseModel], max_tokens: int
+        self,
+        messages: list[dict[str, str]],
+        *,
+        response_model: type[BaseModel],
+        max_tokens: int,
+        reasoning_effort: str | None = None,
     ) -> ChatResult: ...
 
 
@@ -182,7 +186,8 @@ class FoundryChatClientAdapter:
 
     `get_response(messages, options={"max_tokens", "response_format"})`: Agent Framework
     `max_tokens`'ı Responses `max_output_tokens`'a, Pydantic modelini json_schema
-    `text.format`'a çevirir. `usage_details` bir TypedDict'tir (agent-framework-core 1.21):
+    `text.format`'a çevirir; `reasoning={"effort": ...}` (`OpenAIChatOptions.reasoning`,
+    Foundry'de `FoundryChatOptions = OpenAIChatOptions`) akıl yürütme çabasını ayarlar. `usage_details` bir TypedDict'tir (agent-framework-core 1.21):
     `input_token_count`, `output_token_count`, `reasoning_output_token_count`.
     """
 
@@ -216,11 +221,18 @@ class FoundryChatClientAdapter:
         self._message = message_factory
 
     async def complete(
-        self, messages: list[dict[str, str]], *, response_model: type[BaseModel], max_tokens: int
+        self,
+        messages: list[dict[str, str]],
+        *,
+        response_model: type[BaseModel],
+        max_tokens: int,
+        reasoning_effort: str | None = None,
     ) -> ChatResult:
+        options: dict[str, Any] = {"max_tokens": max_tokens, "response_format": response_model}
+        if reasoning_effort:
+            options["reasoning"] = {"effort": reasoning_effort}
         response = await self._client.get_response(
-            [self._message(m["role"], m["content"]) for m in messages],
-            options={"max_tokens": max_tokens, "response_format": response_model},
+            [self._message(m["role"], m["content"]) for m in messages], options=options
         )
         usage = getattr(response, "usage_details", None)
         return ChatResult(
@@ -233,24 +245,31 @@ class FoundryChatClientAdapter:
 
 # --- prompt -----------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You narrate one moment of a synthetic football match for WhyBall. A deterministic \
-verifier checks every claim against the full event log; text with any unverifiable claim, number or \
-name is rejected and never published.
+SYSTEM_PROMPT = """You narrate one moment of a synthetic football match for WhyBall. You write a \
+TEMPLATE with placeholders plus CLAIMS. Code fills every concrete value from verified claims and the \
+match state; a deterministic verifier rejects anything unverifiable.
 
-Use ONLY the moment record in the user message (moment, metrics_at_moment, events, squads). No \
-outside knowledge. Do not invent facts, names or numbers.
+Use ONLY the moment record in the user message (moment, metrics_at_moment, events, squads, \
+metric_labels). No outside knowledge. Do not invent facts.
 
-Write {language_name} text: 1-2 short sentences, persona: {persona}.
+Write {language_name}: 1-2 short, natural sentences, persona: {persona}.
 
-Every number and every team or player name in the text must appear in one of your claims: as the \
-claim value, as a minute of its start/end, or as its subject. Write numbers as digits, not words.
-Write match minutes as 22' (stoppage time: 45+2', 90+3'), never as 22:00; scores as 1-0.
+NEVER write digits, number words, team names, player names, minutes, scores, the words \
+"home"/"away" (or "ev sahibi"/"deplasman"), or metric identifiers such as field_tilt. Use placeholders:
+- {{home}}, {{away}}: team names.
+- {{score}}: the score at this moment, rendered by code in home-away order with team names.
+- {{player:<id>}}: a player by squad id (e.g. h07); that player must be the subject of one of your claims.
+- {{minute:<claim_id>}}: the end minute of a claim; {{start:<claim_id>}}: its start minute.
+- {{value:<claim_id>}}: the verified value of a claim (code formats percentages and signs).
+- {{label:<claim_id>}}: the readable name of a claim's metric.
+Describe metrics in plain words (see metric_labels), e.g. "{{home}} have had {{value:c2}} of the ball".
+Example template: "{{player:h07}} scored for {{home}} at {{minute:c1}}, making it {{score}}." with claim \
+c1 = count goals, subject player h07, start = end = the goal's time, event_ids = [the goal event].
 
-Claims. Times are {{period, minute, second}}; start <= end; end must not be later than the moment \
-time.
+Claims. Each claim has a unique short id (c1, c2, ...). Times are {{period, minute, second}}; \
+start <= end; end must not be later than the moment time.
 - count: number of events of that metric for the subject in [start, end]. event_ids must list \
-exactly ALL counted events, so only make count claims fully backed by the given events (for example \
-the moment's own event with start = end = its time).
+exactly ALL counted events, so only make count claims fully backed by the given events.
 - ratio (possession, field_tilt): the subject team's share 0..1 in [start, end]. Use start = kickoff, \
 end = moment time and the value from metrics_at_moment; cite at least one given event in the range.
 - state: the value at end. score; score_margin (team minus opponent); min_score_margin (worst \
@@ -259,7 +278,7 @@ metrics_at_moment.pressure_balance is from home's view, negate it for away). Use
 cite at least one given event in the range.
 Metrics and their kind: {metrics}.
 Comparisons: {comparisons}. Use "eq" for exact integers and "approx" for decimals (tolerance 0.005).
-subject.team is "home" or "away"; subject.player is a squad name or null.
+subject.team is "home" or "away"; subject.player is a squad id or null.
 
 Respond only with JSON matching the schema."""
 
@@ -279,7 +298,7 @@ def build_messages(
         metrics=", ".join(f"{m} ({k})" for m, k in METRIC_KINDS.items()),
         comparisons=", ".join(COMPARISONS),
     )
-    user = json.dumps(moment_record(moment, events), ensure_ascii=False, sort_keys=True)
+    user = json.dumps(moment_record(moment, events, language), ensure_ascii=False, sort_keys=True)
     if feedback is not None:
         lines = [f"Previous attempt {feedback.attempt} was rejected. Fix every issue:"]
         for item in feedback.items:
@@ -305,6 +324,7 @@ class UsageRecord:
     output_tokens: int | None
     reasoning_tokens: int | None
     latency_ms: int
+    error: str | None = None  # hata mesajı (istemci, zaman aşımı, şema)
 
 
 class FoundryNarrator:
@@ -326,7 +346,7 @@ class FoundryNarrator:
         self.prompt_version = f"{PROMPT_VERSION}:{model_tag}" if model_tag else PROMPT_VERSION
         self.calls = 0
         self.usage: list[UsageRecord] = []
-        self._players = _squad_players(events)
+        self._players = player_ids(events)  # id → ad
         # Kalıcı loop: senkron pipeline'dan çağrılır, istemci tek loop'a bağlı kalır.
         self._loop = asyncio.new_event_loop()
 
@@ -336,9 +356,12 @@ class FoundryNarrator:
 
     def response_model(self, moment: Moment) -> type[BaseModel]:
         match_id = self.events[0].match_id
-        return draft_model_for([f"{match_id}#{s}" for s in moment.event_ids], self._players)
+        return draft_model_for([f"{match_id}#{s}" for s in moment.event_ids], list(self._players))
 
-    def _record(self, moment: Moment, outcome: str, started: float, result: ChatResult | None) -> None:
+    def _record(
+        self, moment: Moment, outcome: str, started: float, result: ChatResult | None,
+        error: str | None = None,
+    ) -> None:
         rec = UsageRecord(
             call=self.calls,
             moment_id=moment.id,
@@ -347,13 +370,14 @@ class FoundryNarrator:
             output_tokens=result.output_tokens if result else None,
             reasoning_tokens=result.reasoning_tokens if result else None,
             latency_ms=round((time.perf_counter() - started) * 1000),
+            error=error,
         )
         self.usage.append(rec)
         logger.info(
             "llm_call call=%d moment=%s outcome=%s input_tokens=%s output_tokens=%s "
-            "reasoning_tokens=%s latency_ms=%d",
+            "reasoning_tokens=%s latency_ms=%d%s",
             rec.call, rec.moment_id, rec.outcome, rec.input_tokens, rec.output_tokens,
-            rec.reasoning_tokens, rec.latency_ms,
+            rec.reasoning_tokens, rec.latency_ms, f" error={error!r}" if error else "",
         )
 
     def narrate(
@@ -368,24 +392,30 @@ class FoundryNarrator:
         model = self.response_model(moment)
         messages = build_messages(moment, self.events, persona, language, feedback)
         started = time.perf_counter()
-        call = self.client.complete(messages, response_model=model, max_tokens=cfg.llm_max_tokens)
+        call = self.client.complete(
+            messages, response_model=model, max_tokens=cfg.llm_max_tokens,
+            reasoning_effort=cfg.llm_reasoning_effort,
+        )
         try:
             result = self._loop.run_until_complete(asyncio.wait_for(call, cfg.llm_timeout_s))
         except TimeoutError:
-            self._record(moment, "timeout", started, None)
-            raise NarratorTimeout(f"LLM {cfg.llm_timeout_s:g} sn içinde yanıt vermedi") from None
+            message = f"LLM {cfg.llm_timeout_s:g} sn içinde yanıt vermedi"
+            self._record(moment, "timeout", started, None, message)
+            raise NarratorTimeout(message) from None
         except Exception as e:
-            self._record(moment, "client_error", started, None)
-            raise NarratorError(f"LLM istemci hatası: {e!r}") from e
+            message = f"LLM istemci hatası: {e!r}"
+            self._record(moment, "client_error", started, None, message)
+            raise NarratorError(message) from e
         try:
-            draft = parse_draft(model, result.text)
+            draft = parse_draft(model, result.text, self._players)
         except ValidationError as e:
-            self._record(moment, "invalid_output", started, result)
             first = e.errors()[0]
-            raise InvalidNarratorOutput(
+            message = (
                 f"Şemaya uymayan yanıt ({e.error_count()} hata): {first['type']} at "
                 f"{'.'.join(map(str, first['loc'])) or '<root>'}"
-            ) from None
+            )
+            self._record(moment, "invalid_output", started, result, message)
+            raise InvalidNarratorOutput(message) from None
         self._record(moment, "ok", started, result)
         return draft
 

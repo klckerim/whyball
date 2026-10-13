@@ -36,6 +36,7 @@ class ExplainConfig:
     llm_timeout_s: float = 60.0  # çağrı başına (reasoning modeli)
     llm_max_tokens: int = 4000  # yanıt token üst sınırı; reasoning token'larını da kapsar
     llm_max_calls_per_run: int = 60  # anlatıcı örneği (çalıştırma) başına toplam çağrı
+    llm_reasoning_effort: str = "low"  # Responses reasoning.effort (none|low|medium|high)
 
 
 DEFAULT_EXPLAIN_CONFIG = ExplainConfig()

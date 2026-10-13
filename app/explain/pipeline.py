@@ -20,6 +20,7 @@ from .claims import Claim, VerificationResult, verify_claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .narrator import Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
+from .slots import SlotContext, bind_template, lint_template, render
 from .template_narrator import narrate as template_narrate
 from .text_lint import LintIssue, Roster, lint_text
 
@@ -39,6 +40,7 @@ class NarrationRecord:
     cache_hit: bool
     cache_key: str | None
     trace: tuple[dict[str, Any], ...]
+    template: str | None = None  # slot tabanlı taslakta render öncesi şablon
 
     @property
     def ok(self) -> bool:
@@ -59,6 +61,7 @@ class NarrationRecord:
             "cache_hit": self.cache_hit,
             "cache_key": self.cache_key,
             "trace": list(self.trace),
+            "template": self.template,
         }
 
     @classmethod
@@ -77,6 +80,7 @@ class NarrationRecord:
             cache_hit=d["cache_hit"],
             cache_key=d["cache_key"],
             trace=tuple(d["trace"]),
+            template=d.get("template"),
         )
 
 
@@ -101,6 +105,34 @@ def check_draft(
         FeedbackItem("verify", r.reason, claim_index=i) for i, r in enumerate(results) if not r.ok
     ]
     return items, lint.issues, results
+
+
+def check_slot_draft(
+    template: str,
+    claims: Sequence[Claim],
+    claim_ids: Sequence[str],
+    ctx: SlotContext,
+    config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+) -> tuple[
+    list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...],
+    tuple[Claim, ...], tuple[str, ...],
+]:
+    """Slot taslağı: şablon lint + yer tutucu bağlama + verify (otomatik skor iddiaları dahil)."""
+    items: list[FeedbackItem] = []
+    if not template.strip():
+        items.append(FeedbackItem("draft", "empty_text"))
+    if not claims:
+        items.append(FeedbackItem("draft", "no_claims"))
+    bound_claims, bound_ids, bind_issues = bind_template(template, claims, claim_ids, ctx)
+    issues = tuple(sorted(
+        (*lint_template(template, ctx, config).issues, *bind_issues), key=lambda i: (i.start, i.code)
+    ))
+    items += [FeedbackItem("lint", i.code, fragment=i.fragment) for i in issues]
+    results = tuple(verify_claim(c, ctx.events, config) for c in bound_claims)
+    items += [
+        FeedbackItem("verify", r.reason, claim_index=i) for i, r in enumerate(results) if not r.ok
+    ]
+    return items, issues, results, bound_claims, bound_ids
 
 
 def run_moment(
@@ -161,7 +193,14 @@ def run_moment(
             continue
         trace.append({"attempt": attempt, "step": "narrate", "ok": True, "narrator": narrator.name,
                       "claims": len(draft.claims), "feedback": feedback_codes})
-        items, issues, results = check_draft(draft.text, draft.claims, events, roster, config, language)
+        if draft.template is not None:
+            ctx = SlotContext.from_moment(moment, events, language)
+            items, issues, results, claims_out, ids_out = check_slot_draft(
+                draft.template, draft.claims, draft.claim_ids, ctx, config
+            )
+        else:
+            items, issues, results = check_draft(draft.text, draft.claims, events, roster, config, language)
+            claims_out = draft.claims
         trace.append({"attempt": attempt, "step": "lint", "ok": not issues,
                       "issues": [{"code": i.code, "fragment": i.fragment} for i in issues]})
         trace.append({"attempt": attempt, "step": "verify", "ok": all(r.ok for r in results),
@@ -171,8 +210,11 @@ def run_moment(
             trace.append({"attempt": attempt, "step": "accept", "ok": True, "source": narrator.source})
             if cache is not None:
                 trace.append({"attempt": attempt, "step": "cache_store", "ok": True, "key": key})
-            rec = record(text=draft.text, claims=draft.claims, verification=results,
-                         lint_issues=(), attempts=attempt, source=narrator.source)
+            text = draft.text
+            if draft.template is not None:
+                text = render(draft.template, claims_out, ids_out, results, ctx)
+            rec = record(text=text, claims=claims_out, verification=results, lint_issues=(),
+                         attempts=attempt, source=narrator.source, template=draft.template)
             if cache is not None:
                 cache.put(key, rec.to_dict())
             return rec
