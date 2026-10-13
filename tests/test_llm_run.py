@@ -143,30 +143,43 @@ def test_human_review_csv_never_overwrites_annotations(tmp_path):
 # --- ölçüm modu: reddedilen taslaklar, çoklu koşu, sürüm karşılaştırması --------------------------
 
 
-def _shots_responder(events):
-    """Her momentte 'maç başından beri ev sahibi şutu' iddiası, yalnızca ilk olaya bağlı (evidence_mismatch)."""
-    from app.explain.claims import KICKOFF, Claim, MatchTime, Subject
-    from tests.test_llm_narrator import slot_json
+class _ShotsNarrator:
+    """v4 tarzı (model iddia kurar) taslak: 'maç başından beri ev sahibi şutu', yalnızca ilk olaya bağlı.
 
-    def respond(messages):
-        record, _ = json.JSONDecoder().raw_decode(messages[1]["content"])
-        end = MatchTime(**record["moment"]["time"])
-        claim = Claim("count", Subject("home"), "shots", "eq", 1, KICKOFF, end, (record["events"][0]["id"],))
-        return slot_json("{home} had {value:c1} {label:c1}.", (claim,), ("c1",), events)
+    foundry-v5'te model iddia kuramaz; bu, arşivlenen v4/v4.1 ölçümlerindeki evidence_mismatch
+    raporlamasının hâlâ çalıştığını gösterir.
+    """
 
-    return respond
+    name, source, prompt_version = "shots", "llm", "test-v4"
+
+    def __init__(self, events):
+        self.events = events
+        self.usage = []
+
+    def narrate(self, moment, persona, language, feedback=None):
+        from app.explain.claims import KICKOFF, Claim, MatchTime, Subject
+        from app.explain.narrator import Draft
+
+        end = MatchTime(moment.period, moment.minute, moment.second)
+        ref = f"{self.events[0].match_id}#{moment.event_ids[0]}"
+        claim = Claim("count", Subject("home"), "shots", "eq", 1, KICKOFF, end, (ref,))
+        template = "{home} had {value:c1} {label:c1}."
+        return Draft(template, (claim,), template=template, claim_ids=("c1",))
 
 
-def _measured_run(script_factory):
-    client = FakeChatClient(script_factory(EVENTS))
-    narrator = FoundryNarrator(EVENTS, client, model_tag="fake")
+def _measured_run(make_narrator):
+    narrator = make_narrator(EVENTS)
     logs = []
     results = run_match(EVENTS, narrator, on_attempt=logs.append)
     return collect_match("red_card_swing_seed42", results, narrator.usage, logs, EVENTS)
 
 
+def _foundry(events):
+    return FoundryNarrator(events, FakeChatClient(responder(events)), model_tag="fake")
+
+
 def test_rejected_drafts_are_recorded_with_message_and_evidence():
-    data = _measured_run(_shots_responder)
+    data = _measured_run(_ShotsNarrator)
     rejected = [r for mo in data["moments"] for r in mo["rejections"]]
     assert rejected and all(r["message"] for r in rejected)
     mismatch = [f for r in rejected for f in r["verify_failures"] if f["reason"] == "evidence_mismatch"]
@@ -186,7 +199,8 @@ def test_rejected_drafts_are_recorded_with_message_and_evidence():
 
 
 def test_trace_rejections_have_messages_without_attempt_log():
-    data, _ = _run(_shots_responder)
+    narrator = _ShotsNarrator(EVENTS)
+    data = collect_match("red_card_swing_seed42", run_match(EVENTS, narrator), narrator.usage)
     rejected = [r for mo in data["moments"] for r in mo["rejections"]]
     assert rejected and all(r["message"] and "evidence_mismatch" in r["message"] for r in rejected
                             if "evidence_mismatch" in r["codes"])
@@ -198,8 +212,8 @@ def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
 
     from eval.llm_run import REVIEW_COLUMNS, write_human_review
 
-    ok = _measured_run(responder)
-    bad = _measured_run(_shots_responder)
+    ok = _measured_run(_foundry)
+    bad = _measured_run(_ShotsNarrator)
     meta = {**_meta(), "prompt_version": "foundry-v4.1:fake", "repeats": 2}
     run = {"meta": meta, "runs": [
         {"started_at": "a", "finished_at": "b", "matches": [bad]},
@@ -211,6 +225,10 @@ def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
     assert "## Sürüm karşılaştırması: foundry-v4, foundry-v4.1" in report
     assert "foundry-v4.1 · koşu 1" in report and "**foundry-v4.1 · toplam (2 koşu)**" in report
     assert "### Koşu 1 · red_card_swing_seed42" in report
+    assert "## Ret kodu sıklığı" in report and "| `evidence_mismatch` | " in report
+    side = report[report.index("## Yan yana"):]
+    assert "| Moment | Tip | foundry-v4 | foundry-v4.1 |" in side and "*(yedek)*" in side
+    assert render_report(run, {"foundry-v4.1": run, "foundry-v4": baseline}) == report  # kendi sürümü dışlanır
     n = len(bad["moments"])
     assert f"| 1 | {n} | {n} |" in report and f"| 2 | {n} | 0 |" in report  # koşu başına yedek
 
@@ -218,3 +236,28 @@ def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
     assert [r["text"] for r in rows] == [mo["text"] for mo in ok["moments"]]
     assert tuple(rows[0]) == REVIEW_COLUMNS
     assert render_report(json.loads(json.dumps(run)), {"foundry-v4": baseline}) == report
+
+
+def test_menu_drafts_never_reach_evidence_mismatch():
+    """foundry-v5: model iddia ve olay bağlamadığı için evidence_mismatch yolu kullanılmaz."""
+    from tests.test_llm_narrator import text_json
+
+    def sloppy(events):
+        good = responder(events)
+        state = {"n": 0}
+
+        def respond(messages):
+            state["n"] += 1
+            if state["n"] % 2:  # her ilk deneme kötü: menü dışı id, olay sözcüğü, ham sayı
+                return text_json("{home} had {value:c9} shots and 3 corners.")
+            return good(messages)
+
+        return respond
+
+    narrator = FoundryNarrator(EVENTS, FakeChatClient(sloppy(EVENTS)), model_tag="fake")
+    logs = []
+    run_match(EVENTS, narrator, on_attempt=logs.append)
+    assert logs and any(not log.accepted for log in logs)
+    reasons = [r.reason for log in logs for r in log.verification]
+    assert reasons and set(reasons) == {"ok"}
+    assert all(log.draft.menu is not None and log.draft.claims == () for log in logs)

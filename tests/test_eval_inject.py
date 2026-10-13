@@ -94,3 +94,16 @@ def test_v41_false_alarms_are_measured_on_clean_sets():
     flagged, total, hits = rows["Template taslakları (ham metin)"]
     assert total > 0 and set(hits) <= {"They"}  # yalnızca "They had been … down"
     assert rows["v4 slot tabanı (temiz)"][0] == 0
+
+
+def test_v5_menu_column():
+    report = _report()
+    assert report.slotified_v5 == report.samples
+    assert _row("control").v5.caught == 0
+    assert _row("unknown_menu_id").v5.rate == 1.0
+    assert _row("number_text_and_claim").v5.applicable == 0  # model iddia yazmaz
+    assert _row("wrong_slot_binding").v5.applicable > 0 and _row("wrong_slot_binding").v5.rate == 0.0
+    for name in ("unsupported_sentence_qualitative", "qualitative_overstatement"):
+        assert _row(name).v5.rate == 1.0, name  # ayrı cümle: sentence_without_claim
+    ewc = _row("event_wrong_claim")
+    assert ewc.v5.rate < ewc.v41.rate  # menü kanıtı geniş: yanlış olay çoğu zaman bir iddianın kanıtı

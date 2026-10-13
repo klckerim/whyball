@@ -3,12 +3,11 @@
 İstemci enjekte edilir (`ChatClient` protokolü). Agent Framework'e özgü tek
 yer `FoundryChatClientAdapter`'dır; testler sahte istemci kullanır.
 
-Modele yalnızca moment kaydı verilir (momentin dayanak olayları, o anki
-metrikler, kadro). Model somut değer yazmaz: metin yer tutuculu bir şablondur
-(bkz. slots.py), gerçek değerleri pipeline doğrulanmış iddialardan render eder.
-Çıktı her moment için üretilen kapalı bir JSON şemasına zorlanır: iddia türü,
-metrik, karşılaştırma ve oyuncu id'si enum'dur; dayanak olay id'leri yalnızca
-verilen olaylardan seçilebilir.
+foundry-v5 (claim menüsü, bkz. menu.py): iddiaları kod kurar ve doğrular. Modele
+moment, doğrulanmış iddia menüsü (değer, etiket, aralık, tam kanıt listesi), kodun yazdığı
+yan cümleler, kanıt olayları ve kadro verilir. Model iddia kurmaz ve olay bağlamaz:
+çıktısı yalnızca yer tutuculu bir metindir (`{"text": ...}`), menü id'lerini kullanır.
+Somut değerleri pipeline menüden render eder.
 
 Güvenlik: çağrı başına zaman aşımı, yanıt token üst sınırı, anlatıcı başına
 maksimum çağrı sayısı (aşılınca `BudgetExceeded`), her çağrının token
@@ -24,14 +23,13 @@ import os
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
-from pydantic import BaseModel, ConfigDict, ValidationError, create_model
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.analytics.moments import Moment
 from app.generator.models import Event
 
-from .claims import COMPARISONS, KINDS, METRIC_KINDS, Claim, MatchTime, Subject
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .narrator import (
     BudgetExceeded,
@@ -41,11 +39,12 @@ from .narrator import (
     NarratorError,
     NarratorTimeout,
 )
-from .labels import METRIC_LABELS
+from .menu import ClaimMenu, build_menu, evidence_events, menu_record
 from .phrases import event_phrase, selectable
-from .slots import player_ids
+from .slots import SlotContext, player_ids
+from .template_narrator import fmt_minute
 
-PROMPT_VERSION = "foundry-v4.1"
+PROMPT_VERSION = "foundry-v5"
 INSTALL_HINT = "FoundryNarrator için: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -58,30 +57,29 @@ def _time(period: int, minute: int, second: int) -> dict[str, int]:
     return {"period": period, "minute": minute, "second": second}
 
 
-def moment_record(moment: Moment, events: Sequence[Event], language: str = "en") -> dict[str, Any]:
-    """Modelin görebileceği tek bilgi: moment, dayanak olayları, o anki metrikler, kadro."""
+def moment_record(
+    moment: Moment, events: Sequence[Event], language: str = "en", menu: ClaimMenu | None = None
+) -> dict[str, Any]:
+    """Modelin görebileceği tek bilgi: moment, claim menüsü, yan cümleler, kanıt olayları, kadro."""
+    menu = menu or build_menu(moment, events)
+    ctx = SlotContext.from_moment(moment, events, language)
     match_id = events[0].match_id
-    by_seq = {e.seq: e for e in events}
     ids = player_ids(events)
     id_of = {name: pid for pid, name in ids.items()}
-    teams = {side: events[0].data["teams"][side]["name"] for side in SIDES}
-    record_events = []
-    for seq in dict.fromkeys(moment.event_ids):
-        e = by_seq[seq]
-        record_events.append({
-            "id": f"{match_id}#{seq}",
+    record_events = [
+        {
+            "id": f"{match_id}#{e.seq}",
             "type": e.type.value,
-            "time": _time(e.period, e.minute, e.second),
+            "minute": fmt_minute(e.period, e.minute),
             "team": e.team,
             "player": id_of.get(e.player) if e.player else None,
-            "outcome": e.outcome,
-            "score_after": e.score,
-            "phrase": event_phrase(e, teams, language),  # {event:<id>} bu metne render edilir
+            "phrase": event_phrase(e, ctx.teams, language),  # {event:<id>} bu metne render edilir
             "selectable": selectable(e, moment.type),  # {event:} yalnızca bu olaylar için
-        })
+        }
+        for e in evidence_events(menu, events)
+    ]
     return {
         "match_id": match_id,
-        "kickoff": _time(1, 0, 0),
         "moment": {
             "id": moment.id,
             "type": moment.type,
@@ -89,72 +87,29 @@ def moment_record(moment: Moment, events: Sequence[Event], language: str = "en")
             "time": _time(moment.period, moment.minute, moment.second),
             "detail": moment.detail,
         },
-        "metrics_at_moment": moment.metrics,
+        **menu_record(menu, ctx),
         "events": record_events,
         "squads": {
             side: [{"id": pid, "name": name} for pid, name in ids.items() if pid[0] == side[0]]
             for side in SIDES
         },
-        "metric_labels": METRIC_LABELS.get(language, METRIC_LABELS["en"]),
     }
 
 
 # --- kapalı çıktı şeması ------------------------------------------------------------------
 
 
-class TimeOut(BaseModel):
+class MenuDraftOut(BaseModel):
+    """Model yalnızca yer tutuculu metni döndürür; iddia ve olay bağlama alanı yok."""
+
     model_config = ConfigDict(extra="forbid")
-    period: int
-    minute: int
-    second: int
+    text: str
 
 
-def draft_model_for(event_ids: Sequence[str], players: Sequence[str]) -> type[BaseModel]:
-    """Bu moment için kapalı şema: event_ids yalnızca verilen olaylardan, oyuncu kadro id'lerinden.
-
-    `text` yer tutuculu şablondur; her iddianın şablonda başvurulan bir `id`'si vardır.
-
-    Strict structured output uyumu: tüm alanlar zorunlu (null'lanabilirler `| None`,
-    varsayılan yok), ek alan yok, minItems gibi anahtar kelimeler yok.
-    """
-    forbid = ConfigDict(extra="forbid")
-    ref = Literal[tuple(dict.fromkeys(event_ids))]  # type: ignore[valid-type]
-    player = Literal[tuple(dict.fromkeys(players))]  # type: ignore[valid-type]
-    subject = create_model(
-        "SubjectOut", __config__=forbid,
-        team=(Literal["home", "away"] | None, ...),
-        player=(player | None, ...),
-    )
-    claim = create_model(
-        "ClaimOut", __config__=forbid,
-        id=(str, ...),
-        kind=(Literal[KINDS], ...),  # type: ignore[valid-type]
-        subject=(subject, ...),
-        metric=(Literal[tuple(METRIC_KINDS)], ...),  # type: ignore[valid-type]
-        comparison=(Literal[COMPARISONS], ...),  # type: ignore[valid-type]
-        value=(float, ...),
-        start=(TimeOut, ...),
-        end=(TimeOut, ...),
-        event_ids=(list[ref], ...),
-    )
-    return create_model("DraftOut", __config__=forbid, text=(str, ...), claims=(list[claim], ...))
-
-
-def parse_draft(model: type[BaseModel], raw: str, players: dict[str, str]) -> Draft:
-    """Model çıktısı → slot taslağı. Oyuncu id'leri doğrulayıcı için ada çevrilir."""
-    out: Any = model.model_validate_json(raw)
-    claims = tuple(
-        Claim(
-            c.kind,
-            Subject(c.subject.team, players[c.subject.player] if c.subject.player else None),
-            c.metric, c.comparison, c.value,
-            MatchTime(c.start.period, c.start.minute, c.start.second),
-            MatchTime(c.end.period, c.end.minute, c.end.second),
-            tuple(c.event_ids),
-        )
-        for c in out.claims
-    )
-    return Draft(out.text, claims, template=out.text, claim_ids=tuple(c.id for c in out.claims))
+def parse_draft(raw: str, menu: ClaimMenu) -> Draft:
+    """Model çıktısı → menü taslağı (iddialar menüden bağlanır)."""
+    out = MenuDraftOut.model_validate_json(raw)
+    return Draft(out.text, (), template=out.text, menu=menu)
 
 
 # --- istemci katmanı --------------------------------------------------------------------
@@ -250,62 +205,45 @@ class FoundryChatClientAdapter:
 
 # --- prompt -----------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You narrate one moment of a synthetic football match for WhyBall. You write a \
-TEMPLATE with placeholders plus CLAIMS. Code fills every concrete value from verified claims and the \
-match data; a deterministic verifier rejects anything unverifiable.
+SYSTEM_PROMPT = """You narrate one moment of a synthetic football match for WhyBall. Code has already \
+built and verified every fact you may use: the claims_menu. You write a short TEMPLATE with placeholders \
+that only refers to menu ids; code fills every concrete value. A deterministic checker rejects anything else.
 
-Use ONLY the moment record in the user message (moment, metrics_at_moment, events, squads, \
-metric_labels). No outside knowledge. Do not invent facts.
+Use ONLY the moment record in the user message (moment, claims_menu, clauses, events, squads). No outside \
+knowledge. Do not invent facts. You do not create claims and you do not link events to claims.
 
 Write {language_name}: 1-2 short, natural sentences, persona: {persona}.
 
-Events come ONLY from {{event:<event id>}}: code renders the event's standard phrase, shown in \
-events[].phrase (e.g. "Murek Brestani was sent off at 38'"). You write only connecting words and plain \
-comments around placeholders. NEVER name an event type or a player's role yourself: no words such as \
-{event_words}. Metric names come from {{label:<claim_id>}}.
+Building blocks (prefer clauses):
+- {{clause:<clause id>}}: a ready, verified natural-language clause from clauses[] (clauses[].text shows \
+how it renders). Use clauses as they are or join two with a connector ("and", "while", "but"). Do not \
+rewrite their numbers. A clause already starts with its own subject ("the score is …", a team name): \
+never put "The"/"the" in front of {{clause:}}.
+- {{value:<claim id>}}, {{minute:<claim id>}} (end minute), {{start:<claim id>}} (start minute), \
+{{label:<claim id>}} (metric name): only ids from claims_menu[].id. Never list labels as "X for Y is N"; \
+a clause reads better.
+- {{event:<event id>}}: an event's standard phrase (events[].phrase); only events with "selectable": true.
+- {{score}} ("1–0", home first) and {{score_named}} ("Brannoch FC 1–0 Morvane Athletic").
+- {{home}}, {{away}}: team names; {{player:<squad id>}} only for a player who is the subject of a menu claim.
 
-NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
-the words "home"/"away" (or "ev sahibi"/"deplasman"), or metric identifiers such as field_tilt. \
-Use placeholders:
-- {{event:<event id>}}: an event's phrase; copy the id exactly from events[].id. Only events with \
-"selectable": true may be used (passes, dribbles, offsides, fouls, corners never), and the event must be \
-in the event_ids of one of your claims.
-- {{home}}, {{away}}: team names. Always name a team with these placeholders: never refer to a team with a \
-pronoun ("they", "their", "them") and never put an article before it (not "the {{home}}").
-- {{score}}: the score at this moment as digits in home-away order, e.g. "1–0" (no team names).
-- {{score_named}}: the same score with both team names, e.g. "Brannoch FC 1–0 Morvane Athletic". It \
-already names both teams, so never attach a team placeholder to it.
-- {{player:<id>}}: a player by squad id (e.g. h07), rendered as the full name; that player must be the \
-subject of one of your claims. An {{event:}} phrase already names its player: never add that player's \
-{{player:}} in the same sentence (no "{{event:...}} by {{player:...}}").
-- {{minute:<claim_id>}}: the end minute of a claim; {{start:<claim_id>}}: its start minute.
-- {{value:<claim_id>}}: the verified value of a claim (code formats percentages and signs).
-- {{label:<claim_id>}}: the readable name of a claim's metric (see metric_labels).
-{sentence_rule}
-Stay factual: no hype or judgement such as {overstatement}. Exception: "dominate" only for a \
+Rules:
+- Every sentence must use at least one menu fact: a clause, value, minute, start, event or score.
+- {primary_rule}
+- The same minute must not appear twice in one sentence (an {{event:}} phrase and a clause may already \
+contain a minute).
+- An {{event:}} phrase already names its player: never add that player's {{player:}} in the same sentence.
+- NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
+the words "home"/"away" (or "ev sahibi"/"deplasman"), metric identifiers, or event words such as \
+{event_words}.
+- Name teams only with {{home}}/{{away}}: no pronouns ("they", "their", "them"), no article ("the {{home}}").
+- {sentence_rule}
+- Stay factual: no hype or judgement such as {overstatement}. Exception: "dominate" only for a \
 dominance_without_reward moment, "take control"/"momentum" only for a pressure_shift moment.
 
-Examples:
-- "{{event:<goal event id>}}, making it {{score}}." with claim c1 = count goals, subject = the scorer's \
-team and squad id, start = end = the goal's time, event_ids = [the goal event].
-- "{{home}} have had {{value:c2}} of the ball since kickoff." with claim c2 = ratio possession, subject \
-home, start = kickoff, end = moment time, value from metrics_at_moment.
+Examples: "{{event:<goal event id>}}, and {{clause:possession}}." · "{{clause:pressure}}, and \
+{{clause:shots}}." · "{{clause:dominance}}, yet {{clause:score}}."
 
-Claims. Each claim has a unique short id (c1, c2, ...). Times are {{period, minute, second}}; \
-start <= end; end must not be later than the moment time.
-- count: number of events of that metric for the subject in [start, end]. event_ids must list \
-exactly ALL counted events, so only make count claims fully backed by the given events.
-- ratio (possession, field_tilt): the subject team's share 0..1 in [start, end]. Use start = kickoff, \
-end = moment time and the value from metrics_at_moment; cite at least one given event in the range.
-- state: the value at end. score; score_margin (team minus opponent); min_score_margin (worst \
-margin from start to end); players_on_pitch; pressure_balance (-1..1 from the subject team's view; \
-metrics_at_moment.pressure_balance is from home's view, negate it for away). Use start = kickoff and \
-cite at least one given event in the range.
-Metrics and their kind: {metrics}.
-Comparisons: {comparisons}. Use "eq" for exact integers and "approx" for decimals (tolerance 0.005).
-subject.team is "home" or "away"; subject.player is a squad id or null.
-
-Respond only with JSON matching the schema."""
+Respond only with JSON: {{"text": "<template>"}}."""
 
 # Prompt'taki okunur listeler; denetimin kendisi phrases.py sözlükleriyle yapılır.
 EVENT_WORD_EXAMPLES = {
@@ -323,7 +261,7 @@ OVERSTATEMENT_EXAMPLES = {
 ONE_WORD = {"en": "one", "tr": "bir"}
 FEEDBACK_HINTS = {
     "event_word": "describe events only with {event:<id>} and metric names with {label:<claim_id>}",
-    "event_not_evidence": "an {event:} must be one of the event_ids of your claims",
+    "event_not_evidence": "an {event:} must be in the evidence of a claims_menu entry (see events[])",
     "unsupported_event": "this event type has no phrase; cite a different event",
     "sentence_start": "start every sentence with a placeholder or an allowed word",
     "overstatement": "remove the hype/judgement wording",
@@ -331,7 +269,19 @@ FEEDBACK_HINTS = {
     "event_type_not_allowed": "use {event:} only for events with \"selectable\": true",
     "player_repeat": "the {event:} phrase already names this player; remove the {player:} from that sentence",
     "article_team": "write {home}/{away} without \"the\"",
+    "unknown_claim_id": "use only ids from claims_menu[].id ({value:}/{minute:}/{start:}/{label:}) or clauses[].id ({clause:})",
+    "sentence_without_claim": "every sentence needs a menu fact: a {clause:}, {value:}, {minute:}, {event:} or {score}",
+    "missing_primary_claim": "use the primary claims of this moment (claims_menu[].primary = true), e.g. via their clause",
+    "minute_repeat": "the same minute appears twice in one sentence; drop one of them",
 }
+
+PRIMARY_RULE = {
+    "dominance_without_reward": "This moment's primary claims (claims_menu[].primary = true): possession AND "
+                                "the shot balance must both be used; {clause:dominance} contains both.",
+    "pressure_shift": "This moment's primary claim (claims_menu[].primary = true): the pressure balance must be "
+                      "used (e.g. {clause:pressure}).",
+}
+DEFAULT_PRIMARY_RULE = "Use the claim that describes the moment itself (its event or main clause)."
 
 
 def sentence_rule(language: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> str:
@@ -353,6 +303,7 @@ def build_messages(
     language: str,
     feedback: Feedback | None = None,
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+    menu: ClaimMenu | None = None,
 ) -> list[dict[str, str]]:
     lang = language if language in EVENT_WORD_EXAMPLES else "en"
     system = SYSTEM_PROMPT.format(
@@ -362,10 +313,10 @@ def build_messages(
         one_word=ONE_WORD[lang],
         sentence_rule=sentence_rule(lang, config),
         overstatement=OVERSTATEMENT_EXAMPLES[lang],
-        metrics=", ".join(f"{m} ({k})" for m, k in METRIC_KINDS.items()),
-        comparisons=", ".join(COMPARISONS),
+        primary_rule=PRIMARY_RULE.get(moment.type, DEFAULT_PRIMARY_RULE),
     )
-    user = json.dumps(moment_record(moment, events, language), ensure_ascii=False, sort_keys=True)
+    record = moment_record(moment, events, language, menu)
+    user = json.dumps(record, ensure_ascii=False, sort_keys=True)
     if feedback is not None:
         lines = [f"Previous attempt {feedback.attempt} was rejected. Fix every issue:"]
         for item in feedback.items:
@@ -415,7 +366,7 @@ class FoundryNarrator:
         self.prompt_version = f"{PROMPT_VERSION}:{model_tag}" if model_tag else PROMPT_VERSION
         self.calls = 0
         self.usage: list[UsageRecord] = []
-        self._players = player_ids(events)  # id → ad
+        self._menus: dict[str, ClaimMenu] = {}
         # Kalıcı loop: senkron pipeline'dan çağrılır, istemci tek loop'a bağlı kalır.
         self._loop = asyncio.new_event_loop()
 
@@ -423,9 +374,13 @@ class FoundryNarrator:
         if not self._loop.is_closed():
             self._loop.close()
 
+    def menu(self, moment: Moment) -> ClaimMenu:
+        if moment.id not in self._menus:
+            self._menus[moment.id] = build_menu(moment, self.events, self.config)
+        return self._menus[moment.id]
+
     def response_model(self, moment: Moment) -> type[BaseModel]:
-        match_id = self.events[0].match_id
-        return draft_model_for([f"{match_id}#{s}" for s in moment.event_ids], list(self._players))
+        return MenuDraftOut
 
     def _record(
         self, moment: Moment, outcome: str, started: float, result: ChatResult | None,
@@ -459,7 +414,8 @@ class FoundryNarrator:
             )
         self.calls += 1
         model = self.response_model(moment)
-        messages = build_messages(moment, self.events, persona, language, feedback, cfg)
+        menu = self.menu(moment)
+        messages = build_messages(moment, self.events, persona, language, feedback, cfg, menu)
         started = time.perf_counter()
         call = self.client.complete(
             messages, response_model=model, max_tokens=cfg.llm_max_tokens,
@@ -476,7 +432,7 @@ class FoundryNarrator:
             self._record(moment, "client_error", started, None, message)
             raise NarratorError(message) from e
         try:
-            draft = parse_draft(model, result.text, self._players)
+            draft = parse_draft(result.text, menu)
         except ValidationError as e:
             first = e.errors()[0]
             message = (

@@ -18,7 +18,9 @@ Yer tutucular:
   {player:<id>}          oyuncu (kadro id'si: h01…, a01…); bir iddianın öznesi olmalı
   {minute:<claim_id>}    iddianın bitiş dakikası; {start:<claim_id>} başlangıç dakikası
   {value:<claim_id>}     iddianın doğrulanmış değeri (metriğe göre biçimli)
-  {label:<claim_id>}     iddianın metriğinin okunur adı
+  {label:<claim_id>}     iddianın metriğinin okunur adı (hemen önünde aynı iddianın {value:}'su
+                         varsa sayıyla uyumlu: "1 shot", "2 shots")
+  {clause:<clause_id>}   yalnızca claim menüsünde (foundry-v5, menu.py): kodun yazdığı yan cümle
 """
 
 from __future__ import annotations
@@ -46,7 +48,7 @@ from .text_lint import LintIssue, LintResult, Roster, _capitalized_groups, _is_s
 
 SIDES = ("home", "away")
 SIMPLE_SLOTS = ("home", "away", "score", "score_named")
-ARG_SLOTS = ("player", "minute", "start", "value", "label", "event")
+ARG_SLOTS = ("player", "minute", "start", "value", "label", "event", "clause")
 PLACEHOLDER_RE = re.compile(r"\{([^{}]*)\}")
 SLOT_ARG_RE = re.compile(r"[A-Za-z0-9_\-]+")
 EVENT_ARG_RE = re.compile(r"[A-Za-z0-9_\-]+#\d+")
@@ -58,7 +60,8 @@ SIDE_LABEL_RE = {
 }
 METRIC_NAME_RE = re.compile(r"(?<![\w{])[a-z]+(?:_[a-z]+)+(?!\w)")
 DIGIT_RE = re.compile(r"\d+(?:[.,]\d+)?")
-ARTICLE_TEAM_RE = re.compile(r"(?<!\w)the\s+\{(?:home|away|score_named)\}", re.IGNORECASE)
+# Yan cümleler kendi öznesi / artikeliyle başlar ("the score is …", "{home} have had …").
+ARTICLE_TEAM_RE = re.compile(r"(?<!\w)the\s+\{(?:home|away|score_named|clause:[^{}]*)\}", re.IGNORECASE)
 
 
 def player_ids(events: Sequence[Event]) -> dict[str, str]:
@@ -172,6 +175,8 @@ def bind_template(
             bound = name is not None and name in subjects
         elif ph.kind in ("minute", "start", "value", "label"):
             bound = ph.arg in by_id
+        elif ph.kind == "clause":
+            bound = False  # yan cümleler yalnızca menü taslağında (menu.bind_menu)
         else:
             bound = True
         if not bound:
@@ -272,7 +277,7 @@ def player_repeat_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
 
 
 def article_team_issues(template: str) -> list[LintIssue]:
-    """Takım adı artikelsiz yazılır: "The {home}" / "the {score_named}" reddedilir."""
+    """Takım adı ve yan cümle artikelsiz yazılır: "The {home}", "the {score_named}", "The {clause:score}"."""
     return [LintIssue("article_team", m.group(), m.start(), m.end(), "name")
             for m in ARTICLE_TEAM_RE.finditer(template)]
 
@@ -342,8 +347,9 @@ def render(
     claim_ids: Sequence[str],
     verdicts: Sequence[VerificationResult],
     ctx: SlotContext,
+    clauses: dict[str, str] | None = None,
 ) -> str:
-    """Bağlanmış ve doğrulanmış şablondan nihai metin."""
+    """Bağlanmış ve doğrulanmış şablondan nihai metin. `clauses`: menü yan cümleleri (id → şablon)."""
     by_id = {cid: (c, v) for cid, c, v in zip(claim_ids, claims, verdicts)}
     starts = {pos for pos, is_placeholder in template_sentence_starts(template) if is_placeholder}
 
@@ -373,13 +379,16 @@ def render(
             return ctx.players[arg]
         if kind == "event":
             return ctx.phrase(arg) or ""
+        if kind == "clause":
+            return render((clauses or {})[arg], claims, claim_ids, verdicts, ctx, clauses)
         claim, _ = by_id[arg]
         if kind == "minute":
             return fmt_minute(claim.end.period, claim.end.minute)
         if kind == "start":
             return fmt_minute(claim.start.period, claim.start.minute)
         if kind == "label":
-            return metric_label(claim.metric, ctx.language)
+            counted = template[:m.start()].endswith("{value:" + arg + "} ")
+            return metric_label(claim.metric, ctx.language, verified(arg) if counted else None)
         return format_value(claim.metric, verified(arg), ctx.language)
 
     return PLACEHOLDER_RE.sub(fill, template)

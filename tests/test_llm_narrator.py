@@ -9,17 +9,17 @@ from openai.lib._pydantic import to_strict_json_schema
 
 from app.analytics import detect_moments
 from app.explain import DEFAULT_EXPLAIN_CONFIG
-from app.explain.claims import KICKOFF, METRIC_KINDS, Claim, MatchTime, Subject
 from app.explain.llm_narrator import (
     PROMPT_VERSION,
     ChatResult,
     FoundryChatClientAdapter,
     FoundryNarrator,
+    MenuDraftOut,
     build_messages,
-    draft_model_for,
     moment_record,
     parse_draft,
 )
+from app.explain.menu import build_menu
 from app.explain.narrator import (
     BudgetExceeded,
     Feedback,
@@ -36,32 +36,16 @@ EVENTS, MOMENT = moment_case("goal")  # red_card_swing 42, 22' ev sahibi golü
 MATCH_ID = EVENTS[0].match_id
 IDS = player_ids(EVENTS)
 ID_OF = {name: pid for pid, name in IDS.items()}
+GOAL_REF = f"{MATCH_ID}#{MOMENT.event_ids[-1]}"
 
 
-def _t(time):
-    return {"period": time[0], "minute": time[1], "second": time[2]}
+def text_json(template):
+    """Modelin döndüreceği JSON (foundry-v5: yalnızca metin)."""
+    return json.dumps({"text": template})
 
 
-def slot_json(template, claims, claim_ids, events=EVENTS):
-    """Slot taslağını modelin döndüreceği JSON'a çevirir (oyuncu adı → id)."""
-    id_of = {name: pid for pid, name in player_ids(events).items()}
-    out = []
-    for cid, c in zip(claim_ids, claims):
-        d = c.to_dict()
-        d.update(
-            id=cid, start=_t(c.start), end=_t(c.end),
-            subject={"team": c.subject.team, "player": id_of.get(c.subject.player)},
-        )
-        out.append(d)
-    return json.dumps({"text": template, "claims": out})
-
-
-def goal_slot(moment=MOMENT, events=EVENTS, value=1):
-    t = MatchTime(moment.period, moment.minute, moment.second)
-    player, side = moment.detail["player"], moment.team
-    ref = f"{events[0].match_id}#{moment.event_ids[-1]}"
-    claim = Claim("count", Subject(side, player), "goals", "eq", value, t, t, (ref,))
-    return f"{{event:{ref}}}, making it {{score_named}}.", (claim,), ("c1",)
+def goal_text(moment=MOMENT, events=EVENTS):
+    return f"{{event:{events[0].match_id}#{moment.event_ids[-1]}}}, making it {{score_named}}."
 
 
 class Sleep:
@@ -98,100 +82,90 @@ def _narrator(client, **cfg):
 
 
 def responder(events):
-    """Her moment için kapalı şemaya uyan slot taslağı üreten sahte model (yalnızca moment kaydı)."""
+    """Her momentte menüden geçerli bir şablon seçen sahte model (yalnızca moment kaydı)."""
     moments = {m.id: m for m in detect_moments(events)}
 
     def respond(messages):
         record, _ = json.JSONDecoder().raw_decode(messages[1]["content"])
         moment = moments[record["moment"]["id"]]
-        end = MatchTime(**record["moment"]["time"])
-        ref = record["events"][0]["id"]
-        claim = Claim("state", Subject("home"), "score", "eq", record["metrics_at_moment"]["score"]["home"],
-                      KICKOFF, end, (ref,))
-        assert moment.id == record["moment"]["id"]
-        return slot_json("{score_named} at {minute:c1}.", (claim,), ("c1",), events)
+        clauses = {c["id"] for c in record["clauses"]}
+        assert {c["id"] for c in record["claims_menu"]} and moment.id == record["moment"]["id"]
+        for first in ("dominance", "pressure", "goal", "goals", "sent_off", "penalty"):
+            if first in clauses:
+                return text_json(f"{{clause:{first}}}, and {{clause:score}}.")
+        return text_json("{clause:score}.")
 
     return respond
+
+
+def _user(call):
+    return call["messages"][1]["content"]
+
+
+def _narrator(client, **cfg):
+    return FoundryNarrator(EVENTS, client, config=replace(DEFAULT_EXPLAIN_CONFIG, **cfg))
 
 
 # --- moment kaydı ve kapalı şema ---------------------------------------------------------
 
 
-def test_prompt_contains_only_the_moment_record():
+def test_record_holds_menu_clauses_and_evidence_events():
     system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
     assert "Turkish" in system and "analyst" in system and "No outside knowledge" in system
-    assert "NEVER write digits" in system and "{score}" in system
-    assert "{event:<event id>}" in system and "{score_named}" in system
-    assert "leaving" not in system  # bozuk "leaving X with {score}" kalıbı örneklerde yok
+    assert "NEVER write digits" in system and "{clause:<clause id>}" in system
+    assert "do not link events" in system
     record = json.loads(user)
     assert record == moment_record(MOMENT, EVENTS, "tr")
-    assert [e["id"] for e in record["events"]] == [f"{MATCH_ID}#{s}" for s in MOMENT.event_ids]
-    assert {e["player"] for e in record["events"]} == {ID_OF[MOMENT.detail["player"]]}
-    assert record["metrics_at_moment"] == MOMENT.metrics
-    assert record["events"][-1]["phrase"] == f"{MOMENT.detail['player']} gol attı (22')"
-    assert record["metric_labels"]["possession"] == "topa sahip olma"
-    assert record["metric_labels"]["pressure_balance"] == "son 10 oynanmış dakikadaki baskı dengesi"
+    assert "metrics_at_moment" not in record and "metric_labels" not in record
+    menu = build_menu(MOMENT, EVENTS)
+    assert [c["id"] for c in record["claims_menu"]] == [c.id for c in menu.claims]
+    evidence = {r for c in menu.claims for r in c.claim.event_ids}
+    assert {e["id"] for e in record["events"]} == evidence  # her iddianın kanıt olayları
+    goal = next(e for e in record["events"] if e["id"] == GOAL_REF)
+    assert goal["phrase"] == f"{MOMENT.detail['player']} gol attı (22')" and goal["selectable"]
+    assert goal["player"] == ID_OF[MOMENT.detail["player"]] and goal["minute"] == "22'"
+    poss = next(c for c in record["claims_menu"] if c["id"] == "possession")
+    assert poss["label"] == "topa sahip olma" and poss["value"].startswith("%")
+    assert next(c for c in record["clauses"] if c["id"] == "score")["text"].startswith("skor ")
     assert record["squads"]["home"][0] == {"id": "h01", "name": IDS["h01"]}
-    allowed = {f"{MATCH_ID}#{s}" for s in MOMENT.event_ids}
-    mentioned = {tok.strip('",') for tok in user.split() if f"{MATCH_ID}#" in tok}
-    assert mentioned <= allowed
 
 
-def test_v41_prompt_rules_and_selectable_events():
-    from tests.explain_helpers import moment_case
-
+def test_v5_prompt_rules():
     system = build_messages(MOMENT, EVENTS, "neutral", "en")[0]["content"]
-    assert '"selectable": true' in system
-    assert "pronoun" in system and 'not "the {home}"' in system
-    assert "never add that player's" in system
-    assert '"They"' not in system  # izinli cümle başı listesinden çıktı
+    assert '"selectable": true' in system and "pronoun" in system and 'no article ("the {home}")' in system
+    assert "never add that player's" in system and "same minute must not appear twice" in system
+    assert 'never put "The"/"the" in front of {clause:}' in system
+    assert "Every sentence must use at least one menu fact" in system
+    assert '"At"' not in system and '"Possession"' not in system and '"They"' not in system
     events, pressure = moment_case("pressure_shift")
-    by_type = {}
-    for e in moment_record(pressure, events)["events"]:
-        by_type.setdefault(e["type"], set()).add(e["selectable"])
-    assert by_type["pass"] == {False} and by_type["shot"] == {True}
-    assert all(e["selectable"] for e in moment_record(MOMENT, EVENTS)["events"] if e["type"] == "goal")
+    assert "pressure balance must be used" in build_messages(pressure, events, "neutral", "en")[0]["content"]
 
 
-def test_response_schema_is_closed_per_moment():
+def test_response_schema_has_no_claims_or_event_ids():
     schema = to_strict_json_schema(_narrator(FakeChatClient("{}")).response_model(MOMENT))
-    claim = schema["$defs"]["ClaimOut"]
-    assert claim["properties"]["event_ids"]["items"]["enum"] == [f"{MATCH_ID}#{s}" for s in MOMENT.event_ids]
-    assert claim["properties"]["metric"]["enum"] == list(METRIC_KINDS)
-    assert claim["properties"]["kind"]["enum"] == ["count", "ratio", "state"]
-    assert claim["properties"]["id"]["type"] == "string"
-    players = schema["$defs"]["SubjectOut"]["properties"]["player"]["anyOf"][0]["enum"]
-    assert players == list(IDS)
-    assert claim["additionalProperties"] is False
+    assert set(schema["properties"]) == {"text"} and schema["additionalProperties"] is False
+    assert "$defs" not in schema  # iddia / olay bağlama alanı yok: evidence_mismatch yolu kapalı
 
 
-def test_event_id_outside_moment_is_rejected_by_schema():
-    template, (claim,), ids = goal_slot()
-    foreign = replace(claim, event_ids=(f"{MATCH_ID}#0",))
-    with pytest.raises(InvalidNarratorOutput):
-        _narrator(FakeChatClient(slot_json(template, (foreign,), ids))).narrate(MOMENT, "neutral", "en")
-
-
-def test_parse_draft_returns_slot_draft_with_player_names():
-    template, claims, ids = goal_slot()
-    model = draft_model_for([f"{MATCH_ID}#{s}" for s in MOMENT.event_ids], list(IDS))
-    draft = parse_draft(model, slot_json(template, claims, ids), IDS)
-    assert draft.template == draft.text == template
-    assert draft.claim_ids == ("c1",)
-    assert draft.claims == claims  # oyuncu id'si ada çevrildi
+def test_parse_draft_returns_menu_draft():
+    menu = build_menu(MOMENT, EVENTS)
+    draft = parse_draft(text_json(goal_text()), menu)
+    assert draft.template == draft.text == goal_text()
+    assert draft.claims == () and draft.menu is menu
 
 
 # --- geçerli yanıt -----------------------------------------------------------------------
 
 
 def test_valid_response_logs_usage_and_sends_reasoning_effort(caplog):
-    client = FakeChatClient(slot_json(*goal_slot()))
+    client = FakeChatClient(text_json(goal_text()))
     narrator = _narrator(client)
     with caplog.at_level(logging.INFO, logger="whyball.llm"):
         draft = narrator.narrate(MOMENT, "neutral", "en")
 
-    assert draft.template is not None
+    assert draft.template is not None and draft.menu is not None
     call = client.calls[0]
+    assert call["response_model"] is MenuDraftOut
     assert call["max_tokens"] == DEFAULT_EXPLAIN_CONFIG.llm_max_tokens
     assert call["reasoning_effort"] == DEFAULT_EXPLAIN_CONFIG.llm_reasoning_effort == "low"
     [usage] = narrator.usage
@@ -201,21 +175,22 @@ def test_valid_response_logs_usage_and_sends_reasoning_effort(caplog):
         assert field in caplog.text
 
 
-def test_pipeline_renders_slots_from_verified_claims():
-    record = run_moment(MOMENT, _narrator(FakeChatClient(slot_json(*goal_slot()))), EVENTS)
+def test_pipeline_renders_menu_claims_and_clauses():
     teams = EVENTS[0].data["teams"]
     home, away = teams["home"]["name"], teams["away"]["name"]
+    record = run_moment(MOMENT, _narrator(FakeChatClient(text_json(goal_text()))), EVENTS)
     assert (record.source, record.attempts, record.ok) == ("llm", 1, True)
-    assert record.template.startswith("{event:")
     assert record.text == f"{MOMENT.detail['player']} scored at 22', making it {home} 1–0 {away}."
-    assert [c.metric for c in record.claims] == ["goals", "score", "score"]  # + otomatik skor iddiaları
+    assert [c.metric for c in record.claims] == ["goals", "score", "score"]
+    clause = run_moment(MOMENT, _narrator(FakeChatClient(text_json("{clause:possession}, and {clause:score}."))), EVENTS)
+    assert clause.ok and clause.text.startswith(f"{home} have had ") and "of the ball since kickoff" in clause.text
+    assert clause.text.endswith(f"and the score is {home} 1–0 {away}.")
 
 
 def test_away_goal_score_is_rendered_home_first():
     events, moments = match(7, "dominant_loss")
     moment = next(m for m in moments if m.type == "goal")
-    template, claims, ids = goal_slot(moment, events)
-    narrator = FoundryNarrator(events, FakeChatClient(slot_json(template, claims, ids, events)))
+    narrator = FoundryNarrator(events, FakeChatClient(text_json(goal_text(moment, events))))
     record = run_moment(moment, narrator, events)
     teams = events[0].data["teams"]
     assert record.text.endswith(f"making it {teams['home']['name']} 0–1 {teams['away']['name']}.")
@@ -224,44 +199,46 @@ def test_away_goal_score_is_rendered_home_first():
 def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v4.1"
-    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v4.1:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v5"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v5:gpt-x"
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 
-# --- slot ihlalleri geri bildirimle düzelir --------------------------------------------------
+# --- menü ihlalleri geri bildirimle düzelir ---------------------------------------------------
 
 
 def test_raw_values_in_template_are_rejected_then_fixed():
-    raw = slot_json("Murek Brestani scored for the home side at 22'.", goal_slot()[1], ("c1",))
-    client = FakeChatClient(raw, slot_json(*goal_slot()))
+    client = FakeChatClient(text_json("Murek Brestani scored for the home side at 22'."), text_json(goal_text()))
     record = run_moment(MOMENT, _narrator(client), EVENTS)
     assert (record.source, record.attempts) == ("llm", 2)
     codes = record.trace[3]["codes"]
-    assert {"raw_entity", "raw_side_label", "raw_number"} <= set(codes)
+    assert {"raw_entity", "raw_side_label", "raw_number", "sentence_without_claim"} <= set(codes)
     assert "raw_number" in _user(client.calls[1])
 
 
-def test_unbound_placeholder_is_rejected():
-    template, claims, ids = goal_slot()
-    bad = slot_json(template + " {home} lead at {minute:c9}.", claims, ids)
-    record = run_moment(MOMENT, _narrator(FakeChatClient(bad, slot_json(template, claims, ids))), EVENTS)
-    assert record.attempts == 2 and "unbound_placeholder" in record.trace[3]["codes"]
+def test_id_outside_menu_is_rejected():
+    bad = text_json(goal_text() + " {home} lead at {minute:c9} with {clause:nope}.")
+    client = FakeChatClient(bad, text_json(goal_text()))
+    record = run_moment(MOMENT, _narrator(client), EVENTS)
+    assert record.attempts == 2
+    assert record.trace[3]["codes"].count("unknown_claim_id") == 2
+    assert "unknown_claim_id" in _user(client.calls[1])
 
 
-def test_free_role_verb_is_rejected_then_event_placeholder_accepted():
-    # v3'te yayınlanan rol hatası: "{player:h02} saved a penalty at {minute:c1}" (h02 penaltıyı kullanandı).
+def test_event_outside_menu_evidence_is_rejected():
+    bad = text_json(f"{{event:{MATCH_ID}#{MOMENT.event_ids[0]}}}, making it {{score}}.")  # şut olayı
+    record = run_moment(MOMENT, _narrator(FakeChatClient(bad, text_json(goal_text()))), EVENTS)
+    assert record.attempts == 2 and "event_not_evidence" in record.trace[3]["codes"]
+
+
+def test_free_role_verb_is_rejected_then_clause_accepted():
     events, moment = moment_case("penalty")
-    t = MatchTime(moment.period, moment.minute, moment.second)
-    taker, outcome = moment.detail["player"], moment.detail["outcome"]
-    ref = f"{events[0].match_id}#{moment.event_ids[-1]}"
-    claim = Claim("count", Subject(moment.team, taker), f"penalties_{outcome}", "eq", 1, t, t, (ref,))
-    pid = {name: p for p, name in player_ids(events).items()}[taker]
-    bad = slot_json(f"{{player:{pid}}} saved a penalty at {{minute:c1}}.", (claim,), ("c1",), events)
-    good = slot_json(f"{{event:{ref}}}.", (claim,), ("c1",), events)
+    pid = {name: p for p, name in player_ids(events).items()}[moment.detail["player"]]
+    bad = text_json(f"{{player:{pid}}} saved a penalty at {{minute:penalty}}.")
+    good = text_json("{clause:penalty}, and {clause:score}.")
     record = run_moment(moment, FoundryNarrator(events, FakeChatClient(bad, good)), events)
     assert record.attempts == 2 and "event_word" in record.trace[3]["codes"]
-    assert record.text.startswith(taker) and "saved a penalty" not in record.text
+    assert record.text.startswith(moment.detail["player"]) and "saved a penalty" not in record.text
 
 
 # --- bozuk JSON --------------------------------------------------------------------------
@@ -269,9 +246,8 @@ def test_free_role_verb_is_rejected_then_event_placeholder_accepted():
 
 @pytest.mark.parametrize(
     "bad",
-    ["not json", '{"text": "hi"}', '{"text": "hi", "claims": [], "extra": 1}',
-     '{"text": "x", "claims": [{"kind": "count"}]}'],
-    ids=["not-json", "missing-claims", "extra-field", "bad-claim"],
+    ["not json", '{"txt": "hi"}', '{"text": "hi", "claims": []}', '{"text": 3}'],
+    ids=["not-json", "missing-text", "extra-claims-field", "bad-type"],
 )
 def test_broken_json_raises_invalid_output(bad):
     narrator = _narrator(FakeChatClient(bad))
@@ -282,7 +258,7 @@ def test_broken_json_raises_invalid_output(bad):
 
 
 def test_pipeline_retries_after_broken_json_with_feedback():
-    client = FakeChatClient("not json", slot_json(*goal_slot()))
+    client = FakeChatClient("not json", text_json(goal_text()))
     record = run_moment(MOMENT, _narrator(client), EVENTS)
     assert (record.source, record.attempts) == ("llm", 2)
     assert record.trace[0]["step"] == "narrate" and record.trace[0]["error"] == "invalid_output"
@@ -323,7 +299,7 @@ def test_client_exception_message_is_logged():
 
 
 def test_budget_exceeded_before_calling_client():
-    client = FakeChatClient(slot_json(*goal_slot()))
+    client = FakeChatClient(text_json(goal_text()))
     narrator = _narrator(client, llm_max_calls_per_run=2)
     narrator.narrate(MOMENT, "neutral", "en")
     narrator.narrate(MOMENT, "neutral", "en")
@@ -352,21 +328,20 @@ def test_budget_exceeded_falls_back_cleanly_for_rest_of_match():
 
 def test_feedback_items_appear_in_prompt():
     feedback = Feedback(1, (
-        FeedbackItem("verify", "value_mismatch", claim_index=0),
+        FeedbackItem("lint", "unknown_claim_id", fragment="{value:c9}"),
         FeedbackItem("lint", "raw_entity", fragment="Arlo Quintana"),
     ))
     user = build_messages(MOMENT, EVENTS, "neutral", "en", feedback)[1]["content"]
     assert "Previous attempt 1 was rejected" in user
-    assert "[verify] value_mismatch claim[0]" in user
+    assert "[lint] unknown_claim_id fragment='{value:c9}' (use only ids from claims_menu" in user
     assert "[lint] raw_entity fragment='Arlo Quintana'" in user
 
 
-def test_pipeline_feeds_verifier_feedback_into_second_call():
-    client = FakeChatClient(slot_json(*goal_slot(value=2)), slot_json(*goal_slot()))
+def test_pipeline_feeds_lint_feedback_into_second_call():
+    client = FakeChatClient(text_json("{home} looked lively."), text_json(goal_text()))
     record = run_moment(MOMENT, _narrator(client), EVENTS)
     assert (record.source, record.attempts) == ("llm", 2)
-    second = _user(client.calls[1])
-    assert "value_mismatch" in second and "claim[0]" in second
+    assert "sentence_without_claim" in _user(client.calls[1])
 
 
 # --- Agent Framework adaptörü ---------------------------------------------------------------
@@ -380,7 +355,7 @@ class _InnerClient:
         self.seen = (messages, options)
 
         class Response:
-            text = '{"text": "x", "claims": []}'
+            text = '{"text": "x"}'
             # agent-framework-core 1.21: UsageDetails bir TypedDict (dict)
             usage_details = {"input_token_count": 12, "output_token_count": 34,
                              "reasoning_output_token_count": 20}
@@ -391,7 +366,7 @@ class _InnerClient:
 @pytest.mark.parametrize("effort", ["low", None])
 def test_adapter_maps_options_and_usage(effort):
     inner = _InnerClient()
-    model = draft_model_for(["m#1"], ["h01"])
+    model = MenuDraftOut
     adapter = FoundryChatClientAdapter(inner, message_factory=lambda role, text: (role, text))
     result = asyncio.run(adapter.complete(
         [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}],
@@ -403,7 +378,7 @@ def test_adapter_maps_options_and_usage(effort):
     if effort:
         expected["reasoning"] = {"effort": effort}
     assert options == expected
-    assert result == ChatResult('{"text": "x", "claims": []}', 12, 34, 20)
+    assert result == ChatResult('{"text": "x"}', 12, 34, 20)
 
 
 def test_adapter_without_agent_framework_gives_install_hint(monkeypatch):

@@ -1,5 +1,9 @@
 """Metriklerin okunur adları ({label:} yer tutucusu, template anlatıcı, model kaydı).
 
+Sayılabilir etiketler sayıyla uyumlu çekilir (EN "1 shot" / "2 shots"; TR sayıdan sonra
+hep tekil). Penaltı etiketleri penaltıyı kullanan takım açısındandır ("penalty taken and
+saved"), kaleci açısından okunamaz.
+
 `pressure_balance` kayan bir pencereden ölçülür (son `pressure_window_min` oynanmış
 dakika); adı bu pencereyi yazar. Penceredeki sayı bir iddia değil, analytics
 ayarından gelen sabittir: text_lint bu kod ifadelerini sayı denetiminden önce maskeler
@@ -25,7 +29,7 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
         "goals": "goals", "shots": "shots", "shots_on_target": "shots on target",
         "corners": "corners", "fouls": "fouls", "yellow_cards": "yellow cards",
         "red_cards": "red cards", "penalties_scored": "penalties scored",
-        "penalties_saved": "penalties saved", "penalties_missed": "penalties missed",
+        "penalties_saved": "penalties taken and saved", "penalties_missed": "penalties missed",
         "substitutions": "substitutions", "possession": "possession",
         "field_tilt": "territorial share", "score": "goals", "score_margin": "goal margin",
         "min_score_margin": "largest deficit", "players_on_pitch": "players on the pitch",
@@ -34,8 +38,8 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
     "tr": {
         "goals": "gol", "shots": "şut", "shots_on_target": "isabetli şut",
         "corners": "korner", "fouls": "faul", "yellow_cards": "sarı kart",
-        "red_cards": "kırmızı kart", "penalties_scored": "atılan penaltı",
-        "penalties_saved": "kurtarılan penaltı", "penalties_missed": "kaçan penaltı",
+        "red_cards": "kırmızı kart", "penalties_scored": "gole çevrilen penaltı",
+        "penalties_saved": "kullanılıp kurtarılan penaltı", "penalties_missed": "kaçan penaltı",
         "substitutions": "oyuncu değişikliği", "possession": "topa sahip olma",
         "field_tilt": "saha üstünlüğü", "score": "gol", "score_margin": "gol farkı",
         "min_score_margin": "en büyük geri kalış farkı", "players_on_pitch": "sahadaki oyuncu",
@@ -44,7 +48,20 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
 }
 
 
-def metric_label(metric: str, language: str) -> str:
+# EN tekil biçimler (değer 1 iken); TR'de sayıdan sonra isim zaten tekil.
+SINGULAR_EN: dict[str, str] = {
+    "goals": "goal", "score": "goal", "shots": "shot", "shots_on_target": "shot on target",
+    "corners": "corner", "fouls": "foul", "yellow_cards": "yellow card", "red_cards": "red card",
+    "penalties_scored": "penalty scored", "penalties_saved": "penalty taken and saved",
+    "penalties_missed": "penalty missed", "substitutions": "substitution",
+    "players_on_pitch": "player on the pitch",
+}
+
+
+def metric_label(metric: str, language: str, value: float | None = None) -> str:
+    """Okunur ad; `value` verilirse sayıyla uyumlu (yalnızca değerin hemen ardından yazıldığında)."""
+    if language == "en" and value is not None and abs(value) == 1 and metric in SINGULAR_EN:
+        return SINGULAR_EN[metric]
     labels = METRIC_LABELS.get(language, METRIC_LABELS["en"])
     return labels.get(metric, metric.replace("_", " "))
 

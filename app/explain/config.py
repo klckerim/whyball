@@ -42,9 +42,13 @@ class ExplainConfig:
     slot_event_type_allowlist: bool = True  # {event:} yalnızca moment tipinin izinli olay tiplerinden
     slot_player_repeat: bool = True  # aynı cümlede {event:X} + X'in oyuncusu için {player:} yasak
     slot_article_team: bool = True  # takım yer tutucusundan önce "the" yasak ("The {home}")
+    # --- foundry-v5 claim menüsü kuralları (yalnızca menü taslağında) ---
+    slot_sentence_claim: bool = True  # her cümle en az bir menü iddiasına dayanır
+    slot_primary_claim: bool = True  # dominance / pressure momentinde ana iddia kullanılır
+    slot_minute_repeat: bool = True  # bir cümlede aynı dakika iki kez yazılmaz
     # Temiz taslaklardan çıkarılmış cümle başı kelimeleri (eval/lint_rates.py `derive_sentence_starts`).
     # Elle düzenlemeyin; tests/test_lint_rates.py yeniden çıkarılan listeyle eşitliği denetler.
-    sentence_start_allowed_en: tuple[str, ...] = ("At", "Possession", "The")
+    sentence_start_allowed_en: tuple[str, ...] = ("The",)
     sentence_start_allowed_tr: tuple[str, ...] = ("Skor",)
 
     # --- LLM anlatıcı güvenliği ---

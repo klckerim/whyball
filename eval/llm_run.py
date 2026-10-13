@@ -44,10 +44,15 @@ DOCS = REPO_ROOT / "docs"
 DEFAULT_JSON = DOCS / "LLM_RUN.json"
 DEFAULT_MD = DOCS / "LLM_RUN.md"
 DEFAULT_CSV = DOCS / "human_review.csv"
-BASELINES = {"foundry-v3": DOCS / "LLM_RUN.foundry-v3.json", "foundry-v4": DOCS / "LLM_RUN.foundry-v4.json"}
+BASELINES = {
+    "foundry-v3": DOCS / "LLM_RUN.foundry-v3.json",
+    "foundry-v4": DOCS / "LLM_RUN.foundry-v4.json",
+    "foundry-v4.1": DOCS / "LLM_RUN.foundry-v4.1.json",
+}
 REVIEW_COLUMNS = ("moment_id", "text", "correct", "wrong_fact", "misleading", "dull")
-# foundry-v4.1 ile eklenen / değişen lint kuralları (canlı tetiklenme tablosu)
-V41_RULES = ("event_type_not_allowed", "player_repeat", "article_team", "sentence_start")
+# foundry-v4.1 / v5 ile eklenen / değişen kurallar (canlı tetiklenme tablosu)
+NEW_RULES = ("event_type_not_allowed", "player_repeat", "article_team", "sentence_start",
+             "unknown_claim_id", "sentence_without_claim", "missing_primary_claim", "minute_repeat")
 
 
 # --- deneme kaydı ------------------------------------------------------------------------------
@@ -364,6 +369,59 @@ def render_comparison(run: dict[str, Any], baselines: dict[str, dict[str, Any]])
     return out
 
 
+def render_code_frequency(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
+    """Ret kodu sıklığı sürüm başına (koşu başına ortalama; reddedilen denemelerdeki kod sayısı)."""
+    version = run["meta"]["prompt_version"].split(":", 1)[0]
+    versions = [*baselines.items(), (version, run)]
+    counts = {
+        label: Counter(c for rr in runs_of(r) for _, _, rej in _rejected(rr["matches"]) for c in rej["codes"])
+        for label, r in versions
+    }
+    n_runs = {label: len(runs_of(r)) for label, r in versions}
+    codes = sorted({c for cnt in counts.values() for c in cnt}, key=lambda c: (-sum(cnt[c] for cnt in counts.values()), c))
+    out = [
+        "## Ret kodu sıklığı",
+        "",
+        "Reddedilen denemelerdeki kodlar, koşu başına ortalama (bir denemede birden fazla kod olabilir).",
+        "",
+        "| Kod | " + " | ".join(f"{label} ({n_runs[label]} koşu)" for label, _ in versions) + " |",
+        "|---|" + "---:|" * len(versions),
+    ]
+    for code in codes:
+        cells = [f"{counts[label][code] / n_runs[label]:.1f}".rstrip("0").rstrip(".") if counts[label][code] else "0"
+                 for label, _ in versions]
+        out.append(f"| `{code}` | " + " | ".join(cells) + " |")
+    return [*out, ""]
+
+
+def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
+    """Aynı momentlerin yayınlanan metni sürüm sürüm (çok koşulu sürümlerde son koşu)."""
+    version = run["meta"]["prompt_version"].split(":", 1)[0]
+    versions = [*baselines.items(), (version, run)]
+    texts: dict[str, dict[str, tuple[str, str]]] = {}
+    for label, r in versions:
+        for m in runs_of(r)[-1]["matches"]:
+            for mo in m["moments"]:
+                texts.setdefault(mo["id"], {})[label] = (mo["source"], mo["text"])
+    order = [(m["match_id"], mo) for m in runs_of(run)[-1]["matches"] for mo in m["moments"]]
+    out = [
+        "## Yan yana: aynı momentler, sürüm sürüm",
+        "",
+        "Yayınlanan metin; çok koşulu sürümlerde son koşu. *(yedek)* = template yedeği.",
+        "",
+        "| Moment | Tip | " + " | ".join(label for label, _ in versions) + " |",
+        "|---|---|" + "---|" * len(versions),
+    ]
+    for match_id, mo in order:
+        cells = []
+        for label, _ in versions:
+            source, text = texts.get(mo["id"], {}).get(label, (None, None))
+            mark = "*(yedek)* " if source == "template_fallback" else ""
+            cells.append(f"{mark}{_cell(text)}" if text is not None else "—")
+        out.append(f"| {match_id.split('_seed')[0]} {_short(mo['id'])} | {mo['type']} | " + " | ".join(cells) + " |")
+    return [*out, ""]
+
+
 def render_evidence_groups(run: dict[str, Any]) -> list[str]:
     """evidence_mismatch retleri: model hangi iddiaya hangi olayları bağladı, doğrulayıcı neyi saydı."""
     groups: Counter[tuple[str, ...]] = Counter()
@@ -383,7 +441,8 @@ def render_evidence_groups(run: dict[str, Any]) -> list[str]:
                          _types(_diff(f["counted"], f["cited"])), _types(_diff(f["cited"], f["counted"])))] += 1
     out = ["## evidence_mismatch: bağlanan ve sayılan olaylar", ""]
     if not groups:
-        return [*out, "Kayıtlı `evidence_mismatch` taslağı yok.", ""]
+        return [*out, "Bu ölçümde `evidence_mismatch` reddi yok (foundry-v5: iddiaları ve kanıtlarını kod kurar, "
+                      "model olay bağlamaz). Önceki sürümlerin dökümü arşivlenen JSON'lardan yeniden render edilebilir.", ""]
     out += [
         "Her satır bir reddedilen iddia grubu. Bağlanan = modelin `event_ids`'i; sayılan = doğrulayıcının "
         "aynı özne, metrik ve aralıkta saydığı olaylar. Eksik = sayılan ama bağlanmayan, fazla = bağlanan "
@@ -406,7 +465,7 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
     """v4.1 kurallarının canlı tetiklenmesi: kuralı içeren ve yalnız o kural yüzünden reddedilen denemeler."""
     rejected = [rej for rr in runs_of(run) for _, _, rej in _rejected(rr["matches"]) if "lint" in rej]
     out = [
-        "## foundry-v4.1 kurallarının canlı tetiklenmesi",
+        "## foundry-v4.1 / v5 kurallarının canlı tetiklenmesi",
         "",
         "Yalnız bu kural = denemenin tek ret nedeni bu kuraldı (başka lint ya da verify hatası yok): "
         "kural olmasa yayınlanacaktı. Kuralın hedeflediği kalıpsa doğru ret, değilse yanlış alarm; "
@@ -416,7 +475,7 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
         "|---|---:|---:|---|",
     ]
     only: list[tuple[str, dict[str, Any]]] = []
-    for rule in V41_RULES:
+    for rule in NEW_RULES:
         hits = [rej for rej in rejected if rule in rej["codes"]]
         alone = [rej for rej in hits if set(rej["codes"]) == {rule}]
         only += [(rule, rej) for rej in alone]
@@ -432,7 +491,8 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
 def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | None = None) -> str:
     meta = run["meta"]
     runs = runs_of(run)
-    baselines = baselines or {}
+    current = meta["prompt_version"].split(":", 1)[0]
+    baselines = {label: b for label, b in (baselines or {}).items() if label != current}
 
     out = [
         "# LLM anlatım ölçümü (gerçek model)",
@@ -472,6 +532,8 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
                 f"{grand['evidence_mismatch']} |", ""]
 
     out += [*render_comparison(run, baselines), ""]
+    out += render_code_frequency(run, baselines)
+    out += render_side_by_side(run, baselines)
     out += render_evidence_groups(run)
     out += render_rule_hits(run)
 

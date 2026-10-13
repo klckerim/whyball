@@ -22,6 +22,7 @@ from app.generator.models import Event
 from .cache import NarrationCache, cache_key
 from .claims import Claim, VerificationResult, verify_claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
+from .menu import ClaimMenu, bind_menu
 from .narrator import Draft, Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
 from .slots import SlotContext, bind_template, lint_template, render
@@ -161,6 +162,33 @@ def check_slot_draft(
     return items, issues, results, bound_claims, bound_ids
 
 
+def check_menu_draft(
+    template: str,
+    menu: ClaimMenu,
+    ctx: SlotContext,
+    config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+) -> tuple[
+    list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...],
+    tuple[Claim, ...], tuple[str, ...],
+]:
+    """Menü taslağı: şablon lint + menüye bağlama + v5 kuralları + verify (menü iddiaları zaten doğrulanmış)."""
+    items: list[FeedbackItem] = []
+    if not template.strip():
+        items.append(FeedbackItem("draft", "empty_text"))
+    bound_claims, bound_ids, bind_issues = bind_menu(template, menu, ctx, config)
+    if template.strip() and not bound_claims:
+        items.append(FeedbackItem("draft", "no_claims"))
+    issues = tuple(sorted(
+        (*lint_template(template, ctx, config).issues, *bind_issues), key=lambda i: (i.start, i.code)
+    ))
+    items += [FeedbackItem("lint", i.code, fragment=i.fragment) for i in issues]
+    results = tuple(verify_claim(c, ctx.events, config) for c in bound_claims)
+    items += [
+        FeedbackItem("verify", r.reason, claim_index=i) for i, r in enumerate(results) if not r.ok
+    ]
+    return items, issues, results, bound_claims, bound_ids
+
+
 def run_moment(
     moment: Moment,
     narrator: Narrator,
@@ -222,7 +250,12 @@ def run_moment(
             continue
         trace.append({"attempt": attempt, "step": "narrate", "ok": True, "narrator": narrator.name,
                       "claims": len(draft.claims), "feedback": feedback_codes})
-        if draft.template is not None:
+        if draft.menu is not None:
+            ctx = SlotContext.from_moment(moment, events, language)
+            items, issues, results, claims_out, ids_out = check_menu_draft(
+                draft.template or "", draft.menu, ctx, config
+            )
+        elif draft.template is not None:
             ctx = SlotContext.from_moment(moment, events, language)
             items, issues, results, claims_out, ids_out = check_slot_draft(
                 draft.template, draft.claims, draft.claim_ids, ctx, config
@@ -244,7 +277,8 @@ def run_moment(
                 trace.append({"attempt": attempt, "step": "cache_store", "ok": True, "key": key})
             text = draft.text
             if draft.template is not None:
-                text = render(draft.template, claims_out, ids_out, results, ctx)
+                clauses = draft.menu.clause_templates(language) if draft.menu is not None else None
+                text = render(draft.template, claims_out, ids_out, results, ctx, clauses)
             rec = record(text=text, claims=claims_out, verification=results, lint_issues=(),
                          attempts=attempt, source=narrator.source, template=draft.template)
             if cache is not None:

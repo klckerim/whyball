@@ -396,6 +396,7 @@ def test_player_repeat_covers_substitute_coming_on():
     ("The {home} have had {value:c1} of the ball.", "The {home}"),
     ("{event:%s}, making it the {score_named}." % REF, "the {score_named}"),
     ("Possession favours the {away}.", "the {away}"),
+    ("{event:%s}. The {clause:score}." % REF, "The {clause:score}"),
 ])
 def test_article_before_team_placeholder_is_rejected(template, fragment):
     assert ("article_team", fragment) in codes(lint_template(template, ctx()).issues)

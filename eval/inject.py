@@ -1,6 +1,7 @@
 """Enjeksiyon değerlendirmesi: foundry-v2 (serbest metin), foundry-v3 (slot), foundry-v4
 (slot + {event:} + sıkı lint) ve foundry-v4.1 (+ olay tipi izin listesi, oyuncu tekrarı,
-zamir/artikel) anlatım yaklaşımları kontrollü hataları ne oranda yakalıyor?
+zamir/artikel) ve foundry-v5 (claim menüsü: iddiaları kod kurar, model menüden seçer) anlatım
+yaklaşımları kontrollü hataları ne oranda yakalıyor?
 
 Template anlatıcının doğru taslaklarından başlar:
 - v2: serbest metin + iddialar; denetim `check_draft` (text_lint + verify_claim), v2 kurallarıyla.
@@ -8,7 +9,9 @@ Template anlatıcının doğru taslaklarından başlar:
   `check_slot_draft` (şablon lint + yer tutucu bağlama + verify_claim), v3 kurallarıyla.
 - v4: aynı iddialarla moment tipi başına v4 şablonu (`slotify_v4`: olaylar {event:} ile,
   metrik adları {label:} ile); denetim `check_slot_draft`, v4 kurallarıyla.
-- v4.1: aynı v4 tabanı; denetim varsayılan (v4.1) kurallarla.
+- v4.1: aynı v4 tabanı; denetim v4.1 kurallarıyla.
+- v5: menü id'li taban (`slotify_v5`); denetim `check_menu_draft` (menüye bağlama + v5 kuralları),
+  varsayılan kurallarla. Model iddia yazmadığı için iddiayı değiştiren enjeksiyonlar v5'te "—".
 Her hata türü her yaklaşımın kendi biçiminde, aynı anlamda enjekte edilir.
 
     python -m eval.inject [--quick] [--out docs/EVAL.md] [--no-write]
@@ -32,7 +35,8 @@ from app.explain.claims import KICKOFF, Claim, Subject, measure
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from app.explain.labels import WINDOW_PHRASES, metric_label, window_phrase_spans
 from app.explain.phrases import sentence_starts
-from app.explain.pipeline import check_draft, check_slot_draft
+from app.explain.menu import ClaimMenu, build_menu
+from app.explain.pipeline import check_draft, check_menu_draft, check_slot_draft
 from app.explain.slots import PLACEHOLDER_RE, SlotContext, parse_placeholders, player_ids, template_sentence_starts
 from app.explain.template_narrator import fmt_minute
 from app.explain.template_narrator import narrate as template_narrate
@@ -45,15 +49,17 @@ from . import lint_rates
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO_ROOT / "docs" / "EVAL.md"
 LANGS = ("en", "tr")
-VARIANTS = ("v2", "v3", "v4", "v41")
-NAMES = {"v2": "v2", "v3": "v3", "v4": "v4", "v41": "v4.1"}
+VARIANTS = ("v2", "v3", "v4", "v41", "v5")
+NAMES = {"v2": "v2", "v3": "v3", "v4": "v4", "v41": "v4.1", "v5": "v5"}
 TITLES = {
     "v2": "foundry-v2 (serbest metin)", "v3": "foundry-v3 (slot)", "v4": "foundry-v4 (slot + {event:} + sıkı lint)",
     "v41": "foundry-v4.1 (+ olay tipi izin listesi, oyuncu tekrarı, zamir/artikel)",
+    "v5": "foundry-v5 (claim menüsü + yan cümleler)",
 }
 
 # Her sütun kendi sürümünün kurallarıyla ölçülür: sonradan eklenen kurallar kapatılır.
-V41_CONFIG = DEFAULT_EXPLAIN_CONFIG
+V5_CONFIG = DEFAULT_EXPLAIN_CONFIG
+V41_CONFIG = replace(DEFAULT_EXPLAIN_CONFIG, sentence_start_allowed_en=("At", "Possession", "The"))
 V4_CONFIG = replace(
     DEFAULT_EXPLAIN_CONFIG, slot_event_type_allowlist=False, slot_player_repeat=False, slot_article_team=False,
     sentence_start_allowed_en=("At", "Possession", "The", "They"),  # v4'ün dondurulmuş listesi
@@ -63,7 +69,7 @@ V3_CONFIG = replace(
     slot_strict_number_words=False, slot_overstatement=False,
 )
 V2_CONFIG = replace(DEFAULT_EXPLAIN_CONFIG, lint_bare_surname=False)
-CONFIGS = {"v2": V2_CONFIG, "v3": V3_CONFIG, "v4": V4_CONFIG, "v41": V41_CONFIG}
+CONFIGS = {"v2": V2_CONFIG, "v3": V3_CONFIG, "v4": V4_CONFIG, "v41": V41_CONFIG, "v5": V5_CONFIG}
 
 # (seed, senaryo): 3 demo maç + her senaryodan 5 seed + 10 senaryosuz maç
 FULL_CORPUS = (
@@ -94,6 +100,7 @@ class Sample:
     claims: tuple[Claim, ...]
     slot: SlotDraft | None = None  # v3 tabanı (slotify başarısızsa None)
     slot4: SlotDraft | None = None  # v4 ve v4.1 tabanı
+    slot5: SlotDraft | None = None  # v5 tabanı (menü id'leri)
     sentences: tuple[str, ...] = ()  # template anlatıcının cümleleri (ham)
 
 
@@ -104,6 +111,7 @@ class SlotDraft:
     claim_ids: tuple[str, ...]
     ctx: SlotContext = field(repr=False)
     event_ref: str | None = None  # v4: şablondaki {event:} olayı
+    menu: ClaimMenu | None = field(default=None, repr=False)  # v5: claim menüsü (claims/claim_ids menüden)
 
 
 @dataclass(frozen=True)
@@ -294,6 +302,50 @@ def slotify_v4(sample: Sample) -> SlotDraft | None:
         if items:
             return None
     return SlotDraft(template, sample.claims, ids, ctx, ref)
+
+
+# --- slotify_v5: v5 tabanı (menü id'leri) -----------------------------------------------------------
+
+# V4_BASE'in menü id'li karşılığı; TR dominance'taki çift {minute} (aynı cümlede aynı dakika) düzeltildi.
+V5_BASE = {
+    "goal": {"en": "{E}, making it {score_named}.", "tr": "{E}; skor {score_named}."},
+    "penalty": {"en": "{E}.", "tr": "{E}."},
+    "red_card": {"en": "{E}. {T} are down to {value:players} players.", "tr": "{E}. {T} sahada {value:players} kişi kaldı."},
+    "score_change": {"en": "{E}, making it {score}.", "tr": "{E}; skor {score}."},
+    "pressure_shift": {
+        "en": "{minute:pressure} — {T} take control: {label:pressure} {value:pressure} in their favour. "
+              "{label:shots_for} since {start:shots_for}: {T} {value:shots_for}, {O} {value:shots_against}.",
+        "tr": "{minute:pressure} — Baskı {T} tarafına geçti: {label:pressure} {value:pressure}. "
+              "{start:shots_for} sonrası {label:shots_for}: {T} {value:shots_for}, {O} {value:shots_against}.",
+    },
+    "dominance_without_reward": {
+        "en": "{minute:possession} — {T} dominate without reward: since {start:possession} they have had "
+              "{value:possession} of the ball and a {value:shots_for}–{value:shots_against} lead in "
+              "{label:shots_for}, yet the score is {score_named}.",
+        "tr": "{minute:possession} — {T} üstün ama sonuç alamıyor: {start:possession} sonrası {label:possession} "
+              "{value:possession}, {label:shots_for} {value:shots_for}–{value:shots_against}; skor ise {score_named}.",
+    },
+}
+V5_BEHIND = {"en": " {T} had been {value:deficit} down.", "tr": " {T} en fazla {value:deficit} farkla gerideydi."}
+
+
+def slotify_v5(sample: Sample) -> SlotDraft | None:
+    """Menü id'leriyle v5 şablonu; v5 kurallarından geçmezse None."""
+    m = sample.moment
+    menu = build_menu(m, sample.events)
+    template = V5_BASE[m.type][sample.lang]
+    if m.type == "score_change" and m.detail.get("from_behind"):
+        template += V5_BEHIND[sample.lang]
+    ref = _event_ref(sample)
+    template = template.replace("{T}", "{" + m.team + "}").replace("{O}", "{" + other(m.team) + "}")
+    if ref is not None:
+        template = template.replace("{E}", "{event:" + ref + "}")
+    ctx = SlotContext.from_moment(m, sample.events, sample.lang)
+    items, *_ = check_menu_draft(template, menu, ctx, V5_CONFIG)
+    if items:
+        return None
+    ids = tuple(c.id for c in menu.claims)
+    return SlotDraft(template, tuple(c.claim for c in menu.claims), ids, ctx, ref, menu)
 
 
 # --- v2 enjeksiyonları (serbest metin) -----------------------------------------------------------
@@ -547,6 +599,25 @@ def on_v4(inject: Injector) -> Injector:
     return run
 
 
+def on_v5(inject: Injector | None) -> Injector | None:
+    """v3/v4 enjektörünü v5 tabanına uygular. İddiayı değiştiren enjeksiyon v5'te ifade edilemez
+    (model iddia yazmaz, menü sabit): None."""
+    if inject is None:
+        return None
+
+    def run(s, rng, foreign):
+        d = s.slot5
+        if d is None:
+            return None
+        inj = inject(replace(s, slot=d, slot4=d), rng, foreign)
+        if inj is None or inj.claims != d.claims:
+            return None
+        return replace(inj, claim_ids=d.claim_ids)
+
+    run.__name__ = f"v5_{inject.__name__.split('_', 1)[1]}"
+    return run
+
+
 def _score_at(s: Sample) -> tuple[int, int]:
     t = s.slot4.ctx.moment_time
     return tuple(int(measure("score", Subject(side), KICKOFF, t, s.events).value) for side in ("home", "away"))
@@ -671,7 +742,9 @@ def _other_event(s: Sample, rng: random.Random) -> Event | None:
 
 def _evidence_tag(s: Sample, e: Event) -> str:
     ref = f"{s.events[0].match_id}#{e.seq}"
-    cited = any(ref in c.event_ids for c in s.claims)
+    menu = s.slot4.menu if s.slot4 else None  # v5 (on_v5): kanıt üyeliği menüye göre
+    claims = [c.claim for c in menu.claims] if menu else s.claims
+    cited = any(ref in c.event_ids for c in claims)
     return f"{e.type.value}, {'bir iddianın kanıtı' if cited else 'kanıt değil'}"
 
 
@@ -772,6 +845,45 @@ def v4_qualitative_overstatement(s, rng, foreign):
     return _slot_overstated(s.slot4, s, rng)
 
 
+def v5_role_reversed(s, rng, foreign):
+    """v4_role_reversed'ın menü karşılığı: dakika, olayı kanıt sayan menü iddiasından."""
+    d = s.slot5
+    if not d or not d.event_ref or s.moment.type not in REVERSED_ROLE:
+        return None
+    owner = d.menu.evidence_owner(d.event_ref)
+    phrase = _role_phrase(s, rng, f"{{player:{_pid(s, s.moment.detail['player'])}}}", "{minute:" + owner + "}")
+    template = d.template.replace("{event:" + d.event_ref + "}", phrase[0], 1)
+    return Injection(template, d.claims, d.claim_ids, tag=phrase[1])
+
+
+def _unknown_id(d: SlotDraft | None, new_id: str) -> Injection | None:
+    """Bir iddia yer tutucusunun id'si tanımsız bir id'yle değişir (yoksa skor bir {value:}'ya)."""
+    if d is None:
+        return None
+    phs = _placeholders(d.template, ("value", "minute", "start", "label", "clause"))
+    if phs:
+        ph = phs[0]
+        return Injection(_splice(d.template, ph.start, ph.end, "{" + ph.kind + ":" + new_id + "}"),
+                         d.claims, d.claim_ids, tag=ph.kind)
+    for score in ("{score_named}", "{score}"):
+        if score in d.template:
+            return Injection(d.template.replace(score, "{value:" + new_id + "}", 1), d.claims, d.claim_ids,
+                             tag="score")
+    return None
+
+
+def v3_unknown_id(s, rng, foreign):
+    return _unknown_id(_slot(s), "c99")
+
+
+def v4_unknown_id(s, rng, foreign):
+    return _unknown_id(s.slot4, "c99")
+
+
+def v5_unknown_id(s, rng, foreign):
+    return _unknown_id(s.slot5, "possession_since_kickoff")  # menüde olmayan, makul görünen id
+
+
 # --- oyuncu tekrarı (foundry-v4.1) -------------------------------------------------------------
 
 REPEAT_SUFFIX = {"en": " by {p}", "tr": " ({p})"}
@@ -842,15 +954,21 @@ class InjectionType:
     new: str | None = None  # türün eklendiği sürüm ("v4", "v4.1")
     v41: Injector | None | str = "v4"  # "v4": v4 enjektörüyle aynı (aynı taban)
     miss_v41: str | None = None  # None: v4 gerekçesi
+    v5: Injector | None | str = "v4"  # "v4": v4 enjektörü v5 tabanında (on_v5)
+    miss_v5: str | None = None  # None: v4.1 gerekçesi
 
     def injector(self, variant: str) -> Injector | None:
         if variant == "v41":
             return self.v4 if self.v41 == "v4" else self.v41  # type: ignore[return-value]
+        if variant == "v5":
+            return on_v5(self.v4) if self.v5 == "v4" else self.v5  # type: ignore[return-value]
         return getattr(self, variant)
 
     def miss(self, variant: str) -> str:
         if variant == "v41":
             return self.miss_v41 if self.miss_v41 is not None else self.miss_v4
+        if variant == "v5":
+            return self.miss_v5 if self.miss_v5 is not None else self.miss("v41")
         return getattr(self, f"miss_{variant}")
 
 
@@ -873,6 +991,12 @@ WRONG_EVENT_V4 = ("Seçilen yanlış olay başka bir iddianın kanıtıysa {even
                   "(yalnızca \"bir iddianın kanıtı\" olması aranıyor, cümledeki rolüyle eşleşmesi değil).")
 WRONG_EVENT_V2V3 = ("Yeni oyuncu bir iddianın öznesiyse ad destekli sayılıyor; olay ile oyuncu eşleşmesi denetlenmiyor.")
 OVERSTATEMENT_V4 = ("İfade nitel abartı listesinde yok (liste sabit; eş anlamlı ve deyimler kaçar).")
+SLOT_BINDING_V5 = ("Menü id'si doğru ve doğrulanmış, ama cümlede yanlış yerde: menü bir {value:}'nun hangi "
+                   "takıma / hangi söze ait olduğunu bilmiyor (\"{home} {value:shots_against}\"). Yalnızca "
+                   "{value:} yerleştiren şablonlarda ölçülür; {clause:} kullanan şablonda takas edilecek değer "
+                   "yok, değerleri yan cümleyi kod yazar.")
+WRONG_EVENT_V5 = ("Menü kanıtları eksiksiz olduğu için (ör. maç başından beri tüm goller) yanlış olay çoğu zaman "
+                  "bir menü iddiasının kanıtı; {event:} bağlama kuralı cümledeki rolü değil kanıt üyeliğini denetler.")
 REPEAT_V2V3 = ("Ad bir iddianın öznesi, ikinci kez anılması yeni bir sayı ya da isim getirmiyor; aynı cümlede "
                "tekrar denetlenmiyor.")
 REPEAT_V4 = ("{player:} oyuncusu bir iddianın öznesi, yer tutucu bağlanıyor; {event:} ifadesinin oyuncuyu "
@@ -885,7 +1009,8 @@ INJECTION_TYPES = (
     InjectionType("number_text_and_claim", "İddia değeri yanlış (v2: metin de birlikte)",
                   v2_number_text_and_claim, v3_number_text_and_claim, on_v4(v3_number_text_and_claim),
                   miss_v2=LOOSE_BOUND, miss_v3=LOOSE_BOUND + " Verify değerin doğruluğunu ölçer, sınırın sıkılığını değil.",
-                  miss_v4=LOOSE_BOUND + " Verify değerin doğruluğunu ölçer, sınırın sıkılığını değil."),
+                  miss_v4=LOOSE_BOUND + " Verify değerin doğruluğunu ölçer, sınırın sıkılığını değil.",
+                  v5=None),
     InjectionType("player_swap", "Oyuncu, aynı maçtan iddiasız başka bir oyuncuyla değişir (v4: tabanda {player:} yok, "
                   "karşılığı `event_wrong_claim`)",
                   v2_player_swap, v3_player_swap, None),
@@ -916,15 +1041,17 @@ INJECTION_TYPES = (
                   v2_free_number, v3_free_number, on_v4(v3_free_number), miss_v2=COINCIDENCE),
     InjectionType("wrong_slot_binding", "Yer tutucu yanlış iddiaya bağlanır (iki referans yer değiştirir)",
                   None, v3_wrong_slot_binding, on_v4(v3_wrong_slot_binding),
-                  miss_v3=SLOT_BINDING + " (v3'ün açığı)", miss_v4=SLOT_BINDING + " v4'te de açık."),
+                  miss_v3=SLOT_BINDING + " (v3'ün açığı)", miss_v4=SLOT_BINDING + " v4'te de açık.",
+                  miss_v5=SLOT_BINDING_V5),
     InjectionType("role_reversed", "Rol ters: olay cümlesi oyuncunun ters rolüyle yazılır "
                   "(penaltıyı kullanan \"saved a penalty\")",
                   v2_role_reversed, v3_role_reversed, v4_role_reversed,
-                  miss_v2=NO_ROLE_CHECK, miss_v3=NO_ROLE_CHECK, miss_v4=ROLE_V4, new="v4"),
+                  miss_v2=NO_ROLE_CHECK, miss_v3=NO_ROLE_CHECK, miss_v4=ROLE_V4, new="v4", v5=v5_role_reversed),
     InjectionType("event_wrong_claim", "Yanlış iddiaya bağlı yer tutucu: olay başka bir gerçek olaya bağlanır "
                   "(v4: {event:} başka olay; v2/v3: olay cümlesinin oyuncusu o olayın oyuncusu)",
                   v2_event_wrong_claim, v3_event_wrong_claim, v4_event_wrong_claim,
-                  miss_v2=WRONG_EVENT_V2V3, miss_v3=WRONG_EVENT_V2V3, miss_v4=WRONG_EVENT_V4, new="v4"),
+                  miss_v2=WRONG_EVENT_V2V3, miss_v3=WRONG_EVENT_V2V3, miss_v4=WRONG_EVENT_V4, new="v4",
+                  miss_v5=WRONG_EVENT_V5),
     InjectionType("sentence_start_fabricated_name", "Rastgele bir cümle sınırına uydurma adla, olay sözcüğü ve "
                   "sayı içermeyen cümle (\"Ravello pressed high.\")",
                   v2_sentence_start_fabricated_name, v3_sentence_start_fabricated_name,
@@ -938,6 +1065,9 @@ INJECTION_TYPES = (
                   "(\"scored at 90+1' by X\"; v4/v4.1: {event:} + aynı oyuncunun {player:})",
                   v2_player_repeat, v3_player_repeat, v4_player_repeat,
                   miss_v2=REPEAT_V2V3, miss_v3=REPEAT_V2V3, miss_v4=REPEAT_V4, new="v4.1"),
+    InjectionType("unknown_menu_id", "Tanımsız id'ye başvuru: bir iddia yer tutucusu iddialarda / menüde "
+                  "olmayan bir id'ye bağlanır (v5: makul görünen `possession_since_kickoff`)",
+                  None, v3_unknown_id, v4_unknown_id, new="v5", v5=v5_unknown_id),
 )
 
 
@@ -964,6 +1094,7 @@ class TypeResult:
     v3: Stats = field(default_factory=Stats)
     v4: Stats = field(default_factory=Stats)
     v41: Stats = field(default_factory=Stats)
+    v5: Stats = field(default_factory=Stats)
 
 
 @dataclass
@@ -972,6 +1103,7 @@ class EvalReport:
     samples: int
     slotified: int
     slotified_v4: int = 0
+    slotified_v5: int = 0
     v2_number_words_without_fix: float | None = None
     results: list[TypeResult] = field(default_factory=list)
     rule_rates: list[lint_rates.RuleRate] = field(default_factory=list)
@@ -981,6 +1113,8 @@ class EvalReport:
     overstatement_llm: list[tuple[str, list[str], str]] = field(default_factory=list)
     # v4.1 değişiklikleri (They çıkışı + yeni kurallar) temiz veri setlerinde: veri seti → (tetiklenen, toplam, parçalar)
     v41_false_alarms: list[tuple[str, int, int, Counter[str]]] = field(default_factory=list)
+    # v5 izinli cümle başı değişikliği ("At", "Possession" çıktı): aynı biçim
+    v5_false_alarms: list[tuple[str, int, int, Counter[str]]] = field(default_factory=list)
 
 
 def _rng(moment: Moment, type_name: str, lang: str, variant: str) -> random.Random:
@@ -1004,13 +1138,15 @@ def build_samples(corpus: Sequence[tuple[int, str | None]]) -> tuple[list[Sample
                 sentences = tuple(s.text[lang] for s in narration.sentences)
                 base = Sample(events, roster, players, teams, m, lang, " ".join(sentences), claims,
                               sentences=sentences)
-                samples.append(replace(base, slot=slotify(base), slot4=slotify_v4(base)))
+                samples.append(replace(base, slot=slotify(base), slot4=slotify_v4(base), slot5=slotify_v5(base)))
     return samples, all_players
 
 
 def _check(variant: str, s: Sample, inj: Injection, config: ExplainConfig) -> bool:
     if variant == "v2":
         items, _, _ = check_draft(inj.text, inj.claims, s.events, s.roster, config, s.lang)
+    elif variant == "v5":
+        items, *_ = check_menu_draft(inj.text, s.slot5.menu, s.slot5.ctx, config)
     else:
         ctx = (s.slot if variant == "v3" else s.slot4).ctx  # v4 ve v4.1 aynı taban
         items, *_ = check_slot_draft(inj.text, inj.claims, inj.claim_ids, ctx, config)
@@ -1024,12 +1160,13 @@ def run_eval(
     configs = configs or CONFIGS
     samples, all_players = build_samples(corpus)
     report = EvalReport(list(corpus), len(samples), sum(s.slot is not None for s in samples),
-                        sum(s.slot4 is not None for s in samples))
+                        sum(s.slot4 is not None for s in samples), sum(s.slot5 is not None for s in samples))
     for spec in INJECTION_TYPES:
         result = TypeResult(spec)
         for s in samples:
             v4_base = s.slot4.template if s.slot4 else None
-            bases = {"v2": s.text, "v3": s.slot.template if s.slot else None, "v4": v4_base, "v41": v4_base}
+            bases = {"v2": s.text, "v3": s.slot.template if s.slot else None, "v4": v4_base, "v41": v4_base,
+                     "v5": s.slot5.template if s.slot5 else None}
             for variant in VARIANTS:
                 inject = spec.injector(variant)
                 if inject is None or bases[variant] is None:
@@ -1090,6 +1227,15 @@ def run_eval(
             flagged += bool(new)
             hits.update(new)
         report.v41_false_alarms.append((name, flagged, len(texts), hits))
+    for name, texts in datasets:
+        hits = Counter()
+        flagged = 0
+        for t in texts:
+            old_starts = set(lint_rates.fired(t, "sentence_start", configs["v41"]))
+            new = [f for f in lint_rates.fired(t, "sentence_start", configs["v5"]) if f not in old_starts]
+            flagged += bool(new)
+            hits.update(new)
+        report.v5_false_alarms.append((name, flagged, len(texts), hits))
     report.held_out = lint_rates.held_out_sentence_starts(raw, llm)
     for t in llm:
         hits = lint_rates.fired(t, "overstatement", configs["v4"])
@@ -1194,6 +1340,28 @@ def render_v41_false_alarms(report: EvalReport) -> list[str]:
     return out
 
 
+def render_v5_sentence_starts(report: EvalReport) -> list[str]:
+    out = [
+        "### foundry-v5 izinli cümle başı değişikliğinin etkisi",
+        "",
+        "\"At\" (dakikayı cümle başına taşır: \"At 29' … since kickoff\") ve \"Possession\" (metrik adı; "
+        "`{label:}`/`{clause:}` ile gelir) listeden çıktı; EN listesi artık yalnızca \"The\". Bu değişiklikle "
+        "yeni reddedilen taslaklar (v4.1 listesiyle zaten reddedilenler sayılmaz):",
+        "",
+        "| Veri seti | Yeni ret | Parçalar |",
+        "|---|---:|---|",
+    ]
+    for name, flagged, total, hits in report.v5_false_alarms:
+        out.append(f"| {name} | {_rate_cell(flagged, total)} | {_tags(hits) or '—'} |")
+    out += [
+        "",
+        "Temiz setlerde (template, slot tabanları) tetiklenme yok. Gerçek LLM satırlarındaki tetiklenmeler olgusal "
+        "olarak doğru olabilecek cümlelerdir (\"Possession since kickoff: …\", \"At 29' …\"); bunlar kuralın "
+        "bilinçli maliyeti, v5'te aynı bilgi `{clause:possession}` ile gelir.",
+    ]
+    return out
+
+
 def render_human_review() -> list[str]:
     counts = lint_rates.human_review_counts()
     out = ["## İnsan etiketleri: foundry-v3 (ham sayılar)", ""]
@@ -1283,7 +1451,7 @@ def render_markdown(report: EvalReport) -> str:
     allowed_en = ", ".join(f"`{w}`" for w in DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_en)
     allowed_tr = ", ".join(f"`{w}`" for w in DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_tr)
     out = [
-        "# Enjeksiyon değerlendirmesi: foundry-v2 ↔ foundry-v3 ↔ foundry-v4 ↔ foundry-v4.1",
+        "# Enjeksiyon değerlendirmesi: foundry-v2 ↔ foundry-v3 ↔ foundry-v4 ↔ foundry-v4.1 ↔ foundry-v5",
         "",
         "Bu dosya `python -m eval.inject` ile üretilir; elle düzenlemeyin.",
         "",
@@ -1305,9 +1473,15 @@ def render_markdown(report: EvalReport) -> str:
         "(pas, çalım, ofsayt, faul, korner, kurtarış seçilemez), aynı cümlede `{event:X}` ile X'in oyuncusunun "
         "`{player:}`'ı birlikte yazılamaz, takım yer tutucusundan önce \"the\" yazılamaz, izinli cümle başı "
         "listesinden \"They\" çıktı (zamirler listeye girmez).",
+        "- **v5 (claim menüsü)**: iddiaları kod kurar ve doğrular (`app/explain/menu.py`); model iddia ve olay "
+        "bağlamaz, yalnızca menü id'lerini (`{value:}`, `{minute:}`, `{start:}`, `{label:}`, `{clause:}`, menü "
+        "kanıtı olan `{event:}`, `{score}`) kullanır. Ek kurallar: menüde olmayan id, menü iddiasına dayanmayan "
+        "cümle, dominance/pressure momentinde ana iddianın kullanılmaması ve bir cümlede aynı dakikanın iki kez "
+        "geçmesi reddedilir; izinli cümle başı EN yalnızca \"The\". Model iddia yazmadığı için iddiayı "
+        "değiştiren enjeksiyonlar (`number_text_and_claim`) v5'te \"—\".",
         f"- Tabanlar: v3 `slotify` {report.slotified}/{report.samples}, v4 `slotify_v4` "
-        f"{report.slotified_v4}/{report.samples} taslak temiz çevrildi (v4 tabanı hem v4 hem v4.1 kurallarından "
-        "geçer); v3/v4/v4.1 sütunları bunlar üzerinden ölçülür.",
+        f"{report.slotified_v4}/{report.samples}, v5 `slotify_v5` {report.slotified_v5}/{report.samples} taslak "
+        "temiz çevrildi (v4 tabanı hem v4 hem v4.1 kurallarından geçer); sütunlar bunlar üzerinden ölçülür.",
         "- Her hata türü her yaklaşımın kendi biçiminde, aynı anlamda enjekte edilir (moment + tür + dil + "
         "sürüm seed'li). Uygulanamayan taslak N'ye girmez; \"—\" o yaklaşımda karşılığı olmayan tür. "
         "\"(yeni, v4)\" / \"(yeni, v4.1)\" işaretli türler o sürümle eklendi.",
@@ -1322,6 +1496,11 @@ def render_markdown(report: EvalReport) -> str:
         "",
         f"Not: yazıyla-sayı denetimi kapalıyken v2'nin `number_words` yakalaması "
         f"{_pct(report.v2_number_words_without_fix)}.",
+        "",
+        "Not (v5): `unsupported_sentence_qualitative` ve `qualitative_overstatement` taslağa *ayrı bir cümle* olarak "
+        "eklenir; v5 bunları `sentence_without_claim` ile yakalar (cümlede menü iddiası yok). Aynı yargı menü "
+        "iddiasına dayanan bir cümlenin içine yazılırsa (\"{clause:possession}, and {home} were the better side\") "
+        "v5 de geçirir: nitel yargının kendisi hâlâ denetlenmiyor.",
         "",
     ]
     out += [
@@ -1379,6 +1558,8 @@ def render_markdown(report: EvalReport) -> str:
         "",
         *render_v41_false_alarms(report),
         "",
+        *render_v5_sentence_starts(report),
+        "",
         "Template ve v3 satırlarında cümle başı ve sayı kelimesi tetiklenmeleri template anlatıcının kendi "
         "kalıplarından geliyor (EN \"Shots since …\", TR \"Bir ara … gerideydi\"). Bu kelimeler listeye bilerek "
         "alınmadı: \"Shots\" olay sözcüğü (v4'te metrik adı `{label:}` ile gelir), \"Bir\" sayı kelimesi. Template "
@@ -1424,7 +1605,8 @@ def main(argv: list[str] | None = None) -> int:
 
     report = run_eval(QUICK_CORPUS if args.quick else FULL_CORPUS)
     print(render_table(report))
-    print(f"\nslotify: v3 {report.slotified}/{report.samples}, v4 {report.slotified_v4}/{report.samples}")
+    print(f"\nslotify: v3 {report.slotified}/{report.samples}, v4 {report.slotified_v4}/{report.samples}, "
+          f"v5 {report.slotified_v5}/{report.samples}")
     for variant in VARIANTS:
         print(f"Yakalanmayan ({NAMES[variant]}): " + (", ".join(r.spec.name for r in uncaught(report, variant)) or "yok"))
     if not args.no_write:

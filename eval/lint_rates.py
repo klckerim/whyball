@@ -28,7 +28,7 @@ from app.explain.phrases import (
     first_word,
     overstatement_spans,
 )
-from app.explain.labels import metric_label
+from app.explain.labels import METRIC_LABELS, metric_label
 from app.explain.slots import (
     PLACEHOLDER_RE,
     SIDE_LABEL_RE,
@@ -159,12 +159,24 @@ PRONOUNS = {
 }
 
 
+# foundry-v5: zaman edatları dakikayı cümle başına taşır ("At 29' … since kickoff"), dakika yer tutucu ya da
+# yan cümleden gelir; metrik adları ("Possession …") {label:}/{clause:} ile gelir.
+TIME_PREPOSITIONS = {"en": frozenset({"at", "since", "in", "after", "before", "by"}), "tr": frozenset()}
+LABEL_WORDS = {
+    lang: frozenset(w.casefold() for label in labels.values() for w in label.split())
+    for lang, labels in METRIC_LABELS.items()
+}
+
+
 def _excluded(word: str, lang: str) -> bool:
-    """Başlangıç listesine girmeyecek kelimeler: home/away, zamir, sayı kelimesi, olay sözcüğü, abartı."""
+    """Başlangıç listesine girmeyecek kelimeler: home/away, zamir, zaman edatı, metrik adı, sayı kelimesi,
+    olay sözcüğü, abartı."""
     w = word.casefold()
     return bool(
         SIDE_LABEL_RE[lang].fullmatch(word)
         or w in PRONOUNS[lang]
+        or w in TIME_PREPOSITIONS[lang]
+        or (w in LABEL_WORDS[lang] and w not in ("the", "of", "over", "on"))
         or w in NUMBER_WORDS[lang]
         or event_word_spans(word, lang)
         or overstatement_spans(word, lang, None)

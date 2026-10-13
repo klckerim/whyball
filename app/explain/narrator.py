@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from app.analytics.moments import Moment
 from app.generator.models import Event
@@ -19,6 +19,9 @@ from .claims import Claim, parse_ref
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .template_narrator import Narration
 from .template_narrator import narrate as template_narrate
+
+if TYPE_CHECKING:
+    from .menu import ClaimMenu
 
 
 @dataclass(frozen=True)
@@ -29,6 +32,8 @@ class Draft:
     # Nihai metni pipeline doğrulamadan sonra render eder (bkz. slots.py).
     template: str | None = None
     claim_ids: tuple[str, ...] = ()
+    # Claim menüsü taslağı (foundry-v5): iddialar menüden, `claims` boş; bkz. menu.py.
+    menu: ClaimMenu | None = None
 
 
 class NarratorError(Exception):
