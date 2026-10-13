@@ -17,8 +17,8 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Maç üret: .venv/bin/python -m app.generator --seed 42 [--scenario late_comeback|red_card_swing|dominant_loss] [--out match.jsonl]
 - Fixture'ları yeniden üret: .venv/bin/python -m app.generator.freeze (sadece üretici bilerek değiştiyse; sonra docs/DATASHEET.md tablosunu güncelle)
 - Momentler: .venv/bin/python -m app.analytics --scenario red_card_swing --seed 42 [--jsonl] (ya da --input data/demo/<dosya>.jsonl)
-- Anlatı + doğrulama: .venv/bin/python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en|tr|both] [--all]
-- Anlatım hattı: .venv/bin/python -m app.explain.run --input data/demo/<dosya>.jsonl --narrator template|fake:<mod> [--lang en|tr] [--no-cache] (önbellek: data/cache/, git'e girmez)
+- Anlatı + doğrulama: .venv/bin/python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en] [--all]
+- Anlatım hattı: .venv/bin/python -m app.explain.run --input data/demo/<dosya>.jsonl --narrator template|fake:<mod> [--lang en] [--no-cache] (önbellek: data/cache/, git'e girmez)
 - Enjeksiyon değerlendirmesi (foundry-v2 serbest metin ↔ v3 slot ↔ v4 slot + {event:} + sıkı lint ↔ v4.1 olay tipi izin listesi + oyuncu tekrarı + zamir/artikel ↔ v5 claim menüsü): .venv/bin/python -m eval.inject [--quick] (docs/EVAL.md'yi yeniden yazar; v3 insan etiketlerini docs/human_review.foundry-v3.csv'den okur)
 - LLM anlatıcı (opsiyonel): .venv/bin/pip install -e ".[llm]"; az login; .env'de FOUNDRY_PROJECT_ENDPOINT ve FOUNDRY_MODEL (.env.example'a bak); --narrator foundry (çalıştırma başına en fazla 60 çağrı; foundry-v5: iddiaları app/explain/menu.py kurar, model yalnızca menü id'lerini kullanır)
 - Gerçek LLM ölçümü (3 demo maç, token harcar): .venv/bin/python -m eval.llm_run --lang en [--repeat 3] → docs/LLM_RUN.json (reddedilen taslaklar dahil), docs/LLM_RUN.md, docs/human_review.csv (son koşudan; elle doldurulmuşsa üzerine yazılmaz); yalnızca yeniden render: --from-json docs/LLM_RUN.json. Önceki sürümler docs/LLM_RUN.foundry-v*.json olarak arşivlenir (karşılaştırma tablosu bunları okur)

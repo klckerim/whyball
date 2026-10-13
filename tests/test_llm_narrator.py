@@ -110,23 +110,23 @@ def _narrator(client, **cfg):
 
 
 def test_record_holds_menu_clauses_and_evidence_events():
-    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
-    assert "Turkish" in system and "analyst" in system and "No outside knowledge" in system
+    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "en"))
+    assert "English" in system and "analyst" in system and "No outside knowledge" in system
     assert "NEVER write digits" in system and "{clause:<clause id>}" in system
     assert "do not link events" in system
     record = json.loads(user)
-    assert record == moment_record(MOMENT, EVENTS, "tr")
+    assert record == moment_record(MOMENT, EVENTS, "en")
     assert "metrics_at_moment" not in record and "metric_labels" not in record
     menu = build_menu(MOMENT, EVENTS)
     assert [c["id"] for c in record["claims_menu"]] == [c.id for c in menu.claims]
     evidence = {r for c in menu.claims for r in c.claim.event_ids}
     assert {e["id"] for e in record["events"]} == evidence  # her iddianın kanıt olayları
     goal = next(e for e in record["events"] if e["id"] == GOAL_REF)
-    assert goal["phrase"] == f"{MOMENT.detail['player']} gol attı (22')" and goal["selectable"]
+    assert goal["phrase"] == f"{MOMENT.detail['player']} scored at 22'" and goal["selectable"]
     assert goal["player"] == ID_OF[MOMENT.detail["player"]] and goal["minute"] == "22'"
     poss = next(c for c in record["claims_menu"] if c["id"] == "possession")
-    assert poss["label"] == "topa sahip olma" and poss["value"].startswith("%")
-    assert next(c for c in record["clauses"] if c["id"] == "score")["text"].startswith("skor ")
+    assert poss["label"] == "possession" and poss["value"].endswith("%")
+    assert next(c for c in record["clauses"] if c["id"] == "score")["text"].startswith("the score is ")
     assert record["squads"]["home"][0] == {"id": "h01", "name": IDS["h01"]}
 
 

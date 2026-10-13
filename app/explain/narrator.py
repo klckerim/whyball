@@ -117,10 +117,9 @@ FAKE_MODES = (
     "unsupported_sentence",
     "fixes_after_feedback",
 )
-HALLUCINATED = {"en": "Arlo Quintana was everywhere.", "tr": "Arlo Quintana her yerdeydi."}
+HALLUCINATED = {"en": "Arlo Quintana was everywhere."}
 UNSUPPORTED = {
     "en": "{team} have now won {n} corners.",
-    "tr": "{team} şimdiye kadar {n} korner kazandı.",
 }
 
 

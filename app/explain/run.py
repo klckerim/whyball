@@ -1,7 +1,7 @@
 """CLI: anlatım hattını çalıştırır, her momentin sonucunu ve izini yazar.
 
 python -m app.explain.run --input data/demo/red_card_swing_seed42.jsonl --narrator fake:wrong_number
-python -m app.explain.run --seed 42 --scenario late_comeback --narrator template --lang tr --no-cache
+python -m app.explain.run --seed 42 --scenario late_comeback --narrator template --lang en --no-cache
 """
 
 from __future__ import annotations

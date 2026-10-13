@@ -249,16 +249,12 @@ Respond only with JSON: {{"text": "<template>"}}."""
 EVENT_WORD_EXAMPLES = {
     "en": "goal, scored, shot, saved, penalty, missed, sent off, card, booked, foul, corner, offside, "
           "substitute, equalised, levelled, conceded, assist, header, keeper",
-    "tr": "gol, şut, penaltı, kurtardı, kaçırdı, kart, atıldı, faul, korner, ofsayt, eşitledi, kaleci, "
-          "asist, vuruş",
 }
 OVERSTATEMENT_EXAMPLES = {
     "en": '"deep into stoppage", "dominate", "take control", "stunning", "dramatic", "relentless", '
           '"against the run of play", "last-gasp", "winner", "decisive", "completely", "comfortably", "deserved"',
-    "tr": '"domine etti", "ezici", "kontrolü ele aldı", "muhteşem", "inanılmaz", "dramatik", "son nefeste", '
-          '"galibiyet golü", "kritik", "tamamen", "rahat", "hak etti"',
 }
-ONE_WORD = {"en": "one", "tr": "bir"}
+ONE_WORD = {"en": "one"}
 FEEDBACK_HINTS = {
     "event_word": "describe events only with {event:<id>} and metric names with {label:<claim_id>}",
     "event_not_evidence": "an {event:} must be in the evidence of a claims_menu entry (see events[])",
@@ -285,7 +281,7 @@ DEFAULT_PRIMARY_RULE = "Use the claim that describes the moment itself (its even
 
 
 def sentence_rule(language: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> str:
-    words = config.sentence_start_allowed_tr if language == "tr" else config.sentence_start_allowed_en
+    words = config.sentence_start_allowed_en
     if not words:
         return "Every sentence must start with a placeholder."
     return "Every sentence must start with a placeholder or one of: " + ", ".join(
@@ -293,7 +289,7 @@ def sentence_rule(language: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG)
     ) + "."
 
 
-LANGUAGE_NAMES = {"en": "English", "tr": "Turkish"}
+LANGUAGE_NAMES = {"en": "English"}
 
 
 def build_messages(

@@ -1,7 +1,6 @@
 """Metriklerin okunur adları ({label:} yer tutucusu, template anlatıcı, model kaydı).
 
-Sayılabilir etiketler sayıyla uyumlu çekilir (EN "1 shot" / "2 shots"; TR sayıdan sonra
-hep tekil). Penaltı etiketleri penaltıyı kullanan takım açısındandır ("penalty taken and
+Sayılabilir etiketler sayıyla uyumlu çekilir (EN "1 shot" / "2 shots"). Penaltı etiketleri penaltıyı kullanan takım açısındandır ("penalty taken and
 saved"), kaleci açısından okunamaz.
 
 `pressure_balance` kayan bir pencereden ölçülür (son `pressure_window_min` oynanmış
@@ -19,8 +18,6 @@ from app.analytics.config import DEFAULT_CONFIG, AnalyticsConfig
 
 def _pressure_label(language: str, config: AnalyticsConfig = DEFAULT_CONFIG) -> str:
     n = f"{config.pressure_window_min:g}"
-    if language == "tr":
-        return f"son {n} oynanmış dakikadaki baskı dengesi"
     return f"pressure balance over the last {n} minutes of play"
 
 
@@ -35,20 +32,10 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
         "min_score_margin": "largest deficit", "players_on_pitch": "players on the pitch",
         "pressure_balance": _pressure_label("en"),
     },
-    "tr": {
-        "goals": "gol", "shots": "şut", "shots_on_target": "isabetli şut",
-        "corners": "korner", "fouls": "faul", "yellow_cards": "sarı kart",
-        "red_cards": "kırmızı kart", "penalties_scored": "gole çevrilen penaltı",
-        "penalties_saved": "kullanılıp kurtarılan penaltı", "penalties_missed": "kaçan penaltı",
-        "substitutions": "oyuncu değişikliği", "possession": "topa sahip olma",
-        "field_tilt": "saha üstünlüğü", "score": "gol", "score_margin": "gol farkı",
-        "min_score_margin": "en büyük geri kalış farkı", "players_on_pitch": "sahadaki oyuncu",
-        "pressure_balance": _pressure_label("tr"),
-    },
 }
 
 
-# EN tekil biçimler (değer 1 iken); TR'de sayıdan sonra isim zaten tekil.
+# EN tekil biçimler (değer 1 iken).
 SINGULAR_EN: dict[str, str] = {
     "goals": "goal", "score": "goal", "shots": "shot", "shots_on_target": "shot on target",
     "corners": "corner", "fouls": "foul", "yellow_cards": "yellow card", "red_cards": "red card",

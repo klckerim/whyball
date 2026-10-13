@@ -698,7 +698,7 @@ def run_live(lang: str, repeat: int = 1, config: ExplainConfig = DEFAULT_EXPLAIN
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Gerçek LLM ile üç demo maç ölçümü")
-    parser.add_argument("--lang", choices=("en", "tr"), default="en")
+    parser.add_argument("--lang", choices=("en",), default="en")
     parser.add_argument("--repeat", type=int, default=1, help="Aynı prompt'la koşu sayısı")
     parser.add_argument("--from-json", help="Modeli çağırmadan bu ham çıktıdan yeniden render et")
     parser.add_argument("--out-json", default=str(DEFAULT_JSON))

@@ -18,7 +18,7 @@ from app.generator.models import read_jsonl
 from eval.inject import FULL_CORPUS
 from tests.explain_helpers import moment_case
 
-LANGS = ("en", "tr")
+LANGS = ("en",)
 
 
 @cache
@@ -122,9 +122,7 @@ def test_english_count_labels_agree_with_value(metric, one, many):
     assert metric_label(metric, "en") == many
 
 
-def test_turkish_labels_stay_singular_after_numbers_and_penalties_read_from_taker():
-    assert metric_label("shots", "tr", 1) == metric_label("shots", "tr", 5) == "şut"
-    assert metric_label("penalties_saved", "tr") == "kullanılıp kurtarılan penaltı"
+def test_penalty_labels_read_from_taker():
     assert "saved" in metric_label("penalties_saved", "en") and "taken" in metric_label("penalties_saved", "en")
 
 

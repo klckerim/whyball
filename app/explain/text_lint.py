@@ -18,12 +18,11 @@ from app.generator.models import Event
 from .claims import Claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .labels import window_phrase_spans
+from .template_narrator import require_language
 
 NUMBER_RE = re.compile(
-    r"(?P<trmin>\d{1,3})\.\s*dakika"  # TR: "46. dakikadan"
-    r"|(?P<min>\d{1,3})(?:\+(?P<extra>\d{1,2}))?'"  # "22'", "45+1'"
-    r"|%(?P<pct1>\d{1,3})(?![\d.])"  # TR: "%58"
-    r"|(?P<pct2>\d{1,3})%"  # EN: "58%"
+    r"(?P<min>\d{1,3})(?:\+(?P<extra>\d{1,2}))?'"  # "22'", "45+1'"
+    r"|(?P<pct>\d{1,3})%"  # "58%"
     r"|(?P<dec>[+-]?\d+\.\d+)"
     r"|(?P<int>\d+)"
 )
@@ -37,23 +36,14 @@ NUMBER_WORDS: dict[str, tuple[str, ...]] = {
         "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
         "eighteen", "nineteen", "twenty",
     ),
-    "tr": (
-        "sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz", "on",
-        "on bir", "on iki", "on üç", "on dört", "on beş", "on altı", "on yedi", "on sekiz",
-        "on dokuz", "yirmi",
-    ),
 }
 # Sayı dışında da sık kullanılan kelimeler: yalnızca ardından sayılabilir bir isim gelirse sayı.
-# TR "bir" artikel, "yedi" fiil ("gol yedi"), "altı" ("altı pas"); EN "one" ("one of").
+# EN "one" ("one of").
 AMBIGUOUS_NUMBER_WORDS: dict[str, frozenset[str]] = {
     "en": frozenset({"one"}),
-    "tr": frozenset({"bir", "yedi", "altı"}),
 }
-# Dil bilinmiyorsa diğer dilde sıradan kelime olanlar da belirsiz (EN "on" edat, TR "on" = 10).
-AMBIGUOUS_ANY_LANGUAGE = frozenset({"on"})
 COUNT_NOUN_STEMS = (
     "goal", "shot", "corner", "player", "minute", "card", "penalt", "point", "save",
-    "gol", "şut", "korner", "oyuncu", "kişi", "dakika", "kart", "penaltı", "fark", "kurtarış",
 )
 NEXT_WORD_RE = re.compile(r"\s+([^\W\d_]+)")
 
@@ -65,8 +55,6 @@ def _number_word_pattern(words: Sequence[str]) -> re.Pattern[str]:
 
 NUMBER_WORD_RE = {
     "en": _number_word_pattern(NUMBER_WORDS["en"]),
-    "tr": _number_word_pattern(NUMBER_WORDS["tr"]),
-    None: _number_word_pattern([*NUMBER_WORDS["en"], *NUMBER_WORDS["tr"]]),
 }
 WORD_VALUES = {w: i for words in NUMBER_WORDS.values() for i, w in enumerate(words)}
 
@@ -169,15 +157,11 @@ def _number_words(text: str, language: str | None, strict: bool = False) -> list
 
     `strict`: bağlamdan bağımsız, her sayı kelimesi ("one of", "bir ara" dahil).
     """
-    scan = text.replace("İ", "i").lower()  # aynı uzunluk; TR büyük İ
-    if strict:
-        ambiguous: frozenset[str] = frozenset()
-    elif language in AMBIGUOUS_NUMBER_WORDS:
-        ambiguous = AMBIGUOUS_NUMBER_WORDS[language]
-    else:
-        ambiguous = AMBIGUOUS_ANY_LANGUAGE.union(*AMBIGUOUS_NUMBER_WORDS.values())
+    language = language or "en"
+    scan = text.lower()
+    ambiguous = frozenset() if strict else AMBIGUOUS_NUMBER_WORDS[language]
     found = []
-    for m in NUMBER_WORD_RE.get(language, NUMBER_WORD_RE[None]).finditer(scan):
+    for m in NUMBER_WORD_RE[language].finditer(scan):
         word = m.group()
         if word in ambiguous:
             nxt = NEXT_WORD_RE.match(scan, m.end())
@@ -194,7 +178,9 @@ def lint_text(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     language: str | None = None,
 ) -> LintResult:
-    """`language` ("en"/"tr") yazıyla sayıların hangi dilde aranacağını belirler."""
+    """`language`: None (belirtilmemiş) ya da "en"; başka bir dil hata verir."""
+    if language is not None:
+        require_language(language)
     issues: list[LintIssue] = []
     teams = {c.subject.team for c in claims if c.subject.team}
     players = {c.subject.player for c in claims if c.subject.player}
@@ -234,13 +220,11 @@ def lint_text(
     eps = config.float_epsilon
     for m in NUMBER_RE.finditer(masked_text):
         g = m.groupdict()
-        if g["trmin"] is not None:
-            kind, ok = "minute", int(g["trmin"]) in minutes
-        elif g["min"] is not None:
+        if g["min"] is not None:
             minute = int(g["min"]) + (int(g["extra"]) - 1 if g["extra"] else 0)
             kind, ok = "minute", minute in minutes
-        elif g["pct1"] is not None or g["pct2"] is not None:
-            p = int(g["pct1"] or g["pct2"])
+        elif g["pct"] is not None:
+            p = int(g["pct"])
             kind = "percent"
             ok = any(abs(v * 100 - p) <= config.lint_percent_tolerance + eps for v in ratios)
         elif g["dec"] is not None:

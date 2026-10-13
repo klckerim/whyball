@@ -48,7 +48,7 @@ from . import lint_rates
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = REPO_ROOT / "docs" / "EVAL.md"
-LANGS = ("en", "tr")
+LANGS = ("en",)
 VARIANTS = ("v2", "v3", "v4", "v41", "v5")
 NAMES = {"v2": "v2", "v3": "v3", "v4": "v4", "v41": "v4.1", "v5": "v5"}
 TITLES = {
@@ -79,12 +79,11 @@ FULL_CORPUS = (
 )
 QUICK_CORPUS = [(42, "red_card_swing"), (7, "dominant_loss"), (42, "late_comeback"), (100, None)]
 
-FABRICATED_START = {"en": "Quintana scores.", "tr": "Quintana gol attı."}
-UNSUPPORTED_NUMBER = {"en": "{team} have won {n} corners.", "tr": "{team} şimdiye kadar {n} korner kazandı."}
-UNSUPPORTED_QUALITATIVE = {"en": "{team} were the better side.", "tr": "{team} daha iyi taraftı."}
+FABRICATED_START = {"en": "Quintana scores."}
+UNSUPPORTED_NUMBER = {"en": "{team} have won {n} corners."}
+UNSUPPORTED_QUALITATIVE = {"en": "{team} were the better side."}
 SIDE_LABEL = {
     "en": {"home": "the home side", "away": "the away side"},
-    "tr": {"home": "ev sahibi ekip", "away": "deplasman ekibi"},
 }
 
 
@@ -148,16 +147,12 @@ def _splice(text: str, start: int, end: int, new: str) -> str:
 
 def _bumped_number(m: re.Match[str]) -> str:
     g = m.groupdict()
-    if g["trmin"] is not None:
-        return m.group().replace(g["trmin"], str(int(g["trmin"]) + 1), 1)
     if g["min"] is not None:
         if g["extra"]:
             return f"{g['min']}+{int(g['extra']) + 1}'"
         return f"{int(g['min']) + 1}'"
-    if g["pct1"] is not None:
-        return f"%{int(g['pct1']) + 5}"
-    if g["pct2"] is not None:
-        return f"{int(g['pct2']) + 5}%"
+    if g["pct"] is not None:
+        return f"{int(g['pct']) + 5}%"
     if g["dec"] is not None:
         value = float(g["dec"]) + 0.10
         return f"{value:+.2f}" if g["dec"][0] in "+-" else f"{value:.2f}"
@@ -225,18 +220,16 @@ def _slot_text(raw: str, sample: Sample) -> str | None:
     for m in NUMBER_RE.finditer(masked):
         g = m.groupdict()
         slot = None
-        if g["min"] is not None or g["trmin"] is not None:
-            minute = int(g["min"] or g["trmin"]) + (int(g["extra"]) - 1 if g["extra"] else 0)
+        if g["min"] is not None:
+            minute = int(g["min"]) + (int(g["extra"]) - 1 if g["extra"] else 0)
             end = next((i for i, c in enumerate(claims) if c.end.minute == minute), None)
             start = next((i for i, c in enumerate(claims) if c.start.minute == minute), None)
             if end is not None:
                 slot = f"{{minute:{ids[end]}}}"
             elif start is not None:
                 slot = f"{{start:{ids[start]}}}"
-            if g["trmin"] is not None and slot:
-                slot += m.group()[len(g["trmin"]):]  # ". dakika" kalsın
-        elif g["pct1"] is not None or g["pct2"] is not None:
-            p = int(g["pct1"] or g["pct2"])
+        elif g["pct"] is not None:
+            p = int(g["pct"])
             i = next((i for i, c in enumerate(claims) if c.kind == "ratio" and abs(c.value * 100 - p) <= 0.5), None)
             slot = f"{{value:{ids[i]}}}" if i is not None else None
         else:
@@ -255,24 +248,20 @@ def _slot_text(raw: str, sample: Sample) -> str | None:
 # Moment tipi başına v4 şablonu; iddialar template anlatıcınınkiyle aynı sırada (c1, c2, ...).
 # {E} olay yer tutucusu, {T}/{O} momentin takımı / rakibi.
 V4_BASE = {
-    "goal": {"en": "{E}, making it {score_named}.", "tr": "{E}; skor {score_named}."},
-    "penalty": {"en": "{E}.", "tr": "{E}."},
-    "red_card": {"en": "{E}. {T} are down to {value:c2} players.", "tr": "{E}. {T} sahada {value:c2} kişi kaldı."},
-    "score_change": {"en": "{E}, making it {score}.", "tr": "{E}; skor {score}."},
+    "goal": {"en": "{E}, making it {score_named}."},
+    "penalty": {"en": "{E}."},
+    "red_card": {"en": "{E}. {T} are down to {value:c2} players."},
+    "score_change": {"en": "{E}, making it {score}."},
     "pressure_shift": {
         "en": "{minute:c1} — {T} take control: {label:c1} {value:c1} in their favour. "
               "{label:c2} since {start:c2}: {T} {value:c2}, {O} {value:c3}.",
-        "tr": "{minute:c1} — Baskı {T} tarafına geçti: {label:c1} {value:c1}. "
-              "{start:c2}–{minute:c2} arası {label:c2}: {T} {value:c2}, {O} {value:c3}.",
     },
     "dominance_without_reward": {
         "en": "{minute:c1} — {T} dominate without reward: since {start:c1} they have had {value:c1} of the "
               "ball and a {value:c2}–{value:c3} lead in {label:c2}, yet the score is {score_named}.",
-        "tr": "{minute:c1} — {T} üstün ama sonuç alamıyor: {start:c1}–{minute:c1} arası {label:c1} "
-              "{value:c1}, {label:c2} {value:c2}–{value:c3}; skor ise {score_named}.",
     },
 }
-V4_BEHIND = {"en": " {T} had been {value:c3} down.", "tr": " {T} en fazla {value:c3} farkla gerideydi."}
+V4_BEHIND = {"en": " {T} had been {value:c3} down."}
 EVENT_MOMENTS = ("goal", "penalty", "red_card", "score_change")
 
 
@@ -306,27 +295,23 @@ def slotify_v4(sample: Sample) -> SlotDraft | None:
 
 # --- slotify_v5: v5 tabanı (menü id'leri) -----------------------------------------------------------
 
-# V4_BASE'in menü id'li karşılığı; TR dominance'taki çift {minute} (aynı cümlede aynı dakika) düzeltildi.
+# V4_BASE'in menü id'li karşılığı.
 V5_BASE = {
-    "goal": {"en": "{E}, making it {score_named}.", "tr": "{E}; skor {score_named}."},
-    "penalty": {"en": "{E}.", "tr": "{E}."},
-    "red_card": {"en": "{E}. {T} are down to {value:players} players.", "tr": "{E}. {T} sahada {value:players} kişi kaldı."},
-    "score_change": {"en": "{E}, making it {score}.", "tr": "{E}; skor {score}."},
+    "goal": {"en": "{E}, making it {score_named}."},
+    "penalty": {"en": "{E}."},
+    "red_card": {"en": "{E}. {T} are down to {value:players} players."},
+    "score_change": {"en": "{E}, making it {score}."},
     "pressure_shift": {
         "en": "{minute:pressure} — {T} take control: {label:pressure} {value:pressure} in their favour. "
               "{label:shots_for} since {start:shots_for}: {T} {value:shots_for}, {O} {value:shots_against}.",
-        "tr": "{minute:pressure} — Baskı {T} tarafına geçti: {label:pressure} {value:pressure}. "
-              "{start:shots_for} sonrası {label:shots_for}: {T} {value:shots_for}, {O} {value:shots_against}.",
     },
     "dominance_without_reward": {
         "en": "{minute:possession} — {T} dominate without reward: since {start:possession} they have had "
               "{value:possession} of the ball and a {value:shots_for}–{value:shots_against} lead in "
               "{label:shots_for}, yet the score is {score_named}.",
-        "tr": "{minute:possession} — {T} üstün ama sonuç alamıyor: {start:possession} sonrası {label:possession} "
-              "{value:possession}, {label:shots_for} {value:shots_for}–{value:shots_against}; skor ise {score_named}.",
     },
 }
-V5_BEHIND = {"en": " {T} had been {value:deficit} down.", "tr": " {T} en fazla {value:deficit} farkla gerideydi."}
+V5_BEHIND = {"en": " {T} had been {value:deficit} down."}
 
 
 def slotify_v5(sample: Sample) -> SlotDraft | None:
@@ -639,40 +624,35 @@ def v4_score_order_reversed(s, rng, foreign):
 
 # --- yeni türler (foundry-v4) --------------------------------------------------------------------
 
-# Olay cümlesi ters rolle: penaltıyı kullanan "kurtardı", golcü "kurtardı/yedi", atılan "kart gördürdü".
+# Olay cümlesi ters rolle: penaltıyı kullanan "saved", golcü "saved/conceded", atılan "drew a red card".
 # Her tür için birkaç ifade; bir kısmı bilerek olay sözcüğü içermiyor (yasak listeyi sınamak için).
 REVERSED_ROLE = {
     "goal": {
         "en": ("{p} saved the shot at {m}", "{p} conceded at {m}", "{p} kept it out at {m}"),
-        "tr": ("{p} şutu kurtardı ({m})", "{p} golü engelleyemedi ({m})", "{p} topu çizgiden çıkardı ({m})"),
     },
     "penalty": {
         "en": ("{p} saved a penalty at {m}", "{p} stopped the spot-kick at {m}", "{p} kept the kick out at {m}"),
-        "tr": ("{p} penaltı kurtardı ({m})", "{p} penaltıda gole izin vermedi ({m})", "{p} vuruşu çeldi ({m})"),
     },
     "red_card": {
         "en": ("{p} drew a red card at {m}", "{p} was brought down and saw a rival dismissed at {m}",
                "{p} was the victim of the challenge at {m}"),
-        "tr": ("{p} rakibine kırmızı kart gördürdü ({m})", "{p} yerde kaldı, rakibi oyundan atıldı ({m})",
-               "{p} sert müdahaleye maruz kaldı ({m})"),
     },
 }
 FABRICATED_NAMES = ("Ravello", "Okonde", "Marisk", "Telvano", "Quintara", "Dusko", "Fernhal", "Albrecz")
 FABRICATED_PREDICATES = {
     "en": ("{n} pressed high.", "{n} kept running.", "{n} looked sharp."),
-    "tr": ("{n} önde baskı yaptı.", "{n} durmadan koştu.", "{n} çok hareketliydi."),
 }
-# Nitel abartı: lint yasak listesinden bağımsız yazıldı; bir kısmı listede yok. (EN, TR, destekleyen tipler)
+# Nitel abartı: lint yasak listesinden bağımsız yazıldı; bir kısmı listede yok. (EN, destekleyen tipler)
 OVERSTATED = (
-    ("{t} were utterly dominant.", "{t} rakibini ezdi geçti.", ("dominance_without_reward",)),
-    ("{t} pushed on deep into stoppage time.", "{t} uzatmaların son saniyelerinde bastırdı.", ()),
-    ("{t} completely took control.", "{t} oyunun kontrolünü tamamen ele aldı.", ("pressure_shift",)),
-    ("{t} were stunning.", "{t} inanılmaz oynadı.", ()),
-    ("{t} were relentless.", "{t} durdurulamaz göründü.", ()),
-    ("{t} ran the show.", "{t} gösteri yaptı.", ()),
-    ("{t} were in total command.", "{t} sahada fırtına gibi esti.", ()),
-    ("{t} deserved more.", "{t} çok daha fazlasını hak etti.", ()),
-    ("{t} put on a masterclass.", "{t} ders verir gibi oynadı.", ()),
+    ("{t} were utterly dominant.", ("dominance_without_reward",)),
+    ("{t} pushed on deep into stoppage time.", ()),
+    ("{t} completely took control.", ("pressure_shift",)),
+    ("{t} were stunning.", ()),
+    ("{t} were relentless.", ()),
+    ("{t} ran the show.", ()),
+    ("{t} were in total command.", ()),
+    ("{t} deserved more.", ()),
+    ("{t} put on a masterclass.", ()),
 )
 
 
@@ -819,9 +799,8 @@ def v4_sentence_start_fabricated_name(s, rng, foreign):
 
 
 def _overstated(s: Sample, rng: random.Random, team: str) -> tuple[str, str]:
-    options = [o for o in OVERSTATED if s.moment.type not in o[2]]
-    en, tr, _ = rng.choice(options)
-    template = tr if s.lang == "tr" else en
+    options = [o for o in OVERSTATED if s.moment.type not in o[1]]
+    template, _ = rng.choice(options)
     return template.format(t=team), template.replace("{t} ", "")
 
 
@@ -886,7 +865,7 @@ def v5_unknown_id(s, rng, foreign):
 
 # --- oyuncu tekrarı (foundry-v4.1) -------------------------------------------------------------
 
-REPEAT_SUFFIX = {"en": " by {p}", "tr": " ({p})"}
+REPEAT_SUFFIX = {"en": " by {p}"}
 
 
 def _repeated_player(s: Sample) -> str | None:
@@ -979,14 +958,14 @@ QUALITATIVE_V4 = ("Cümle yer tutucuyla başlıyor, sayı ve olay sözcüğü yo
                   "abartı listesinde değil (abartı değil, yargı). Nitel yargılar v4'te de kapsam dışında.")
 SENTENCE_START = ("Cümle başındaki tek büyük harfli kelime isim sayılmıyor (cümle başı büyük harfi normal); "
                   "kadroda olmayan tek kelimelik isim bu konumda fark edilmiyor.")
-AMBIGUOUS = ("Belirsiz kelime (TR \"bir\", EN \"one\") ardından sayılabilir bir isim gelmediği için sayı "
-             "sayılmıyor (\"bir ara\", \"one of\" gibi kullanımlarda yanlış alarmı önlemek için).")
+AMBIGUOUS = ("Belirsiz kelime (EN \"one\") ardından sayılabilir bir isim gelmediği için sayı "
+             "sayılmıyor (\"one of\" gibi kullanımlarda yanlış alarmı önlemek için).")
 SLOT_BINDING = ("Her yer tutucu doğru türde ve doğrulanmış bir iddiaya bağlı; hangi iddianın cümlede nereye "
                 "ait olduğu denetlenmiyor.")
 LOOSE_BOUND = "Gevşetilmiş eşitsizlik iddiası (`score_margin lte 0` → `lte 1`) hâlâ doğru kalıyor."
 NO_ROLE_CHECK = "Ad iddianın öznesi ve dakika doğru; lint ve verify olayın rolünü (kim attı / kim kurtardı) bilmiyor."
 ROLE_V4 = ("Ters rol, olay sözcüğü yasak listesinde olmayan bir fiille yazıldığında (\"kept it out\", "
-           "\"victim of the challenge\", \"topu çizgiden çıkardı\") yakalanmıyor; yakalama sözlüğe dayanıyor.")
+           "\"victim of the challenge\") yakalanmıyor; yakalama sözlüğe dayanıyor.")
 WRONG_EVENT_V4 = ("Seçilen yanlış olay başka bir iddianın kanıtıysa {event:} bağlama kuralından geçiyor "
                   "(yalnızca \"bir iddianın kanıtı\" olması aranıyor, cümledeki rolüyle eşleşmesi değil).")
 WRONG_EVENT_V2V3 = ("Yeni oyuncu bir iddianın öznesiyse ad destekli sayılıyor; olay ile oyuncu eşleşmesi denetlenmiyor.")
@@ -1025,7 +1004,7 @@ INJECTION_TYPES = (
                   v2_unsupported_sentence_qualitative, v3_unsupported_sentence_qualitative,
                   on_v4(v3_unsupported_sentence_qualitative),
                   miss_v2=QUALITATIVE, miss_v3=QUALITATIVE, miss_v4=QUALITATIVE_V4),
-    InjectionType("number_words", "Yanlış sayı yazıyla (\"two\", \"iki\")",
+    InjectionType("number_words", "Yanlış sayı yazıyla (\"two\")",
                   v2_number_words, v3_number_words, on_v4(v3_number_words),
                   miss_v2=AMBIGUOUS + " Ya da " + COINCIDENCE, miss_v3=AMBIGUOUS),
     InjectionType("sentence_start_fabricated", "Başa uydurma isimli cümle (\"Quintana scores.\")",
@@ -1389,7 +1368,7 @@ def render_window_audit(corpus: Sequence[tuple[int, str | None]]) -> list[str]:
         "## Şablon pencere denetimi (template anlatıcı)",
         "",
         "Her iddianın penceresi ve pencereli (başlangıcı ne maç başı ne olay anı) iddiaların cümlede "
-        "yazılı olup olmadığı (EN \"since X'\" ve TR \"X. dakikadan\").",
+        "yazılı olup olmadığı (EN \"since X'\").",
         "",
         "| Moment tipi | Metrik | Tür | Pencere | İddia | Pencere metinde |",
         "|---|---|---|---|---:|---:|",
@@ -1406,10 +1385,10 @@ def render_window_audit(corpus: Sequence[tuple[int, str | None]]) -> list[str]:
         "- `dominance_without_reward`: possession ve şut iddiaları zaten aynı pencereden "
         "(`dominance_context_minutes`); hata EN cümlesindeydi (\"58% of possession and 4–0 shots since 25'\" "
         "pencereyi yalnızca şutlara bağlıyordu). Düzeltme: pencere iki değerden önce yazılıyor "
-        "(\"since 25' they have had 58% of the ball and a 4–0 lead in shots\"). TR cümlesi pencereyi zaten başa koyuyordu.",
+        "(\"since 25' they have had 58% of the ball and a 4–0 lead in shots\").",
         "- `pressure_shift`: `pressure_balance` iddiası `start = maç başı` taşıyor, ama `measure` başlangıcı yok "
         "sayıyor; metrik son 10 oynanmış dakikanın kayan penceresi. foundry-v4.1: metriğin okunur adı pencereyi "
-        f"yazıyor (\"{metric_label('pressure_balance', 'en')}\" / \"{metric_label('pressure_balance', 'tr')}\"; "
+        f"yazıyor (\"{metric_label('pressure_balance', 'en')}\"; "
         "`app/explain/labels.py`, pencere `AnalyticsConfig.pressure_window_min`'den). Bu sabit ifade iddia değil: "
         "text_lint onu sayı denetiminden önce maskeler, doğrulayıcıya pencere desteği eklenmedi. Şut sayımı "
         "ise maç saatine göre `_since` penceresinden geliyor ve devre başında kırpılıyor; "
@@ -1449,7 +1428,6 @@ def render_markdown(report: EvalReport) -> str:
     control = next(r for r in report.results if r.spec.name == "control")
     corpus = ", ".join(f"{sc or 'senaryosuz'}/{seed}" for seed, sc in report.corpus)
     allowed_en = ", ".join(f"`{w}`" for w in DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_en)
-    allowed_tr = ", ".join(f"`{w}`" for w in DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_tr)
     out = [
         "# Enjeksiyon değerlendirmesi: foundry-v2 ↔ foundry-v3 ↔ foundry-v4 ↔ foundry-v4.1 ↔ foundry-v5",
         "",
@@ -1457,7 +1435,7 @@ def render_markdown(report: EvalReport) -> str:
         "",
         "## Yöntem",
         "",
-        "- Başlangıç: template anlatıcının doğru taslakları (metin + iddialar), tüm momentler, EN ve TR.",
+        "- Başlangıç: template anlatıcının doğru taslakları (metin + iddialar), tüm momentler, EN.",
         f"- Derlem: {len(report.corpus)} maç, {report.samples} taslak. Maçlar: {corpus}.",
         "- **v2 (serbest metin)**: model metni ve iddiaları serbest yazar; denetim text_lint + verify_claim "
         "(v2 kuralları: yalnızca-soyad denetimi kapalı).",
@@ -1560,11 +1538,10 @@ def render_markdown(report: EvalReport) -> str:
         "",
         *render_v5_sentence_starts(report),
         "",
-        "Template ve v3 satırlarında cümle başı ve sayı kelimesi tetiklenmeleri template anlatıcının kendi "
-        "kalıplarından geliyor (EN \"Shots since …\", TR \"Bir ara … gerideydi\"). Bu kelimeler listeye bilerek "
-        "alınmadı: \"Shots\" olay sözcüğü (v4'te metrik adı `{label:}` ile gelir), \"Bir\" sayı kelimesi. Template "
-        "yedeği v4 slot lint'inden değil text_lint'ten geçtiği için bu, yayınlanan yedek metinleri etkilemez; "
-        "\"Bir ara\" bağlamsız sayı kelimesi kuralının gerçek bir yanlış alarmıdır.",
+        "Template ve v3 satırlarında cümle başı tetiklenmeleri template anlatıcının kendi "
+        "kalıplarından geliyor (EN \"Shots since …\"). Bu kelime listeye bilerek "
+        "alınmadı: \"Shots\" olay sözcüğü (v4'te metrik adı `{label:}` ile gelir). Template "
+        "yedeği v4 slot lint'inden değil text_lint'ten geçtiği için bu, yayınlanan yedek metinleri etkilemez.",
         "",
         "Nitel abartı kuralının gerçek LLM çıktılarında tetiklendiği metinler ve insan etiketi: "
         + ("; ".join(f"`{mid}` ({', '.join(h)}) → {label}" for mid, h, label in report.overstatement_llm) or "yok")
@@ -1576,11 +1553,10 @@ def render_markdown(report: EvalReport) -> str:
         f"{report.samples} taslağı + gerçek LLM çıktıları ({report.llm_texts} metin; foundry-v3'te yalnızca insan "
         "etiketi `correct` olanlar). Cümlenin yer tutucuyla başlamayan ilk kelimesi alınır; home/away, zamir "
         "(foundry-v4.1: \"They\" çıktı), sayı kelimesi, olay sözcüğü ve abartı ifadeleri listeye girmez. Sonuç `config.py`'ye donduruldu: "
-        f"EN {allowed_en}; TR {allowed_tr}.",
+        f"EN {allowed_en}.",
         "",
         "Liste ölçüldüğü veriyi içerdiği için yukarıdaki oran iyimser. Dış-örneklem tahmini: liste yalnızca template "
-        f"taslaklarından çıkarılsaydı (EN {', '.join(allowed_from['en']) or '—'}; TR "
-        f"{', '.join(allowed_from['tr']) or '—'}) gerçek LLM çıktılarındaki {sentences} cümleden {flagged} tanesi "
+        f"taslaklarından çıkarılsaydı (EN {', '.join(allowed_from['en']) or '—'}) gerçek LLM çıktılarındaki {sentences} cümleden {flagged} tanesi "
         f"({_pct(flagged / sentences if sentences else None)}) reddedilirdi: {_tags(examples) or '—'}.",
         "",
         *render_overstatement_list(),

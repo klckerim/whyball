@@ -56,7 +56,6 @@ SCORE_IDS = {"home": "score_home", "away": "score_away"}
 
 SIDE_LABEL_RE = {
     "en": re.compile(r"(?<!\w)(?:home|away)(?!\w)", re.IGNORECASE),
-    "tr": re.compile(r"(?<!\w)(?:ev sahibi|deplasman)", re.IGNORECASE),
 }
 METRIC_NAME_RE = re.compile(r"(?<![\w{])[a-z]+(?:_[a-z]+)+(?!\w)")
 DIGIT_RE = re.compile(r"\d+(?:[.,]\d+)?")
@@ -201,7 +200,7 @@ def _mask_placeholders(template: str, char: str = "x") -> str:
 
 
 def allowed_sentence_starts(language: str | None, config: ExplainConfig) -> frozenset[str]:
-    by_lang = {"en": config.sentence_start_allowed_en, "tr": config.sentence_start_allowed_tr}
+    by_lang = {"en": config.sentence_start_allowed_en}
     words = by_lang[language] if language in by_lang else [w for ws in by_lang.values() for w in ws]
     return frozenset(w.casefold() for w in words)
 
@@ -333,7 +332,7 @@ def lint_template(
 def format_value(metric: str, value: float, language: str) -> str:
     if metric in ("possession", "field_tilt"):
         pct = round(value * 100)
-        return f"%{pct}" if language == "tr" else f"{pct}%"
+        return f"{pct}%"
     if metric == "pressure_balance":
         return f"{value:+.2f}"
     if metric == "min_score_margin":
@@ -360,8 +359,7 @@ def render(
     def capitalize(text: str) -> str:
         if not text or not text[0].islower():
             return text
-        first = "İ" if ctx.language == "tr" and text[0] == "i" else text[0].upper()
-        return first + text[1:]
+        return text[0].upper() + text[1:]
 
     def fill(m: re.Match[str]) -> str:
         out = value(m)

@@ -105,16 +105,16 @@ class _Builder:
         self.clauses: list[MenuClause] = []
         self.pid = {name: pid for pid, name in player_ids(events).items()}
 
-    def add(self, cid: str, claim: Claim, en: str | None = None, tr: str | None = None) -> None:
+    def add(self, cid: str, claim: Claim, en: str | None = None) -> None:
         self.claims.append(MenuClaim(cid, claim))
         if en is not None:
-            self.clause(cid, (cid,), en, tr or en)
+            self.clause(cid, (cid,), en)
 
-    def clause(self, cid: str, claim_ids: tuple[str, ...], en: str, tr: str) -> None:
+    def clause(self, cid: str, claim_ids: tuple[str, ...], en: str) -> None:
         def sides(t: str) -> str:
             t = t.replace("{T}", "{" + self.side + "}")
             return t.replace("{O}", "{" + self.opp + "}") if self.opp else t
-        self.clauses.append(MenuClause(cid, claim_ids, {"en": sides(en), "tr": sides(tr)}))
+        self.clauses.append(MenuClause(cid, claim_ids, {"en": sides(en)}))
 
     def player(self, name: str) -> str:
         return "{player:" + self.pid[name] + "}"
@@ -124,37 +124,34 @@ class _Builder:
         for side in ("home", "away"):
             value = self.c.measured("score", side)
             self.add(SCORE_IDS[side], self.c.state("score", side, "eq", value, anchor))
-        self.clause("score", (SCORE_IDS["home"], SCORE_IDS["away"]), "the score is {score_named}", "skor {score_named}")
+        self.clause("score", (SCORE_IDS["home"], SCORE_IDS["away"]), "the score is {score_named}")
 
     def possession(self, start: MatchTime = KICKOFF) -> None:
         value = round(self.c.measured("possession", self.side, start), 2)
         claim = Claim("ratio", Subject(self.side), "possession", "approx", value, start, self.c.t,
                       (self.c.ref(self.m.at_seq),))
         if start == KICKOFF:
-            self.add("possession", claim, "{T} have had {value:possession} of the ball since kickoff",
-                     "{T} maç başından bu yana topun {value:possession} kadarına sahip")
+            self.add("possession", claim, "{T} have had {value:possession} of the ball since kickoff")
         else:
-            self.add("possession", claim, "{T} have had {value:possession} of the ball since {start:possession}",
-                     "{start:possession} sonrası {T} topun {value:possession} kadarına sahip")
+            self.add("possession", claim, "{T} have had {value:possession} of the ball since {start:possession}")
 
     def margin(self, cid: str, claim: Claim) -> None:
         v = claim.value
         if v > 0:
-            en, tr = "{T} lead by {value:%s}" % cid, "{T} {value:%s} farkla önde" % cid
+            en = "{T} lead by {value:%s}" % cid
         elif v == 0:
-            en, tr = "the sides are level", "taraflar eşit"
+            en = "the sides are level"
         else:
-            en, tr = "{T} are behind", "{T} geride"
-        self.add(cid, claim, en, tr)
+            en = "{T} are behind"
+        self.add(cid, claim, en)
 
 
 def _goal(b: _Builder) -> None:
     player = b.m.detail["player"]
     b.add("goal", b.c.count("goals", Subject(b.side, player), b.c.t),
-          f"{b.player(player)} scored for {{T}}", f"{b.player(player)} {{T}} adına gol attı")
+          f"{b.player(player)} scored for {{T}}")
     b.add("team_goals", b.c.count("goals", Subject(b.side), KICKOFF),
-          "{T} have scored {value:team_goals} {label:team_goals} so far",
-          "{T} şu ana kadar {value:team_goals} {label:team_goals} attı")
+          "{T} have scored {value:team_goals} {label:team_goals} so far")
     b.score()
     b.possession()
 
@@ -163,7 +160,7 @@ def _score_change(b: _Builder) -> None:
     d = b.m.detail
     goal_seq = b.m.event_ids[-1]
     b.add("goals", b.c.count("goals", Subject(b.side), b.c.t),
-          "{T} scored at {minute:goals}", "{T} {minute:goals} itibarıyla gol buldu")
+          "{T} scored at {minute:goals}")
     margin = b.c.measured("score_margin", b.side)
     b.margin("margin", b.c.state("score_margin", b.side, "eq", margin, [goal_seq]))
     if d.get("from_behind"):
@@ -171,7 +168,7 @@ def _score_change(b: _Builder) -> None:
         conceded = measure("goals", Subject(b.opp), KICKOFF, b.c.t, b.c.events).counted
         goals = "goal" if deficit == 1 else "goals"
         b.add("deficit", b.c.state("min_score_margin", b.side, "eq", -deficit, conceded),
-              "{T} had been {value:deficit} %s down" % goals, "{T} bir ara {value:deficit} farkla gerideydi")
+              "{T} had been {value:deficit} %s down" % goals)
     b.score()
     b.possession()
 
@@ -179,26 +176,26 @@ def _score_change(b: _Builder) -> None:
 def _red_card(b: _Builder) -> None:
     player = b.m.detail["player"]
     b.add("sent_off", b.c.count("red_cards", Subject(b.side, player), b.c.t),
-          f"{b.player(player)} of {{T}} was sent off", f"{{T}} oyuncusu {b.player(player)} oyundan atıldı")
+          f"{b.player(player)} of {{T}} was sent off")
     team_reds = measure("red_cards", Subject(b.side), KICKOFF, b.c.t, b.c.events).counted
     left = b.c.measured("players_on_pitch", b.side)
     b.add("players", b.c.state("players_on_pitch", b.side, "eq", left, team_reds),
-          "{T} are down to {value:players} {label:players}", "{T} sahada {value:players} kişi kaldı")
+          "{T} are down to {value:players} {label:players}")
     b.score()
     b.possession()
 
 
 _PENALTY_CLAUSES = {
-    "scored": ("{p} scored a penalty for {T}", "{p} {T} adına penaltıyı gole çevirdi"),
-    "saved": ("{p}'s penalty for {T} was saved", "{T} adına penaltıyı {p} kullandı, vuruş kurtarıldı"),
-    "missed": ("{p} missed a penalty for {T}", "{p} {T} adına penaltıyı kaçırdı"),
+    "scored": "{p} scored a penalty for {T}",
+    "saved": "{p}'s penalty for {T} was saved",
+    "missed": "{p} missed a penalty for {T}",
 }
 
 
 def _penalty(b: _Builder) -> None:
     player, outcome = b.m.detail["player"], b.m.detail["outcome"]
-    en, tr = (t.replace("{p}", b.player(player)) for t in _PENALTY_CLAUSES[outcome])
-    b.add("penalty", b.c.count(f"penalties_{outcome}", Subject(b.side, player), b.c.t), en, tr)
+    en = _PENALTY_CLAUSES[outcome].replace("{p}", b.player(player))
+    b.add("penalty", b.c.count(f"penalties_{outcome}", Subject(b.side, player), b.c.t), en)
     b.score()
     b.possession()
 
@@ -209,21 +206,19 @@ def _shots(b: _Builder, start: MatchTime, lead_form: bool) -> None:
     b.add("shots_for", shots)
     b.add("shots_against", opp)
     ids = ("shots_for", "shots_against")
-    tr = "{start:shots_for} sonrası {label:shots_for} sayısında {T} {value:shots_for}, {O} {value:shots_against}"
     if lead_form:
         verb = "lead" if shots.value > opp.value else ("trail" if shots.value < opp.value else "are level at")
         en = f"{{T}} {verb} {{value:shots_for}}–{{value:shots_against}} in {{label:shots_for}} since {{start:shots_for}}"
     else:
         en = ("{T} have had {value:shots_for} {label:shots_for} to {O}'s {value:shots_against} "
               "since {start:shots_for}")
-    b.clause("shots", ids, en, tr)
+    b.clause("shots", ids, en)
 
 
 def _pressure_shift(b: _Builder) -> None:
     balance = round(b.c.measured("pressure_balance", b.side), 2)
     b.add("pressure", b.c.state("pressure_balance", b.side, "approx", balance, b.m.event_ids),
-          "{T} lead the {label:pressure} at {value:pressure}",
-          "{label:pressure} {value:pressure} ile {T} lehine")
+          "{T} lead the {label:pressure} at {value:pressure}")
     _shots(b, _since(b.c.t, b.c.config.context_minutes), lead_form=False)
     b.score()
 
@@ -238,9 +233,7 @@ def _dominance(b: _Builder) -> None:
     balance = balance.format(v="{value:shots_for}", o="{value:shots_against}")
     b.clause("dominance", ("possession", "shots_for", "shots_against"),
              "since {start:possession} {T} have had {value:possession} of the ball and "
-             + balance + " in {label:shots_for}",
-             "{start:possession} sonrası {T} topun {value:possession} kadarına sahip, {label:shots_for} "
-             "sayısında {value:shots_for}–{value:shots_against}")
+             + balance + " in {label:shots_for}")
     b.score()
     margin = b.c.measured("score_margin", b.side)
     b.margin("margin", b.c.state("score_margin", b.side, "eq", margin, [b.m.at_seq]))

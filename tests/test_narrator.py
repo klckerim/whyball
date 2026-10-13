@@ -40,7 +40,7 @@ def test_narrators_satisfy_protocol():
 @pytest.mark.parametrize("mode", FAKE_MODES)
 def test_fake_mode_produces_expected_problem(mode, mtype):
     events, moment = moment_case(mtype)
-    for lang in ("en", "tr"):
+    for lang in ("en",):
         problems = _problems(FakeNarrator(events, mode).narrate(moment, "neutral", lang), events)
         if EXPECTED[mode] is None:
             assert not problems

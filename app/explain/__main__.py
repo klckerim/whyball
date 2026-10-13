@@ -1,4 +1,4 @@
-"""CLI: python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en|tr|both] [--all]
+"""CLI: python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en] [--all]
        python -m app.explain --seed 42 --scenario red_card_swing
 """
 
@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--input", help="JSONL olay dosyası")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
-    parser.add_argument("--lang", choices=[*LANGS, "both"], default="both")
+    parser.add_argument("--lang", choices=LANGS, default="en")
     parser.add_argument("--all", action="store_true", help="Seçimi atla, tüm momentleri anlat")
     args = parser.parse_args(argv)
 
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         parser.error("--input ya da --seed gerekli")
 
-    langs = LANGS if args.lang == "both" else (args.lang,)
+    langs = (args.lang,)
     moments = detect_moments(events)
     chosen = moments if args.all else select_moments(moments)
     out = sys.stdout

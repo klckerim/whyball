@@ -1,4 +1,4 @@
-"""Template anlatıcı: bir momentten tipli iddialar ve EN/TR düz metin üretir.
+"""Template anlatıcı: bir momentten tipli iddialar ve EN düz metin üretir.
 
 LLM anlatıcının fallback'idir. Metindeki her somut ifade bir iddiaya
 dayanır; iddiası doğrulanmayan cümle yayınlanmaz (``Narration.published``).
@@ -25,7 +25,14 @@ from .claims import (
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .labels import metric_label
 
-LANGS = ("en", "tr")
+LANGS = ("en",)
+
+
+def require_language(language: str | None) -> str:
+    """EN is the only supported language; anything else is rejected with a clear error."""
+    if language not in LANGS:
+        raise ValueError(f"unsupported language {language!r}: only 'en' is supported")
+    return language
 
 
 @dataclass(frozen=True)
@@ -117,7 +124,7 @@ class _Context:
         a = self.measured("score", "away")
         home, away = self.names["home"], self.names["away"]
         return Sentence(
-            {"en": f"{home} {h:g}–{a:g} {away}.", "tr": f"Skor: {home} {h:g}–{a:g} {away}."},
+            {"en": f"{home} {h:g}–{a:g} {away}."},
             (
                 self.state("score", "home", "eq", h, evidence),
                 self.state("score", "away", "eq", a, evidence),
@@ -137,7 +144,6 @@ def _goal(c: _Context) -> list[Sentence]:
         Sentence(
             {
                 "en": f"{c.minute} — {player} scores for {team}.",
-                "tr": f"{c.minute} — Gol! {player} ({team}) ağları buldu.",
             },
             (scored,),
         ),
@@ -155,14 +161,12 @@ def _red_card(c: _Context) -> list[Sentence]:
         Sentence(
             {
                 "en": f"{c.minute} — {player} ({team}) is sent off.",
-                "tr": f"{c.minute} — {player} ({team}) kırmızı kartla oyundan atıldı.",
             },
             (sent_off,),
         ),
         Sentence(
             {
                 "en": f"{team} are down to {left:g} players.",
-                "tr": f"{team} sahada {left:g} kişi kaldı.",
             },
             (c.state("players_on_pitch", side, "eq", left, team_reds),),
         ),
@@ -170,27 +174,18 @@ def _red_card(c: _Context) -> list[Sentence]:
 
 
 _PENALTY_TEXT = {
-    "scored": (
-        "{minute} — Penalty for {team}: {player} scores from the spot.",
-        "{minute} — {team} penaltı kazandı ve {player} penaltıyı gole çevirdi.",
-    ),
-    "saved": (
-        "{minute} — Penalty for {team}, but {player} sees the kick saved.",
-        "{minute} — {team} penaltı kazandı, ancak {player} penaltıyı kullandı, vuruş kurtarıldı.",
-    ),
-    "missed": (
-        "{minute} — Penalty for {team}, but {player} misses.",
-        "{minute} — {team} penaltı kazandı, ancak {player} penaltıyı kaçırdı.",
-    ),
+    "scored": "{minute} — Penalty for {team}: {player} scores from the spot.",
+    "saved": "{minute} — Penalty for {team}, but {player} sees the kick saved.",
+    "missed": "{minute} — Penalty for {team}, but {player} misses.",
 }
 
 
 def _penalty(c: _Context) -> list[Sentence]:
     side, player, outcome = c.m.team, c.m.detail["player"], c.m.detail["outcome"]
-    en, tr = _PENALTY_TEXT[outcome]
+    en = _PENALTY_TEXT[outcome]
     values = {"minute": c.minute, "team": c.names[side], "player": player}
     claim = c.count(f"penalties_{outcome}", Subject(side, player), c.t)
-    return [Sentence({"en": en.format(**values), "tr": tr.format(**values)}, (claim,))]
+    return [Sentence({"en": en.format(**values)}, (claim,))]
 
 
 def _score_change(c: _Context) -> list[Sentence]:
@@ -203,7 +198,7 @@ def _score_change(c: _Context) -> list[Sentence]:
             c.state("score", side, "eq", 1, [goal_seq]),
             c.state("score", other(side), "eq", 0, [goal_seq]),
         )
-        text = {"en": f"{c.minute} — {team} open the scoring.", "tr": f"{c.minute} — {team} skoru açtı."}
+        text = {"en": f"{c.minute} — {team} open the scoring."}
     else:
         margin = 0 if kind == "equalizer" else 1
         claims = (
@@ -211,9 +206,9 @@ def _score_change(c: _Context) -> list[Sentence]:
             c.state("score_margin", side, "eq", margin, [goal_seq]),
         )
         text = (
-            {"en": f"{c.minute} — {team} draw level.", "tr": f"{c.minute} — {team} eşitliği yakaladı."}
+            {"en": f"{c.minute} — {team} draw level."}
             if kind == "equalizer"
-            else {"en": f"{c.minute} — {team} go ahead.", "tr": f"{c.minute} — {team} öne geçti."}
+            else {"en": f"{c.minute} — {team} go ahead."}
         )
     sentences = [Sentence(text, claims)]
 
@@ -224,7 +219,6 @@ def _score_change(c: _Context) -> list[Sentence]:
             Sentence(
                 {
                     "en": f"They had been {deficit} goal{'s' if deficit > 1 else ''} down.",
-                    "tr": f"Bir ara {deficit} gol gerideydi.",
                 },
                 (c.state("min_score_margin", side, "eq", -deficit, conceded),),
             )
@@ -245,16 +239,12 @@ def _pressure_shift(c: _Context) -> list[Sentence]:
             {
                 "en": f"{c.minute} — {team} take control: {metric_label('pressure_balance', 'en')} "
                       f"is {balance:+.2f} in their favour.",
-                "tr": f"{c.minute} — Baskı {team} tarafına geçti: "
-                      f"{metric_label('pressure_balance', 'tr')} {balance:+.2f}.",
             },
             (c.state("pressure_balance", side, "approx", balance, c.m.event_ids),),
         ),
         Sentence(
             {
                 "en": f"Shots since {start.minute}': {team} {shots.value:g}, {opp} {opp_shots.value:g}.",
-                "tr": f"{start.minute}. dakikadan bu yana şutlar: {team} {shots.value:g}, "
-                      f"{opp} {opp_shots.value:g}.",
             },
             (shots, opp_shots),
         ),
@@ -286,9 +276,6 @@ def _dominance(c: _Context) -> list[Sentence]:
             {
                 "en": f"{c.minute} — {team} dominate without reward: since {start.minute}' they have had "
                       f"{pct}% of the ball and a {s:g}–{o:g} lead in shots, yet the score is "
-                      f"{home} {h:g}–{a:g} {away}.",
-                "tr": f"{c.minute} — {team} üstün ama sonuç alamıyor: {start.minute}. dakikadan "
-                      f"bu yana %{pct} topa sahip olma ve {s:g}–{o:g} şut, skor ise "
                       f"{home} {h:g}–{a:g} {away}.",
             },
             claims,

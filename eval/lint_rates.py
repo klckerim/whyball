@@ -51,7 +51,7 @@ V2_RUN = DOCS / "LLM_RUN.foundry-v2.json"
 V3_RUN = DOCS / "LLM_RUN.foundry-v3.json"
 V4_RUN = DOCS / "LLM_RUN.foundry-v4.json"
 V3_REVIEW = DOCS / "human_review.foundry-v3.csv"
-LANGS = ("en", "tr")
+LANGS = ("en",)
 LABELS = ("correct", "wrong_fact", "misleading", "dull")
 
 
@@ -83,7 +83,7 @@ def _mask(template: str) -> str:
 
 
 def template_drafts(corpus: Iterable[tuple[int, str | None]]) -> list[Text]:
-    """Template anlatıcının taslakları (ham metin), tüm momentler, EN ve TR."""
+    """Template anlatıcının taslakları (ham metin), tüm momentler, EN."""
     out = []
     for seed, scenario in corpus:
         events = generate_match(seed, scenario)
@@ -155,13 +155,12 @@ def llm_v4_outputs() -> list[Text]:
 # Zamirler takım yer tutucusunun yerini tutar; cümle başında {home}/{away} yazılır (foundry-v4.1).
 PRONOUNS = {
     "en": frozenset({"they", "their", "them", "we", "he", "she", "it", "its"}),
-    "tr": frozenset({"onlar", "bunlar", "o"}),
 }
 
 
 # foundry-v5: zaman edatları dakikayı cümle başına taşır ("At 29' … since kickoff"), dakika yer tutucu ya da
 # yan cümleden gelir; metrik adları ("Possession …") {label:}/{clause:} ile gelir.
-TIME_PREPOSITIONS = {"en": frozenset({"at", "since", "in", "after", "before", "by"}), "tr": frozenset()}
+TIME_PREPOSITIONS = {"en": frozenset({"at", "since", "in", "after", "before", "by"})}
 LABEL_WORDS = {
     lang: frozenset(w.casefold() for label in labels.values() for w in label.split())
     for lang, labels in METRIC_LABELS.items()
@@ -273,8 +272,7 @@ def rule_rates(datasets: Sequence[tuple[str, Sequence[Text]]], config: ExplainCo
 def held_out_sentence_starts(templates: Sequence[Text], llm: Sequence[Text]) -> tuple[dict[str, tuple[str, ...]], int, int, Counter[str]]:
     """Liste yalnızca template taslaklarından çıkarılsaydı gerçek LLM çıktılarında kaç cümle reddedilirdi."""
     allowed = derive_sentence_starts(templates)
-    config = replace(DEFAULT_EXPLAIN_CONFIG, sentence_start_allowed_en=allowed["en"],
-                     sentence_start_allowed_tr=allowed["tr"])
+    config = replace(DEFAULT_EXPLAIN_CONFIG, sentence_start_allowed_en=allowed["en"])
     sentences = flagged = 0
     examples: Counter[str] = Counter()
     for t in llm:
@@ -333,8 +331,7 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
                 for c in s.claims:
                     stated = None
                     if _window(c) == "pencere (X' → an)":
-                        stated = (f"since {c.start.minute}'" in s.text["en"]
-                                  and f"{c.start.minute}. dakikadan" in s.text["tr"])
+                        stated = f"since {c.start.minute}'" in s.text["en"]
                     elif c.metric == "pressure_balance":  # pencere etiketin içinde
                         stated = all(metric_label(c.metric, lang) in s.text[lang] for lang in LANGS)
                     key = (m.type, c.metric, c.kind, _window(c))

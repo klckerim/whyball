@@ -14,7 +14,7 @@ FAILING_MODES = {
     "hallucinated_name": "unknown_name",
     "unsupported_sentence": "unsupported_number",
 }
-LANGS = ("en", "tr")
+LANGS = ("en",)
 
 
 def _steps(record):
@@ -141,3 +141,22 @@ def test_run_match_narrates_selected_moments():
     results = run_match(events, FakeNarrator(events, "correct"))
     assert [m for m, _ in results] == select_moments(moments)
     assert all(r.source == "llm" and r.ok for _, r in results)
+
+
+def test_only_english_is_accepted():
+    events, moment = moment_case("goal")
+    with pytest.raises(ValueError, match="only 'en' is supported"):
+        run_moment(moment, TemplateNarrator(events), events, language="tr")
+    with pytest.raises(ValueError, match="only 'en' is supported"):
+        run_match(events, TemplateNarrator(events), language="tr")
+
+
+@pytest.mark.parametrize("cli", ["app.explain.__main__", "app.explain.run"])
+def test_cli_rejects_non_english_language(cli, capsys):
+    import importlib
+
+    main = importlib.import_module(cli).main
+    with pytest.raises(SystemExit) as exc:
+        main(["--input", "data/demo/red_card_swing_seed42.jsonl", "--lang", "tr"])
+    assert exc.value.code == 2
+    assert "--lang" in capsys.readouterr().err

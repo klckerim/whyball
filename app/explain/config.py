@@ -30,7 +30,7 @@ class ExplainConfig:
     # --- text lint ---
     lint_allowed_capitalized: tuple[str, ...] = ()  # cümle ortasında serbest büyük harfli kelimeler
     lint_percent_tolerance: float = 0.5  # metindeki tam yüzde ile ratio iddiası arasındaki fark
-    lint_number_words: bool = True  # yazıyla sayılar (EN/TR, 0-20) da denetlensin
+    lint_number_words: bool = True  # yazıyla sayılar (EN, 0-20) da denetlensin
     lint_bare_surname: bool = True  # serbest metinde yalnızca soyadla anılan oyuncu reddedilir
 
     # --- slot şablonu lint (foundry-v4 kuralları; kapalıyken v3 davranışı) ---
@@ -49,7 +49,6 @@ class ExplainConfig:
     # Temiz taslaklardan çıkarılmış cümle başı kelimeleri (eval/lint_rates.py `derive_sentence_starts`).
     # Elle düzenlemeyin; tests/test_lint_rates.py yeniden çıkarılan listeyle eşitliği denetler.
     sentence_start_allowed_en: tuple[str, ...] = ("The",)
-    sentence_start_allowed_tr: tuple[str, ...] = ("Skor",)
 
     # --- LLM anlatıcı güvenliği ---
     llm_timeout_s: float = 60.0  # çağrı başına (reasoning modeli)

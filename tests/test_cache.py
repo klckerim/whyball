@@ -29,13 +29,12 @@ def test_prompt_version_change_regenerates(tmp_path):
     assert narrator.calls == 2
 
 
-def test_persona_and_language_are_part_of_key(tmp_path):
+def test_persona_is_part_of_key(tmp_path):
     events, moment = moment_case("goal")
     cache, narrator = NarrationCache(tmp_path), FakeNarrator(events, "correct")
     run_moment(moment, narrator, events, cache=cache)
     run_moment(moment, narrator, events, cache=cache, persona="analyst")
-    run_moment(moment, narrator, events, cache=cache, language="tr")
-    assert narrator.calls == 3
+    assert narrator.calls == 2
 
 
 def test_corrupt_cache_entry_is_a_miss(tmp_path):
@@ -85,8 +84,7 @@ def test_moment_hash_and_key_components():
     keys = {
         cache_key(m, "neutral", "en", "v1"),
         cache_key(m, "analyst", "en", "v1"),
-        cache_key(m, "neutral", "tr", "v1"),
         cache_key(m, "neutral", "en", "v2"),
         cache_key(moments[1], "neutral", "en", "v1"),
     }
-    assert len(keys) == 5
+    assert len(keys) == 4

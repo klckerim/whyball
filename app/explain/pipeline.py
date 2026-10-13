@@ -27,6 +27,7 @@ from .narrator import Draft, Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
 from .slots import SlotContext, bind_template, lint_template, render
 from .template_narrator import narrate as template_narrate
+from .template_narrator import require_language
 from .text_lint import LintIssue, Roster, lint_text
 
 
@@ -201,6 +202,7 @@ def run_moment(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     on_attempt: AttemptHook | None = None,
 ) -> NarrationRecord:
+    require_language(language)
     persona = persona or config.default_persona
     version = prompt_version or narrator.prompt_version
     roster = Roster.from_events(events)
@@ -320,6 +322,7 @@ def run_match(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     on_attempt: AttemptHook | None = None,
 ) -> list[tuple[Moment, NarrationRecord]]:
+    require_language(language)
     moments = detect_moments(events)
     if select:
         moments = select_moments(moments, config)
