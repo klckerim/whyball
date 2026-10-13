@@ -27,7 +27,7 @@ V3_RULES = replace(
 )
 
 EVENTS, MOMENTS = match(7, "dominant_loss")
-GOAL = next(m for m in MOMENTS if m.type == "goal")  # 57' deplasman golü, skor 0–1
+GOAL = next(m for m in MOMENTS if m.type == "goal")  # away goal at 57', score 0–1
 T = MatchTime(GOAL.period, GOAL.minute, GOAL.second)
 REF = f"{EVENTS[0].match_id}#{GOAL.event_ids[-1]}"
 TEAMS = EVENTS[0].data["teams"]
@@ -47,7 +47,7 @@ def codes(issues):
     return [(i.code, i.fragment) for i in issues]
 
 
-# --- ayrıştırma ve bağlama ------------------------------------------------------------------
+# --- parsing and binding ------------------------------------------------------------------
 
 
 def test_player_ids_are_deterministic():
@@ -67,8 +67,8 @@ def test_bind_flags_unbound_and_duplicate_ids():
     template = f"{{player:h99}} and {{player:{bystander}}} at {{minute:c7}}."
     _, _, issues = bind_template(template, (GOAL_CLAIM, POSS_CLAIM), ("c1", "c1"), ctx())
     found = codes(issues)
-    assert ("unbound_placeholder", "{player:h99}") in found  # kadroda yok
-    assert ("unbound_placeholder", f"{{player:{bystander}}}") in found  # iddia öznesi değil
+    assert ("unbound_placeholder", "{player:h99}") in found  # not in the squad
+    assert ("unbound_placeholder", f"{{player:{bystander}}}") in found  # not the subject of a claim
     assert ("unbound_placeholder", "{minute:c7}") in found
     assert ("duplicate_claim_id", "c1") in found
 
@@ -80,7 +80,7 @@ def test_score_placeholder_adds_verified_score_claims():
     assert [(c.subject.team, c.value, c.end) for c in claims[1:]] == [("home", 0, T), ("away", 1, T)]
 
 
-# --- şablon lint -----------------------------------------------------------------------------
+# --- template lint -----------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -97,11 +97,6 @@ def test_score_placeholder_adds_verified_score_claims():
 )
 def test_lint_rejects_raw_values(template, code, fragment):
     assert (code, fragment) in codes(lint_template(template, ctx()).issues)
-
-
-def test_lint_rejects_turkish_side_labels_and_number_words():
-    found = codes(lint_template("Deplasman ekibi üç şut attı.", ctx("tr")).issues)
-    assert ("raw_side_label", "Deplasman") in found and ("raw_number", "üç") in found
 
 
 def test_clean_template_passes_lint():
@@ -138,15 +133,15 @@ def test_placeholder_at_sentence_start_is_capitalized():
     assert text == f"{HOME} lead. Possession is 61%."
 
 
-@pytest.mark.parametrize("lang,expected", [("en", "61%"), ("tr", "%61")])
+@pytest.mark.parametrize("lang,expected", [("en", "61%")])
 def test_percent_and_label_rendering(lang, expected):
     text = _render("{home}: {value:c2} {label:c2}.", (GOAL_CLAIM, POSS_CLAIM), ("c1", "c2"), lang)
-    label = "possession" if lang == "en" else "topa sahip olma"
+    label = "possession"
     assert text == f"{HOME}: {expected} {label}."
 
 
 def test_value_uses_verified_actual_not_model_value():
-    # İddia 0.61 ≈ gerçek 0.609…; render doğrulanmış gerçek değerden yuvarlar.
+    # Claim 0.61 ≈ actual 0.609…; render rounds from the verified actual value.
     c = ctx()
     claims, ids, _ = bind_template("{value:c2}", (GOAL_CLAIM, POSS_CLAIM), ("c1", "c2"), c)
     verdicts = (VerificationResult(True, "ok", 1), VerificationResult(True, "ok", 0.6049))
@@ -156,7 +151,7 @@ def test_value_uses_verified_actual_not_model_value():
 @pytest.mark.parametrize(
     "metric,value,lang,expected",
     [("pressure_balance", 0.833, "en", "+0.83"), ("pressure_balance", -0.5, "en", "-0.50"),
-     ("min_score_margin", -2, "en", "2"), ("shots", 5.0, "en", "5"), ("field_tilt", 0.316, "tr", "%32")],
+     ("min_score_margin", -2, "en", "2"), ("shots", 5.0, "en", "5")],
 )
 def test_format_value(metric, value, lang, expected):
     assert format_value(metric, value, lang) == expected
@@ -169,31 +164,30 @@ def test_minute_and_start_rendering_in_stoppage_time():
     assert out == "40'–45+2'"
 
 
-# --- {event:} olay ifadeleri ------------------------------------------------------------------
+# --- {event:} event phrases ------------------------------------------------------------------
 
-# (tip, varyant) → (EN, TR); {p} oyuncu, {m} dakika, {in} oyuna giren, {team} takım.
+# (type, variant) → EN; {p} player, {m} minute, {in} player coming on, {team} team.
 EXPECTED_PHRASES = {
-    ("goal", None): ("{p} scored at {m}", "{p} gol attı ({m})"),
-    ("shot", "goal"): ("{p} scored at {m}", "{p} gol attı ({m})"),
-    ("shot", "saved"): ("{p} had a shot saved at {m}", "{p} şut çekti, kurtarıldı ({m})"),
-    ("shot", "blocked"): ("{p} had a shot blocked at {m}", "{p} şut çekti, rakibe çarptı ({m})"),
-    ("shot", "off_target"): ("{p} shot off target at {m}", "{p} şut çekti, isabet bulmadı ({m})"),
-    ("penalty", "scored"): ("{p} scored a penalty at {m}", "{p} penaltıyı gole çevirdi ({m})"),
-    ("penalty", "saved"): ("{p}'s penalty was saved at {m}", "{p} penaltı kullandı, vuruş kurtarıldı ({m})"),
-    ("penalty", "missed"): ("{p} missed a penalty at {m}", "{p} penaltıyı kaçırdı ({m})"),
-    ("red_card", "straight_red"): ("{p} was sent off at {m}", "{p} kırmızı kartla oyundan atıldı ({m})"),
-    ("red_card", "second_yellow"): ("{p} was sent off for a second yellow at {m}",
-                                    "{p} ikinci sarı karttan oyundan atıldı ({m})"),
-    ("yellow_card", None): ("{p} was booked at {m}", "{p} sarı kart gördü ({m})"),
-    ("foul", None): ("{p} committed a foul at {m}", "{p} faul yaptı ({m})"),
-    ("corner", None): ("{p} took a corner at {m}", "{p} korner kullandı ({m})"),
-    ("pass", "success"): ("{p} completed a pass at {m}", "{p} pas verdi ({m})"),
-    ("pass", "fail"): ("{p} lost the ball with a pass at {m}", "{p} pas denedi, top rakibe geçti ({m})"),
-    ("dribble", "success"): ("{p} beat a defender at {m}", "{p} rakibini geçti ({m})"),
-    ("dribble", "fail"): ("{p} was dispossessed at {m}", "{p} top kaybetti ({m})"),
-    ("offside", None): ("{p} was caught offside at {m}", "{p} ofsayta düştü ({m})"),
-    ("substitution", None): ("{in} came on for {p} at {m}", "{in}, {p} yerine oyuna girdi ({m})"),
-    ("save", None): ("{team} made a save at {m}", "{team} kurtarış yaptı ({m})"),
+    ("goal", None): "{p} scored at {m}",
+    ("shot", "goal"): "{p} scored at {m}",
+    ("shot", "saved"): "{p} had a shot saved at {m}",
+    ("shot", "blocked"): "{p} had a shot blocked at {m}",
+    ("shot", "off_target"): "{p} shot off target at {m}",
+    ("penalty", "scored"): "{p} scored a penalty at {m}",
+    ("penalty", "saved"): "{p}'s penalty was saved at {m}",
+    ("penalty", "missed"): "{p} missed a penalty at {m}",
+    ("red_card", "straight_red"): "{p} was sent off at {m}",
+    ("red_card", "second_yellow"): "{p} was sent off for a second yellow at {m}",
+    ("yellow_card", None): "{p} was booked at {m}",
+    ("foul", None): "{p} committed a foul at {m}",
+    ("corner", None): "{p} took a corner at {m}",
+    ("pass", "success"): "{p} completed a pass at {m}",
+    ("pass", "fail"): "{p} lost the ball with a pass at {m}",
+    ("dribble", "success"): "{p} beat a defender at {m}",
+    ("dribble", "fail"): "{p} was dispossessed at {m}",
+    ("offside", None): "{p} was caught offside at {m}",
+    ("substitution", None): "{in} came on for {p} at {m}",
+    ("save", None): "{team} made a save at {m}",
 }
 
 
@@ -222,14 +216,13 @@ FIRST = _first_events()
 
 @pytest.mark.parametrize("key", sorted(EXPECTED_PHRASES, key=str))
 def test_event_phrase_per_type_and_outcome(key):
-    assert key in FIRST, f"derlemde örnek yok: {key}"
+    assert key in FIRST, f"no example in the corpus: {key}"
     e, events = FIRST[key]
     teams = {side: events[0].data["teams"][side]["name"] for side in ("home", "away")}
     values = {"p": e.player, "m": fmt_minute(e.period, e.minute), "in": (e.data or {}).get("player_in"),
               "team": teams.get(e.team)}
-    en, tr = EXPECTED_PHRASES[key]
+    en = EXPECTED_PHRASES[key]
     assert event_phrase(e, teams, "en") == en.format(**values)
-    assert event_phrase(e, teams, "tr") == tr.format(**values)
 
 
 @pytest.mark.parametrize("etype", ["match_meta", "kickoff", "half_time", "full_time"])
@@ -245,10 +238,10 @@ def test_saved_penalty_phrase_never_names_the_goalkeeper():
                 continue
             keeper = next(x for x in events[i + 1:] if x.type.value == "save").player
             teams = {side: events[0].data["teams"][side]["name"] for side in ("home", "away")}
-            for lang in ("en", "tr"):
+            for lang in ("en",):
                 phrase = event_phrase(e, teams, lang)
                 assert keeper not in phrase and keeper.split()[-1] not in phrase
-                assert phrase.startswith(e.player)  # özne her zaman penaltıyı kullanan
+                assert phrase.startswith(e.player)  # the subject is always the penalty taker
 
 
 def test_event_phrases_in_demo_matches_name_only_their_own_player():
@@ -257,7 +250,7 @@ def test_event_phrases_in_demo_matches_name_only_their_own_player():
         teams = {side: events[0].data["teams"][side]["name"] for side in ("home", "away")}
         names = set(player_ids(events).values())
         for e in events:
-            for lang in ("en", "tr"):
+            for lang in ("en",):
                 phrase = event_phrase(e, teams, lang)
                 if phrase is None:
                     continue
@@ -267,7 +260,7 @@ def test_event_phrases_in_demo_matches_name_only_their_own_player():
 
 def test_event_must_be_evidence_of_a_claim():
     c = ctx()
-    _, _, issues = bind_template("{event:%s}." % REF, (POSS_CLAIM,), ("c1",), c)  # POSS_CLAIM REF'i kanıt sayıyor
+    _, _, issues = bind_template("{event:%s}." % REF, (POSS_CLAIM,), ("c1",), c)  # POSS_CLAIM counts REF as evidence
     assert issues == []
     other = next(e for e in EVENTS if e.type.value == "shot" and e.seq < GOAL.event_ids[-1])
     ref = f"{EVENTS[0].match_id}#{other.seq}"
@@ -282,21 +275,18 @@ def test_event_must_be_evidence_of_a_claim():
 
 
 def test_role_reversal_cannot_be_written():
-    # v3'te yayınlanan hata (dominant_loss M009): penaltıyı kullanan "saved a penalty" diye anıldı.
+    # The error published in v3 (dominant_loss M009): the penalty taker was described as having "saved a penalty".
     found = codes(lint_template("{player:%s} saved a penalty at {minute:c1}." % PID, ctx()).issues)
     assert ("event_word", "saved") in found and ("event_word", "penalty") in found
-    tr = codes(lint_template("{player:%s} penaltı kurtardı." % PID, ctx("tr")).issues)
-    assert ("event_word", "penaltı") in tr and ("event_word", "kurtardı") in tr
 
 
-# --- v4 lint kuralları ------------------------------------------------------------------------
+# --- v4 lint rules ------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     "template,lang,fragment",
     [("Ravello pressed high. {home} lead.", "en", "Ravello"),
-     ("{home} lead. Quintana was everywhere.", "en", "Quintana"),
-     ("Kesinlikle {home} önde.", "tr", "Kesinlikle")],
+     ("{home} lead. Quintana was everywhere.", "en", "Quintana")],
 )
 def test_sentence_must_start_with_placeholder_or_allowed_word(template, lang, fragment):
     found = codes(lint_template(template, ctx(lang)).issues)
@@ -304,13 +294,8 @@ def test_sentence_must_start_with_placeholder_or_allowed_word(template, lang, fr
     assert not any(code == "sentence_start" for code, _ in codes(lint_template(template, ctx(lang), V3_RULES).issues))
 
 
-def test_turkish_ordinal_dot_is_not_a_sentence_break():
-    assert lint_template("{start:c1}. dakikadan bu yana {home} önde.", ctx("tr")).ok
-
-
 @pytest.mark.parametrize("template,lang,word", [
     ("{home} were one of the sides in it.", "en", "one"),
-    ("{home} bir ara önde.", "tr", "bir"),
 ])
 def test_number_words_are_rejected_regardless_of_context(template, lang, word):
     assert ("raw_number", word) in codes(lint_template(template, ctx(lang)).issues)
@@ -327,7 +312,7 @@ def test_overstatement_needs_moment_type_support():
     assert not lint_template("{home} dominate without reward.", pressure).ok
 
 
-# --- foundry-v4.1 kuralları -------------------------------------------------------------------
+# --- foundry-v4.1 rules -------------------------------------------------------------------
 
 V4_RULES = replace(
     DEFAULT_EXPLAIN_CONFIG, slot_event_type_allowlist=False, slot_player_repeat=False,
@@ -413,12 +398,11 @@ def test_they_is_no_longer_an_allowed_sentence_start():
     assert lint_template(template, ctx(), V4_RULES).ok
 
 
-# --- baskı dengesi penceresi ------------------------------------------------------------------
+# --- pressure balance window ------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("lang,expected", [
     ("en", "pressure balance over the last 10 minutes of play"),
-    ("tr", "son 10 oynanmış dakikadaki baskı dengesi"),
 ])
 def test_pressure_balance_label_states_window(lang, expected):
     from app.analytics.config import DEFAULT_CONFIG

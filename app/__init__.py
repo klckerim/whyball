@@ -1,1 +1,1 @@
-"""WhyBall uygulama paketi."""
+"""WhyBall application package."""

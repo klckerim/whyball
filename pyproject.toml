@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whyball"
 version = "0.1.0"
-description = "Çok ajanlı futbol maç anlatıcısı; her iddia deterministik metriklerle doğrulanır."
+description = "Multi-agent football match narrator; every claim is verified against deterministic metrics."
 requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-# Foundry (FoundryNarrator, app/llm/hello.py) için; çekirdek ve testler gerektirmez.
+# For Foundry (FoundryNarrator, app/llm/hello.py); the core and the tests do not need it.
 llm = ["agent-framework-foundry", "azure-identity", "python-dotenv"]
 
 [tool.setuptools.packages.find]

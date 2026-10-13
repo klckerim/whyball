@@ -1,27 +1,27 @@
 # WhyBall
-Çok ajanlı futbol maç anlatıcısı. Her iddia deterministik metriklerle doğrulanır.
+Multi-agent football match narrator. Every claim is verified against deterministic metrics.
 
 ## Stack
 Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 
-## Kurallar
-- LLM sadece Explain aşamasında. Analytics ve moment detector LLM kullanmaz.
-- Verifier'dan geçmeyen cümle yayınlanmaz. Max 2 yeniden deneme, sonra template fallback.
-- Veri sentetik ve seed'li. Gerçek kulüp ve oyuncu adı yok.
-- Sır commit etme. Anahtarlar .env içinde.
-- Her değişiklikten sonra testler çalışmalı.
+## Rules
+- LLM only in the Explain stage. Analytics and the moment detector do not use an LLM.
+- A sentence that does not pass the Verifier is never published. Max 2 retries, then the template fallback.
+- Data is synthetic and seeded. No real club or player names.
+- Never commit secrets. Keys live in .env.
+- Tests must pass after every change.
 
-## Komutlar
-- Kurulum: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+## Commands
+- Setup: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 - Test: .venv/bin/pytest -q
-- Maç üret: .venv/bin/python -m app.generator --seed 42 [--scenario late_comeback|red_card_swing|dominant_loss] [--out match.jsonl]
-- Fixture'ları yeniden üret: .venv/bin/python -m app.generator.freeze (sadece üretici bilerek değiştiyse; sonra docs/DATASHEET.md tablosunu güncelle)
-- Momentler: .venv/bin/python -m app.analytics --scenario red_card_swing --seed 42 [--jsonl] (ya da --input data/demo/<dosya>.jsonl)
-- Anlatı + doğrulama: .venv/bin/python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en|tr|both] [--all]
-- Anlatım hattı: .venv/bin/python -m app.explain.run --input data/demo/<dosya>.jsonl --narrator template|fake:<mod> [--lang en|tr] [--no-cache] (önbellek: data/cache/, git'e girmez)
-- Enjeksiyon değerlendirmesi (foundry-v2 serbest metin ↔ v3 slot ↔ v4 slot + {event:} + sıkı lint ↔ v4.1 olay tipi izin listesi + oyuncu tekrarı + zamir/artikel ↔ v5 claim menüsü): .venv/bin/python -m eval.inject [--quick] (docs/EVAL.md'yi yeniden yazar; v3 insan etiketlerini docs/human_review.foundry-v3.csv'den okur)
-- LLM anlatıcı (opsiyonel): .venv/bin/pip install -e ".[llm]"; az login; .env'de FOUNDRY_PROJECT_ENDPOINT ve FOUNDRY_MODEL (.env.example'a bak); --narrator foundry (çalıştırma başına en fazla 60 çağrı; foundry-v5: iddiaları app/explain/menu.py kurar, model yalnızca menü id'lerini kullanır)
-- Gerçek LLM ölçümü (3 demo maç, token harcar): .venv/bin/python -m eval.llm_run --lang en [--repeat 3] → docs/LLM_RUN.json (reddedilen taslaklar dahil), docs/LLM_RUN.md, docs/human_review.csv (son koşudan; elle doldurulmuşsa üzerine yazılmaz); yalnızca yeniden render: --from-json docs/LLM_RUN.json. Önceki sürümler docs/LLM_RUN.foundry-v*.json olarak arşivlenir (karşılaştırma tablosu bunları okur)
-- Foundry bağlantı testi: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
+- Generate a match: .venv/bin/python -m app.generator --seed 42 [--scenario late_comeback|red_card_swing|dominant_loss] [--out match.jsonl]
+- Regenerate fixtures: .venv/bin/python -m app.generator.freeze (only if the generator changed on purpose; then update the table in docs/DATASHEET.md)
+- Moments: .venv/bin/python -m app.analytics --scenario red_card_swing --seed 42 [--jsonl] (or --input data/demo/<file>.jsonl)
+- Narration + verification: .venv/bin/python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en] [--all]
+- Narration pipeline: .venv/bin/python -m app.explain.run --input data/demo/<file>.jsonl --narrator template|fake:<mode> [--lang en] [--no-cache] (cache: data/cache/, not tracked by git)
+- Injection evaluation (foundry-v2 free text ↔ v3 slot ↔ v4 slot + {event:} + strict lint ↔ v4.1 event type allow-list + player repeat + pronoun/article ↔ v5 claim menu): .venv/bin/python -m eval.inject [--quick] (rewrites docs/EVAL.md; reads the v3 human labels from docs/human_review.foundry-v3.csv)
+- LLM narrator (optional): .venv/bin/pip install -e ".[llm]"; az login; FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL in .env (see .env.example); --narrator foundry (at most 60 calls per run; foundry-v5: app/explain/menu.py builds the claims, the model only uses menu ids)
+- Real LLM measurement (3 demo matches, spends tokens): .venv/bin/python -m eval.llm_run --lang en [--repeat 3] → docs/LLM_RUN.json (rejected drafts included), docs/LLM_RUN.md, docs/human_review.csv (from the last run; never overwritten if filled in by hand); re-render only: --from-json docs/LLM_RUN.json. Earlier versions are archived as docs/LLM_RUN.foundry-v*.json (the comparison table reads them)
+- Foundry connection test: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
-## Scope freeze: 24 Ekim akşamı. Sonrasında yeni özellik yok.
+## Scope freeze: evening of 24 October. No new features after that.

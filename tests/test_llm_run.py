@@ -40,7 +40,7 @@ def test_fallbacks_are_listed_with_rejection_codes():
 
         def respond(messages):
             state["n"] += 1
-            return "not json" if state["n"] <= 3 else good(messages)  # ilk moment 3 kez bozuk
+            return "not json" if state["n"] <= 3 else good(messages)  # first moment broken 3 times
 
         return respond
 
@@ -52,12 +52,12 @@ def test_fallbacks_are_listed_with_rejection_codes():
     assert [(r["attempt"], r["codes"]) for r in first["rejections"]] == [
         (a, ["invalid_output"]) for a in (1, 2, 3)
     ]
-    assert all("Şemaya uymayan" in r["message"] for r in first["rejections"])
+    assert all("Response does not match the schema" in r["message"] for r in first["rejections"])
 
     report = render_report({"meta": _meta(), "matches": [data]})
-    assert "## Yedeğe düşen momentler" in report
+    assert "## Moments that fell back" in report
     assert "`invalid_output`" in report and "#3:" in report
-    assert "**Toplam**" in report and "foundry-v2:fake" in report
+    assert "**Total**" in report and "foundry-v2:fake" in report
 
 
 def test_budget_fallback_reason_is_reported():
@@ -75,7 +75,7 @@ def test_render_from_json_is_deterministic():
     assert render_report(reloaded) == render_report(run)
 
 
-# --- hata mesajları, reasoning oranı, insan değerlendirme CSV'si -----------------------------
+# --- error messages, reasoning ratio, human review CSV -----------------------------
 
 
 def test_client_error_messages_reach_report():
@@ -98,8 +98,8 @@ def test_client_error_messages_reach_report():
     assert first["attempts"] == 2 and first["rejections"][0]["codes"] == ["client_error"]
     assert "upstream reset" in first["rejections"][0]["message"]
     report = render_report({"meta": _meta(), "matches": [data]})
-    assert "## İstemci hataları" in report and "upstream reset" in report
-    assert "## Yeniden denemeyle geçen momentler" in report
+    assert "## Client errors" in report and "upstream reset" in report
+    assert "## Moments that passed after a retry" in report
 
 
 def test_reasoning_ratio_and_latency_columns():
@@ -108,7 +108,7 @@ def test_reasoning_ratio_and_latency_columns():
     s = summarize(data)
     ratio = s["reasoning_tokens"] / s["output_tokens"] * 100
     assert f"({ratio:.1f}%)" in report
-    assert "Reasoning çabası: `low`" in report and "| Medyan |" in report
+    assert "Reasoning effort: `low`" in report and "| Median |" in report
 
 
 def test_human_review_csv(tmp_path):
@@ -140,14 +140,14 @@ def test_human_review_csv_never_overwrites_annotations(tmp_path):
     assert path.read_text(encoding="utf-8") == annotated
 
 
-# --- ölçüm modu: reddedilen taslaklar, çoklu koşu, sürüm karşılaştırması --------------------------
+# --- measurement mode: rejected drafts, multiple runs, version comparison --------------------------
 
 
 class _ShotsNarrator:
-    """v4 tarzı (model iddia kurar) taslak: 'maç başından beri ev sahibi şutu', yalnızca ilk olaya bağlı.
+    """A v4-style draft (the model builds the claim): 'home shots since kickoff', citing only the first event.
 
-    foundry-v5'te model iddia kuramaz; bu, arşivlenen v4/v4.1 ölçümlerindeki evidence_mismatch
-    raporlamasının hâlâ çalıştığını gösterir.
+    In foundry-v5 the model cannot build claims; this shows that evidence_mismatch reporting on the
+    archived v4/v4.1 measurements still works.
     """
 
     name, source, prompt_version = "shots", "llm", "test-v4"
@@ -185,7 +185,7 @@ def test_rejected_drafts_are_recorded_with_message_and_evidence():
     mismatch = [f for r in rejected for f in r["verify_failures"] if f["reason"] == "evidence_mismatch"]
     assert mismatch
     f = mismatch[0]
-    assert f["claim"]["metric"] == "shots" and f["window"] == "maç başı → an"
+    assert f["claim"]["metric"] == "shots" and f["window"] == "kickoff → now"
     assert len(f["cited"]) == 1 and all(e["type"] == "shot" for e in f["counted"])
     first = next(r for r in rejected if "evidence_mismatch" in r["codes"])
     assert first["template"] == "{home} had {value:c1} {label:c1}."
@@ -193,9 +193,9 @@ def test_rejected_drafts_are_recorded_with_message_and_evidence():
     assert "cited [#" in first["message"] and "counted [#" in first["message"]
 
     report = render_report({"meta": _meta(), "matches": [data]})
-    assert "## evidence_mismatch: bağlanan ve sayılan olaylar" in report
+    assert "## evidence_mismatch: cited and counted events" in report
     assert "count shots home" in report and "shot×" in report
-    assert "## Reddedilen taslaklar" in report and "{home} had {value:c1} {label:c1}." in report
+    assert "## Rejected drafts" in report and "{home} had {value:c1} {label:c1}." in report
 
 
 def test_trace_rejections_have_messages_without_attempt_log():
@@ -204,7 +204,7 @@ def test_trace_rejections_have_messages_without_attempt_log():
     rejected = [r for mo in data["moments"] for r in mo["rejections"]]
     assert rejected and all(r["message"] and "evidence_mismatch" in r["message"] for r in rejected
                             if "evidence_mismatch" in r["codes"])
-    assert "template" not in rejected[0]  # taslak yalnızca ölçüm modunda
+    assert "template" not in rejected[0]  # the draft only in measurement mode
 
 
 def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
@@ -221,16 +221,16 @@ def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
     ]}
     baseline = {"meta": {**_meta(), "prompt_version": "foundry-v4:fake"}, "matches": [bad]}
     report = render_report(run, {"foundry-v4": baseline})
-    assert "### Koşu 2 (c – d)" in report and "### Koşu başına yedeğe düşen" in report
-    assert "## Sürüm karşılaştırması: foundry-v4, foundry-v4.1" in report
-    assert "foundry-v4.1 · koşu 1" in report and "**foundry-v4.1 · toplam (2 koşu)**" in report
-    assert "### Koşu 1 · red_card_swing_seed42" in report
-    assert "## Ret kodu sıklığı" in report and "| `evidence_mismatch` | " in report
-    side = report[report.index("## Yan yana"):]
-    assert "| Moment | Tip | foundry-v4 | foundry-v4.1 |" in side and "*(yedek)*" in side
-    assert render_report(run, {"foundry-v4.1": run, "foundry-v4": baseline}) == report  # kendi sürümü dışlanır
+    assert "### Run 2 (c – d)" in report and "### Fallbacks per run" in report
+    assert "## Version comparison: foundry-v4, foundry-v4.1" in report
+    assert "foundry-v4.1 · run 1" in report and "**foundry-v4.1 · total (2 runs)**" in report
+    assert "### Run 1 · red_card_swing_seed42" in report
+    assert "## Rejection code frequency" in report and "| `evidence_mismatch` | " in report
+    side = report[report.index("## Side by side"):]
+    assert "| Moment | Type | foundry-v4 | foundry-v4.1 |" in side and "*(fallback)*" in side
+    assert render_report(run, {"foundry-v4.1": run, "foundry-v4": baseline}) == report  # its own version is excluded
     n = len(bad["moments"])
-    assert f"| 1 | {n} | {n} |" in report and f"| 2 | {n} | 0 |" in report  # koşu başına yedek
+    assert f"| 1 | {n} | {n} |" in report and f"| 2 | {n} | 0 |" in report  # fallbacks per run
 
     rows = list(csv.DictReader(write_human_review(run, tmp_path / "hr.csv").open(encoding="utf-8")))
     assert [r["text"] for r in rows] == [mo["text"] for mo in ok["moments"]]
@@ -239,7 +239,7 @@ def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
 
 
 def test_menu_drafts_never_reach_evidence_mismatch():
-    """foundry-v5: model iddia ve olay bağlamadığı için evidence_mismatch yolu kullanılmaz."""
+    """foundry-v5: the model links no claims or events, so the evidence_mismatch path is unused."""
     from tests.test_llm_narrator import text_json
 
     def sloppy(events):
@@ -248,7 +248,7 @@ def test_menu_drafts_never_reach_evidence_mismatch():
 
         def respond(messages):
             state["n"] += 1
-            if state["n"] % 2:  # her ilk deneme kötü: menü dışı id, olay sözcüğü, ham sayı
+            if state["n"] % 2:  # every first attempt is bad: off-menu id, event word, raw number
                 return text_json("{home} had {value:c9} shots and 3 corners.")
             return good(messages)
 

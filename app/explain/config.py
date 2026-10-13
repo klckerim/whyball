@@ -1,4 +1,4 @@
-"""Explain aşaması eşikleri. Seçici, doğrulayıcı ve anlatıcı sayıları buradan okur."""
+"""Explain stage thresholds. The selector, verifier and narrator read their numbers from here."""
 
 from __future__ import annotations
 
@@ -7,54 +7,53 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ExplainConfig:
-    # --- seçici ---
+    # --- selector ---
     min_importance: float = 0.5
     window_minutes: int = 10
-    max_per_window: int = 3  # always_keep dışındaki momentler için
+    max_per_window: int = 3  # for moments outside always_keep
     always_keep: tuple[str, ...] = ("goal", "red_card")
 
-    # --- doğrulayıcı ---
-    approx_tolerance: float = 0.005  # metinde 2 ondalığa / tam yüzdeye yuvarlanan değerler
-    float_epsilon: float = 1e-9  # tolerans sınırındaki kayan nokta hatası (0.88 - 0.875)
+    # --- verifier ---
+    approx_tolerance: float = 0.005  # values rounded to 2 decimals / a whole percent in the text
+    float_epsilon: float = 1e-9  # floating-point error at the tolerance edge (0.88 - 0.875)
 
-    # --- anlatıcı ---
-    context_minutes: int = 10  # baskı kayması cümlesindeki "X'ten beri" aralığı
+    # --- narrator ---
+    context_minutes: int = 10  # the "since X'" range in the pressure shift sentence
     dominance_context_minutes: int = 20
-    full_squad: int = 11  # meta'da kadro yoksa players_on_pitch için
+    full_squad: int = 11  # for players_on_pitch when meta has no squad
 
-    # --- anlatım hattı ---
-    max_retries: int = 2  # ilk denemeden sonra; sonra template yedeği
+    # --- narration pipeline ---
+    max_retries: int = 2  # after the first attempt; then the template fallback
     default_persona: str = "neutral"
     template_prompt_version: str = "template-v1"
 
     # --- text lint ---
-    lint_allowed_capitalized: tuple[str, ...] = ()  # cümle ortasında serbest büyük harfli kelimeler
-    lint_percent_tolerance: float = 0.5  # metindeki tam yüzde ile ratio iddiası arasındaki fark
-    lint_number_words: bool = True  # yazıyla sayılar (EN/TR, 0-20) da denetlensin
-    lint_bare_surname: bool = True  # serbest metinde yalnızca soyadla anılan oyuncu reddedilir
+    lint_allowed_capitalized: tuple[str, ...] = ()  # capitalized words allowed mid-sentence
+    lint_percent_tolerance: float = 0.5  # gap between a whole percent in the text and a ratio claim
+    lint_number_words: bool = True  # also check numbers written as words (EN, 0-20)
+    lint_bare_surname: bool = True  # free text that names a player by surname only is rejected
 
-    # --- slot şablonu lint (foundry-v4 kuralları; kapalıyken v3 davranışı) ---
-    slot_event_words: bool = True  # olay tipi / rol sözcükleri yalnızca {event:} ile gelir
-    slot_sentence_start: bool = True  # cümlenin ilk kelimesi yer tutucu ya da izinli başlangıç
-    slot_strict_number_words: bool = True  # yazıyla sayı bağlamdan bağımsız yasak ("one of", "bir ara")
-    slot_overstatement: bool = True  # nitel abartı listesi (moment tipi desteklemiyorsa)
-    # --- foundry-v4.1 kuralları ---
-    slot_event_type_allowlist: bool = True  # {event:} yalnızca moment tipinin izinli olay tiplerinden
-    slot_player_repeat: bool = True  # aynı cümlede {event:X} + X'in oyuncusu için {player:} yasak
-    slot_article_team: bool = True  # takım yer tutucusundan önce "the" yasak ("The {home}")
-    # --- foundry-v5 claim menüsü kuralları (yalnızca menü taslağında) ---
-    slot_sentence_claim: bool = True  # her cümle en az bir menü iddiasına dayanır
-    slot_primary_claim: bool = True  # dominance / pressure momentinde ana iddia kullanılır
-    slot_minute_repeat: bool = True  # bir cümlede aynı dakika iki kez yazılmaz
-    # Temiz taslaklardan çıkarılmış cümle başı kelimeleri (eval/lint_rates.py `derive_sentence_starts`).
-    # Elle düzenlemeyin; tests/test_lint_rates.py yeniden çıkarılan listeyle eşitliği denetler.
+    # --- slot template lint (foundry-v4 rules; v3 behaviour when off) ---
+    slot_event_words: bool = True  # event type / role words only via {event:}
+    slot_sentence_start: bool = True  # first word of a sentence is a placeholder or an allowed start
+    slot_strict_number_words: bool = True  # number words banned regardless of context ("one of")
+    slot_overstatement: bool = True  # qualitative overstatement list (unless the moment type supports it)
+    # --- foundry-v4.1 rules ---
+    slot_event_type_allowlist: bool = True  # {event:} only for event types the moment type allows
+    slot_player_repeat: bool = True  # {event:X} plus a {player:} for X's player in one sentence is banned
+    slot_article_team: bool = True  # "the" before a team placeholder is banned ("The {home}")
+    # --- foundry-v5 claim menu rules (menu drafts only) ---
+    slot_sentence_claim: bool = True  # every sentence rests on at least one menu claim
+    slot_primary_claim: bool = True  # a dominance / pressure moment uses its primary claim
+    slot_minute_repeat: bool = True  # the same minute is not written twice in one sentence
+    # Sentence-start words derived from clean drafts (eval/lint_rates.py `derive_sentence_starts`).
+    # Do not edit by hand; tests/test_lint_rates.py checks it equals the re-derived list.
     sentence_start_allowed_en: tuple[str, ...] = ("The",)
-    sentence_start_allowed_tr: tuple[str, ...] = ("Skor",)
 
-    # --- LLM anlatıcı güvenliği ---
-    llm_timeout_s: float = 60.0  # çağrı başına (reasoning modeli)
-    llm_max_tokens: int = 4000  # yanıt token üst sınırı; reasoning token'larını da kapsar
-    llm_max_calls_per_run: int = 60  # anlatıcı örneği (çalıştırma) başına toplam çağrı
+    # --- LLM narrator safety ---
+    llm_timeout_s: float = 60.0  # per call (reasoning model)
+    llm_max_tokens: int = 4000  # response token cap; includes reasoning tokens
+    llm_max_calls_per_run: int = 60  # total calls per narrator instance (run)
     llm_reasoning_effort: str = "low"  # Responses reasoning.effort (none|low|medium|high)
 
 

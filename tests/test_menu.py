@@ -1,4 +1,4 @@
-"""Claim menüsü (foundry-v5): doğrulanmış aday iddialar, yan cümleler ve menü kuralları."""
+"""Claim menu (foundry-v5): verified candidate claims, clauses and menu rules."""
 
 from functools import cache
 
@@ -18,12 +18,12 @@ from app.generator.models import read_jsonl
 from eval.inject import FULL_CORPUS
 from tests.explain_helpers import moment_case
 
-LANGS = ("en", "tr")
+LANGS = ("en",)
 
 
 @cache
 def _matches():
-    """3 demo maç (dondurulmuş fixture) + enjeksiyon derleminin 28 maçı."""
+    """The 3 demo matches (frozen fixtures) + the 28 matches of the injection corpus."""
     out = [read_jsonl(path) for _, _, path in demo_paths()]
     out += [generate_match(seed, scenario) for seed, scenario in FULL_CORPUS]
     return out
@@ -38,7 +38,7 @@ def _key(c):
     return (c.metric, c.kind, c.subject, c.start, c.end)
 
 
-# --- menü: doğrulanmış ve eksiksiz ------------------------------------------------------------
+# --- menu: verified and complete ------------------------------------------------------------
 
 
 def test_corpus_covers_demo_and_injection_matches():
@@ -63,7 +63,7 @@ def test_count_evidence_is_complete_including_counts_from_kickoff():
             counted = measure(c.metric, c.subject, c.start, c.end, events).counted
             assert {int(r.rsplit("#", 1)[1]) for r in c.event_ids} == set(counted), (m.id, mc.id)
             from_kickoff += mc.window == "since_kickoff" and len(counted) > 1
-    assert from_kickoff > 0  # v4.1'in kaçırdığı "maç başından" sayımlar menüde tam kanıtla
+    assert from_kickoff > 0  # the "since kickoff" counts v4.1 missed are on the menu with full evidence
 
 
 def test_menu_keeps_every_template_claim_type():
@@ -105,7 +105,7 @@ def test_every_claim_has_a_clause_that_renders_and_passes_text_lint(lang):
             assert result.ok, (m.id, clause.id, text, [(i.code, i.fragment) for i in result.issues])
 
 
-# --- etiket dilbilgisi ------------------------------------------------------------------------
+# --- label grammar ------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("metric,one,many", [
@@ -122,9 +122,7 @@ def test_english_count_labels_agree_with_value(metric, one, many):
     assert metric_label(metric, "en") == many
 
 
-def test_turkish_labels_stay_singular_after_numbers_and_penalties_read_from_taker():
-    assert metric_label("shots", "tr", 1) == metric_label("shots", "tr", 5) == "şut"
-    assert metric_label("penalties_saved", "tr") == "kullanılıp kurtarılan penaltı"
+def test_penalty_labels_read_from_taker():
     assert "saved" in metric_label("penalties_saved", "en") and "taken" in metric_label("penalties_saved", "en")
 
 
@@ -139,7 +137,7 @@ def test_label_agrees_only_right_after_its_value():
     assert text == "1 shot; a lead in shots."
 
 
-# --- menü taslağı kuralları -------------------------------------------------------------------
+# --- menu draft rules -------------------------------------------------------------------
 
 
 def _check(mtype, template, lang="en"):
@@ -180,7 +178,7 @@ def test_same_minute_twice_in_one_sentence_is_rejected():
     codes, *_ = _check("score_change", "{event:%s}, as {clause:goals}." % ref)
     assert "minute_repeat" in [c for c, _ in codes]
     codes, *_ = _check("dominance_without_reward", "{clause:possession}, and {clause:shots}.")
-    assert "minute_repeat" in [c for c, _ in codes]  # iki yan cümle aynı pencere başını yazar
+    assert "minute_repeat" in [c for c, _ in codes]  # two clauses write the same window start
     assert "minute_repeat" not in [c for c, _ in _check("score_change", "{event:%s}. {clause:goals}." % ref)[0]]
 
 
@@ -192,7 +190,7 @@ def test_menu_drafts_never_produce_evidence_mismatch():
 
 
 def test_known_gap_judgement_inside_a_grounded_sentence_passes():
-    """Belgelenen açık (EVAL.md "Verifier ajanının hedefi"): nitel yargı dayanaklı cümlenin içinde geçer."""
+    """Documented gap (EVAL.md "Target for the Verifier agent"): a qualitative judgement passes inside a grounded sentence."""
     codes, *_ = _check("goal", "{clause:possession}, and {home} were the better side.")
     assert codes == []
 

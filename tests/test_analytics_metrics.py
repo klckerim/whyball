@@ -14,7 +14,7 @@ def _cut_points(events):
     return sorted({1, 2, half, half + 1, half + 2, n // 2, n - 1, n, *range(50, n, 50)})
 
 
-# --- ileriye bakma ----------------------------------------------------------
+# --- lookahead ----------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed,scenario", CASES)
@@ -40,7 +40,7 @@ def test_future_events_do_not_matter():
     assert metrics_at(spliced, until_seq=n - 1) == metrics_at(events, until_seq=n - 1)
 
 
-# --- temel doğruluk ---------------------------------------------------------
+# --- basic correctness ---------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed,scenario", CASES)
@@ -68,7 +68,7 @@ def test_empty_stream():
     assert snap.pressure_balance == 0.0
 
 
-# --- elle kurulmuş akışlar --------------------------------------------------
+# --- hand-built streams --------------------------------------------------
 
 
 def _ev(seq, period, minute, second, etype, team=None, x=None):
@@ -81,12 +81,12 @@ def _ev(seq, period, minute, second, etype, team=None, x=None):
 def test_final_third_entries():
     P, D = EventType.PASS, EventType.DRIBBLE
     events = [
-        _ev(0, 1, 1, 0, P, "home", 50.0),   # orta saha
-        _ev(1, 1, 1, 5, P, "home", 72.0),   # giriş (home ≥ 70)
-        _ev(2, 1, 1, 9, D, "home", 80.0),   # zaten içeride
-        _ev(3, 1, 1, 15, P, "away", 60.0),  # top el değiştirdi
-        _ev(4, 1, 1, 20, P, "home", 75.0),  # yeniden giriş
-        _ev(5, 1, 1, 30, P, "away", 30.0),  # away girişi (away ≤ 35)
+        _ev(0, 1, 1, 0, P, "home", 50.0),   # midfield
+        _ev(1, 1, 1, 5, P, "home", 72.0),   # entry (home ≥ 70)
+        _ev(2, 1, 1, 9, D, "home", 80.0),   # already inside
+        _ev(3, 1, 1, 15, P, "away", 60.0),  # possession changed
+        _ev(4, 1, 1, 20, P, "home", 75.0),  # re-entry
+        _ev(5, 1, 1, 30, P, "away", 30.0),  # away entry (away ≤ 35)
     ]
     snap = metrics_at(events)
     assert snap.final_third_entries == {"home": 2, "away": 1}
@@ -96,19 +96,19 @@ def test_final_third_entries():
 
 def test_pressure_window_skips_half_time_break():
     S = EventType.SHOT
-    # Şutlar son üçte bir dışından: giriş sayılmasınlar, yalnızca w_shot ölçülsün.
+    # Shots from outside the final third: no entries counted, only w_shot is measured.
     events = [
-        _ev(0, 1, 10, 0, S, "home", 60.0),            # oynanan 600 sn
-        _ev(1, 1, 46, 0, S, "home", 60.0),            # oynanan 2760 sn
-        _ev(2, 1, 47, 0, EventType.HALF_TIME),        # ilk devre 2820 sn
+        _ev(0, 1, 10, 0, S, "home", 60.0),            # 600 s played
+        _ev(1, 1, 46, 0, S, "home", 60.0),            # 2760 s played
+        _ev(2, 1, 47, 0, EventType.HALF_TIME),        # first half 2820 s
         _ev(3, 2, 45, 0, EventType.KICKOFF, "away", 52.5),
-        _ev(4, 2, 50, 0, S, "away", 45.0),            # oynanan 2820 + 300 = 3120
-        _ev(5, 2, 55, 30, S, "away", 45.0),           # oynanan 2820 + 630 = 3450
+        _ev(4, 2, 50, 0, S, "away", 45.0),            # played 2820 + 300 = 3120
+        _ev(5, 2, 55, 30, S, "away", 45.0),           # played 2820 + 630 = 3450
     ]
     w = DEFAULT_CONFIG.w_shot
-    # 50:00'de 10 dk penceresi oynanan 2520 sn'den başlar: 46:00 şutu içeride, 10:00 dışarıda.
+    # At 50:00 the 10-minute window starts at 2520 s played: the 46:00 shot is inside, the 10:00 one outside.
     snap = metrics_at(events, until_seq=4)
     assert snap.played_seconds == 3120
     assert snap.pressure == {"home": w, "away": w}
-    # 55:30'da pencere 2850 sn'den başlar: ilk devre şutları düşer.
+    # At 55:30 the window starts at 2850 s: the first-half shots drop out.
     assert pressure_index(events) == {"home": 0.0, "away": 2 * w, "balance": -1.0}

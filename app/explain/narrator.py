@@ -1,8 +1,8 @@
-"""Narrator protokolü, template anlatıcı ve testler için FakeNarrator.
+"""Narrator protocol, the template narrator and a FakeNarrator for tests.
 
-Anlatıcılar maç bağlamıyla (olay akışı) kurulur; protokol çağrısı yalnızca
-moment, persona, dil ve önceki denemenin geri bildirimini alır. İleride LLM
-anlatıcı da aynı protokolü uygulayacak.
+Narrators are built with the match context (event stream); a protocol call only takes
+the moment, persona, language and the previous attempt's feedback. The LLM
+narrator implements the same protocol.
 """
 
 from __future__ import annotations
@@ -28,16 +28,16 @@ if TYPE_CHECKING:
 class Draft:
     text: str
     claims: tuple[Claim, ...]
-    # Slot tabanlı taslak: `template` yer tutuculu metin, `claim_ids` iddia başına id.
-    # Nihai metni pipeline doğrulamadan sonra render eder (bkz. slots.py).
+    # Slot-based draft: `template` is placeholder text, `claim_ids` one id per claim.
+    # The pipeline renders the final text after verification (see slots.py).
     template: str | None = None
     claim_ids: tuple[str, ...] = ()
-    # Claim menüsü taslağı (foundry-v5): iddialar menüden, `claims` boş; bkz. menu.py.
+    # Claim menu draft (foundry-v5): claims come from the menu, `claims` is empty; see menu.py.
     menu: ClaimMenu | None = None
 
 
 class NarratorError(Exception):
-    """Anlatıcı taslak üretemedi. `retryable=False` ise hat hemen yedeğe geçer."""
+    """The narrator could not produce a draft. With `retryable=False` the pipeline falls back at once."""
 
     code = "client_error"
     retryable = True
@@ -77,7 +77,7 @@ class Feedback:
 @runtime_checkable
 class Narrator(Protocol):
     name: str
-    source: str  # kayıttaki "source": "llm" | "template"
+    source: str  # "source" in the record: "llm" | "template"
     prompt_version: str
 
     def narrate(
@@ -86,7 +86,7 @@ class Narrator(Protocol):
 
 
 class TemplateNarrator:
-    """Mevcut şablonları Narrator protokolüne bağlar. Persona ve feedback'i yok sayar."""
+    """Binds the existing templates to the Narrator protocol. Ignores persona and feedback."""
 
     source = "template"
     name = "template"
@@ -117,10 +117,9 @@ FAKE_MODES = (
     "unsupported_sentence",
     "fixes_after_feedback",
 )
-HALLUCINATED = {"en": "Arlo Quintana was everywhere.", "tr": "Arlo Quintana her yerdeydi."}
+HALLUCINATED = {"en": "Arlo Quintana was everywhere."}
 UNSUPPORTED = {
     "en": "{team} have now won {n} corners.",
-    "tr": "{team} şimdiye kadar {n} korner kazandı.",
 }
 
 
@@ -129,7 +128,7 @@ def _fmt(v: float) -> str:
 
 
 class FakeNarrator:
-    """LLM'in tipik hatalarını deterministik olarak taklit eder (yalnızca test/demo)."""
+    """Mimics typical LLM mistakes deterministically (tests/demo only)."""
 
     source = "llm"
 
@@ -137,7 +136,7 @@ class FakeNarrator:
         self, events: Sequence[Event], mode: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
     ) -> None:
         if mode not in FAKE_MODES:
-            raise ValueError(f"Bilinmeyen fake mod: {mode!r} (seçenekler: {', '.join(FAKE_MODES)})")
+            raise ValueError(f"Unknown fake mode: {mode!r} (options: {', '.join(FAKE_MODES)})")
         self.mode = mode
         self.name = f"fake:{mode}"
         self.prompt_version = f"fake-{mode}-v1"
@@ -183,7 +182,7 @@ class FakeNarrator:
 def make_narrator(
     spec: str, events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> Narrator:
-    """"template", "fake:<mod>" ya da "foundry" (FOUNDRY_PROJECT_ENDPOINT, FOUNDRY_MODEL)."""
+    """"template", "fake:<mode>" or "foundry" (FOUNDRY_PROJECT_ENDPOINT, FOUNDRY_MODEL)."""
     if spec == "template":
         return TemplateNarrator(events, config)
     if spec == "foundry":
@@ -193,4 +192,4 @@ def make_narrator(
     kind, _, mode = spec.partition(":")
     if kind == "fake" and mode:
         return FakeNarrator(events, mode, config)
-    raise ValueError(f"Bilinmeyen anlatıcı: {spec!r} (template | fake:<mod> | foundry)")
+    raise ValueError(f"Unknown narrator: {spec!r} (template | fake:<mode> | foundry)")

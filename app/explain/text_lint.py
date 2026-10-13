@@ -1,9 +1,8 @@
-"""Anlatı metni denetimi: her sayı ve her isim bir iddiada geçmeli.
+"""Narration text check: every number and every name must appear in a claim.
 
-İsimler maç kadrosundan (match_meta) tanınır. Kadroda olmayan, isim gibi
-görünen büyük harfli kelime grupları uydurma isim sayılır. Sayılar türüne
-göre (dakika, yüzde, ondalık, tamsayı) iddiaların değer ve aralıklarıyla
-eşleştirilir.
+Names are recognised from the match squad (match_meta). Capitalized word groups that look
+like names but are not in the squad count as made-up names. Numbers are matched against the
+claims' values and ranges by kind (minute, percent, decimal, integer).
 """
 
 from __future__ import annotations
@@ -18,42 +17,32 @@ from app.generator.models import Event
 from .claims import Claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .labels import window_phrase_spans
+from .template_narrator import require_language
 
 NUMBER_RE = re.compile(
-    r"(?P<trmin>\d{1,3})\.\s*dakika"  # TR: "46. dakikadan"
-    r"|(?P<min>\d{1,3})(?:\+(?P<extra>\d{1,2}))?'"  # "22'", "45+1'"
-    r"|%(?P<pct1>\d{1,3})(?![\d.])"  # TR: "%58"
-    r"|(?P<pct2>\d{1,3})%"  # EN: "58%"
+    r"(?P<min>\d{1,3})(?:\+(?P<extra>\d{1,2}))?'"  # "22'", "45+1'"
+    r"|(?P<pct>\d{1,3})%"  # "58%"
     r"|(?P<dec>[+-]?\d+\.\d+)"
     r"|(?P<int>\d+)"
 )
 WORD_RE = re.compile(r"[^\W\d_]+(?:['’-][^\W\d_]+)*")
 SENTENCE_BREAKS = ".!?:—–\"("
 
-# Yazıyla sayılar (0-20). Dizin = değer.
+# Numbers written as words (0-20). Index = value.
 NUMBER_WORDS: dict[str, tuple[str, ...]] = {
     "en": (
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
         "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
         "eighteen", "nineteen", "twenty",
     ),
-    "tr": (
-        "sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz", "on",
-        "on bir", "on iki", "on üç", "on dört", "on beş", "on altı", "on yedi", "on sekiz",
-        "on dokuz", "yirmi",
-    ),
 }
-# Sayı dışında da sık kullanılan kelimeler: yalnızca ardından sayılabilir bir isim gelirse sayı.
-# TR "bir" artikel, "yedi" fiil ("gol yedi"), "altı" ("altı pas"); EN "one" ("one of").
+# Words also common outside numbers: a number only if a countable noun follows.
+# EN "one" ("one of").
 AMBIGUOUS_NUMBER_WORDS: dict[str, frozenset[str]] = {
     "en": frozenset({"one"}),
-    "tr": frozenset({"bir", "yedi", "altı"}),
 }
-# Dil bilinmiyorsa diğer dilde sıradan kelime olanlar da belirsiz (EN "on" edat, TR "on" = 10).
-AMBIGUOUS_ANY_LANGUAGE = frozenset({"on"})
 COUNT_NOUN_STEMS = (
     "goal", "shot", "corner", "player", "minute", "card", "penalt", "point", "save",
-    "gol", "şut", "korner", "oyuncu", "kişi", "dakika", "kart", "penaltı", "fark", "kurtarış",
 )
 NEXT_WORD_RE = re.compile(r"\s+([^\W\d_]+)")
 
@@ -65,8 +54,6 @@ def _number_word_pattern(words: Sequence[str]) -> re.Pattern[str]:
 
 NUMBER_WORD_RE = {
     "en": _number_word_pattern(NUMBER_WORDS["en"]),
-    "tr": _number_word_pattern(NUMBER_WORDS["tr"]),
-    None: _number_word_pattern([*NUMBER_WORDS["en"], *NUMBER_WORDS["tr"]]),
 }
 WORD_VALUES = {w: i for words in NUMBER_WORDS.values() for i, w in enumerate(words)}
 
@@ -98,11 +85,11 @@ class LintResult:
 @dataclass(frozen=True)
 class Entity:
     kind: str  # "team" | "player"
-    key: str  # takım için taraf, oyuncu için tam ad
+    key: str  # side for a team, full name for a player
 
 
 class Roster:
-    """Maçtaki takım ve oyuncu adları ile takma adları (şehir, soyad)."""
+    """Team and player names in the match, with their aliases (city, surname)."""
 
     def __init__(self, teams: dict[str, str], players: Sequence[str]) -> None:
         self.aliases: dict[str, set[Entity]] = {}
@@ -111,11 +98,11 @@ class Roster:
             entity = Entity("team", side)
             self._add(name, entity)
             if " " in name:
-                self._add(name.rsplit(" ", 1)[0], entity)  # şehir
+                self._add(name.rsplit(" ", 1)[0], entity)  # city
         for name in players:
             entity = Entity("player", name)
             self._add(name, entity)
-            self._add(name.rsplit(" ", 1)[-1], entity)  # soyad
+            self._add(name.rsplit(" ", 1)[-1], entity)  # surname
         ordered = sorted(self.aliases, key=lambda a: (-len(a), a))
         self.pattern = re.compile(
             r"(?<!\w)(?:" + "|".join(re.escape(a) for a in ordered) + r")(?!\w)"
@@ -132,7 +119,7 @@ class Roster:
 
 
 def bare_surname_spans(text: str, roster: Roster) -> list[tuple[int, int]]:
-    """Oyuncunun tam adı değil yalnızca soyadıyla anıldığı aralıklar (takım takma adları hariç)."""
+    """Spans where a player is named by surname only, not the full name (team aliases excluded)."""
     out = []
     for m in roster.pattern.finditer(text):
         entities = roster.aliases[m.group()]
@@ -165,19 +152,15 @@ def _capitalized_groups(text: str) -> list[tuple[int, int, list[str]]]:
 
 
 def _number_words(text: str, language: str | None, strict: bool = False) -> list[tuple[int, int, int]]:
-    """(başlangıç, bitiş, değer) — belirsiz kelimeler yalnızca sayılabilir isimden önceyse.
+    """(start, end, value) — ambiguous words only before a countable noun.
 
-    `strict`: bağlamdan bağımsız, her sayı kelimesi ("one of", "bir ara" dahil).
+    `strict`: regardless of context, every number word ("one of" included).
     """
-    scan = text.replace("İ", "i").lower()  # aynı uzunluk; TR büyük İ
-    if strict:
-        ambiguous: frozenset[str] = frozenset()
-    elif language in AMBIGUOUS_NUMBER_WORDS:
-        ambiguous = AMBIGUOUS_NUMBER_WORDS[language]
-    else:
-        ambiguous = AMBIGUOUS_ANY_LANGUAGE.union(*AMBIGUOUS_NUMBER_WORDS.values())
+    language = language or "en"
+    scan = text.lower()
+    ambiguous = frozenset() if strict else AMBIGUOUS_NUMBER_WORDS[language]
     found = []
-    for m in NUMBER_WORD_RE.get(language, NUMBER_WORD_RE[None]).finditer(scan):
+    for m in NUMBER_WORD_RE[language].finditer(scan):
         word = m.group()
         if word in ambiguous:
             nxt = NEXT_WORD_RE.match(scan, m.end())
@@ -194,13 +177,15 @@ def lint_text(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     language: str | None = None,
 ) -> LintResult:
-    """`language` ("en"/"tr") yazıyla sayıların hangi dilde aranacağını belirler."""
+    """`language`: None (unspecified) or "en"; any other language raises."""
+    if language is not None:
+        require_language(language)
     issues: list[LintIssue] = []
     teams = {c.subject.team for c in claims if c.subject.team}
     players = {c.subject.player for c in claims if c.subject.player}
 
-    # 1) Bilinen isimler: bir iddianın öznesi olmalı; oyuncu yalnızca soyadla anılamaz
-    # (aynı soyad iki takımda olabilir). Sonra maskelenir.
+    # 1) Known names: must be the subject of a claim; a player cannot be named by surname only
+    # (the same surname can appear in both teams). Then they are masked.
     masked = list(text)
     bare = set(bare_surname_spans(text, roster))
     for m in roster.pattern.finditer(text):
@@ -213,12 +198,12 @@ def lint_text(
         ):
             issues.append(LintIssue("unsupported_name", m.group(), m.start(), m.end(), "name"))
         masked[m.start() : m.end()] = " " * (m.end() - m.start())
-    # Kodun ürettiği sabit pencere ifadeleri ("over the last 10 minutes of play"): iddia değil.
+    # Fixed window phrases written by code ("over the last 10 minutes of play"): not claims.
     for start, end in window_phrase_spans(text):
         masked[start:end] = "x" * (end - start)
     masked_text = "".join(masked)
 
-    # 2) Kadroda olmayan isim benzeri kelimeler.
+    # 2) Name-like words not in the squad.
     allowed = set(config.lint_allowed_capitalized)
     for start, end, words in _capitalized_groups(masked_text):
         if all(w in allowed for w in words):
@@ -227,20 +212,18 @@ def lint_text(
             continue
         issues.append(LintIssue("unknown_name", text[start:end], start, end, "name"))
 
-    # 3) Sayılar.
+    # 3) Numbers.
     minutes = {c.start.minute for c in claims} | {c.end.minute for c in claims}
     values = [abs(float(c.value)) for c in claims]
     ratios = [float(c.value) for c in claims if c.kind == "ratio"]
     eps = config.float_epsilon
     for m in NUMBER_RE.finditer(masked_text):
         g = m.groupdict()
-        if g["trmin"] is not None:
-            kind, ok = "minute", int(g["trmin"]) in minutes
-        elif g["min"] is not None:
+        if g["min"] is not None:
             minute = int(g["min"]) + (int(g["extra"]) - 1 if g["extra"] else 0)
             kind, ok = "minute", minute in minutes
-        elif g["pct1"] is not None or g["pct2"] is not None:
-            p = int(g["pct1"] or g["pct2"])
+        elif g["pct"] is not None:
+            p = int(g["pct"])
             kind = "percent"
             ok = any(abs(v * 100 - p) <= config.lint_percent_tolerance + eps for v in ratios)
         elif g["dec"] is not None:
@@ -253,7 +236,7 @@ def lint_text(
         if not ok:
             issues.append(LintIssue("unsupported_number", m.group(), m.start(), m.end(), kind))
 
-    # 4) Yazıyla sayılar (tamsayıyla aynı kural).
+    # 4) Number words (same rule as integers).
     if config.lint_number_words:
         for start, end, n in _number_words(masked_text, language):
             if not any(v == n for v in values):

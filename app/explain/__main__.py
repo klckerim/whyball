@@ -1,4 +1,4 @@
-"""CLI: python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en|tr|both] [--all]
+"""CLI: python -m app.explain --input data/demo/red_card_swing_seed42.jsonl [--lang en] [--all]
        python -m app.explain --seed 42 --scenario red_card_swing
 """
 
@@ -16,12 +16,12 @@ from .template_narrator import LANGS, narrate
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Momentleri seç, anlat ve iddiaları doğrula")
-    parser.add_argument("--input", help="JSONL olay dosyası")
+    parser = argparse.ArgumentParser(description="Select moments, narrate them and verify the claims")
+    parser.add_argument("--input", help="JSONL event file")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
-    parser.add_argument("--lang", choices=[*LANGS, "both"], default="both")
-    parser.add_argument("--all", action="store_true", help="Seçimi atla, tüm momentleri anlat")
+    parser.add_argument("--lang", choices=LANGS, default="en")
+    parser.add_argument("--all", action="store_true", help="Skip selection, narrate every moment")
     args = parser.parse_args(argv)
 
     if args.input:
@@ -29,9 +29,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.seed is not None:
         events = generate_match(args.seed, args.scenario)
     else:
-        parser.error("--input ya da --seed gerekli")
+        parser.error("--input or --seed is required")
 
-    langs = LANGS if args.lang == "both" else (args.lang,)
+    langs = (args.lang,)
     moments = detect_moments(events)
     chosen = moments if args.all else select_moments(moments)
     out = sys.stdout
@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
         short_id = m.id.rsplit("-", 1)[-1]
         out.write(f"{short_id}  {m.period}H {m.minute:02d}:{m.second:02d}  {m.type}  imp={m.importance:.2f}\n")
         for lang in langs:
-            out.write(f"  [{lang.upper()}] {n.published(lang) or '(yayınlanacak cümle yok)'}\n")
+            out.write(f"  [{lang.upper()}] {n.published(lang) or '(no sentence to publish)'}\n")
         for sentence, results in zip(n.sentences, n.results):
             for claim, r in zip(sentence.claims, results):
                 total += 1
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
                 out.write(f"    {status}  {claim.describe()}\n")
         out.write("\n")
     out.write(
-        f"Seçilen moment: {len(chosen)}/{len(moments)} · doğrulanan iddia: {passed}/{total}\n"
+        f"Selected moments: {len(chosen)}/{len(moments)} · verified claims: {passed}/{total}\n"
     )
     return 0 if passed == total else 1
 

@@ -1,11 +1,11 @@
-"""Explain testleri için ortak yardımcılar: her moment tipinden örnek moment."""
+"""Shared helpers for the explain tests: a sample moment of each moment type."""
 
 from functools import cache
 
 from app.analytics import detect_moments
 from app.generator import generate_match
 
-# moment tipi → (seed, senaryo, ek koşul)
+# moment type → (seed, scenario, extra condition)
 MOMENT_SOURCES = {
     "goal": (42, "red_card_swing", None),
     "red_card": (42, "red_card_swing", None),

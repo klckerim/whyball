@@ -6,11 +6,6 @@ from eval.lint_rates import derive_frozen, human_review_counts, start_words
 def test_frozen_sentence_starts_match_derivation():
     derived = derive_frozen(FULL_CORPUS)
     assert DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_en == derived["en"]
-    assert DEFAULT_EXPLAIN_CONFIG.sentence_start_allowed_tr == derived["tr"]
-
-
-def test_start_words_skip_placeholders_and_turkish_ordinals():
-    assert [w for *_, w in start_words("{home} lead. The rest. {start:c1}. dakikadan bu yana.")] == ["The"]
 
 
 def test_human_review_counts_v3():
@@ -24,8 +19,8 @@ def test_human_review_counts_v3():
 def test_pronouns_never_enter_the_allowed_starts():
     from eval.lint_rates import PRONOUNS, Text, derive_sentence_starts
 
-    texts = [Text("t", "en", "m", "goal", "They lead. {home} lead."), Text("t", "tr", "m", "goal", "Onlar önde.")]
-    assert derive_sentence_starts(texts) == {"en": (), "tr": ()}
+    texts = [Text("t", "en", "m", "goal", "They lead. {home} lead.")]
+    assert derive_sentence_starts(texts) == {"en": ()}
     assert "they" in PRONOUNS["en"]
 
 

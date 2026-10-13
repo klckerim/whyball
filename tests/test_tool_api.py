@@ -20,7 +20,7 @@ END = MatchTime.of(EVENTS[-1])
 
 
 def _call(name, payload):
-    """Payload ve sonuç JSON'dan gidip gelir."""
+    """Payload and result round-trip through JSON."""
     out = TOOLS[name](json.loads(json.dumps(payload)))
     assert json.loads(json.dumps(out)) == out
     return out
@@ -89,3 +89,12 @@ def test_list_metrics():
 def test_errors_are_returned_as_json(name, payload, code):
     out = _call(name, payload)
     assert out["ok"] is False and out["error"]["code"] == code
+
+
+def test_lint_text_rejects_non_english_language():
+    out = _call("lint_text", {"match_path": MATCH_PATH, "text": DRAFT.text, "language": "tr",
+                              "claims": [c.to_dict() for c in DRAFT.claims]})
+    assert not out["ok"] and out["error"]["code"] == "invalid_input"
+    assert "only 'en' is supported" in out["error"]["message"]
+    assert _call("lint_text", {"match_path": MATCH_PATH, "text": DRAFT.text, "language": "en",
+                               "claims": [c.to_dict() for c in DRAFT.claims]})["ok"]

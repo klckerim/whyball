@@ -26,7 +26,7 @@ def _of(moments, mtype, team=None):
 
 
 def _near(m, minute):
-    # Zorunlu olay tam dakikasında; önceki gol kutlaması en fazla +1 dk kaydırabilir.
+    # A forced event at its exact minute; an earlier goal celebration can shift it by at most +1 min.
     return minute <= m.minute <= minute + 1
 
 
@@ -42,7 +42,7 @@ def _assert_score_changes(moments, expected):
         assert _near(m, minute), actual
 
 
-# --- genel değişmezler ------------------------------------------------------
+# --- general invariants ------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed,scenario", CASES)
@@ -83,7 +83,7 @@ def test_moments_are_deterministic(seed, scenario):
     )
 
 
-# --- senaryo beklentileri ----------------------------------------------------
+# --- scenario expectations ----------------------------------------------------
 
 
 @pytest.mark.parametrize("seed", SCENARIO_SEEDS["late_comeback"])
@@ -125,8 +125,8 @@ def test_red_card_swing(seed):
 
 
 def test_red_card_swing_pressure_tilts_to_away_after_red():
-    # Moment düzeyinde "kırmızıdan sonra away'e kayma" 200 seed'de ~%90 tutar
-    # (away bazen zaten kırmızıdan önce baskın). Metrik düzeyindeki etki ise sağlamdır.
+    # At the moment level, "shift to away after the red card" holds in ~90% of 200 seeds
+    # (away is sometimes already dominant before the red). The effect at the metric level is solid.
     c = DEFAULT_CONFIG
     frac = {"pre": {"home": 0, "away": 0, "n": 0}, "post": {"home": 0, "away": 0, "n": 0}}
     for seed in range(50):
@@ -165,7 +165,7 @@ def test_dominant_loss(seed):
     assert not _of(moments, "dominance_without_reward", "away")
 
 
-# --- config gerçekten kullanılıyor -------------------------------------------
+# --- the config is really used -------------------------------------------
 
 
 def test_thresholds_come_from_config():

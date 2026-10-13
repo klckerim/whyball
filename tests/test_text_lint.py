@@ -26,7 +26,7 @@ def _codes(result):
     return [(i.code, i.fragment) for i in result.issues]
 
 
-# --- her şey desteklenmiş metin ----------------------------------------------------
+# --- fully supported text ----------------------------------------------------
 
 
 def test_template_draft_is_fully_supported():
@@ -35,7 +35,7 @@ def test_template_draft_is_fully_supported():
 
 
 @pytest.mark.parametrize("seed,scenario", [(42, "late_comeback"), (7, "dominant_loss"), (100, None)])
-@pytest.mark.parametrize("lang", ["en", "tr"])
+@pytest.mark.parametrize("lang", ["en"])
 def test_all_template_drafts_pass(seed, scenario, lang):
     events = generate_match(seed, scenario)
     narrator, roster = TemplateNarrator(events), Roster.from_events(events)
@@ -45,7 +45,7 @@ def test_all_template_drafts_pass(seed, scenario, lang):
         assert result.ok, (m.type, d.text, _codes(result))
 
 
-# --- iddiasız sayı ------------------------------------------------------------------
+# --- number without a claim ------------------------------------------------------------------
 
 
 def test_number_without_claim_is_rejected():
@@ -58,16 +58,16 @@ def test_number_without_claim_is_rejected():
 
 def test_pressure_window_phrase_is_not_a_claim_number():
     pressure = next(m for m in detect_moments(EVENTS) if m.type == "pressure_shift")
-    for lang, phrase in (("en", "over the last 10 minutes of play"), ("tr", "son 10 oynanmış dakikadaki")):
+    for lang, phrase in (("en", "over the last 10 minutes of play"),):
         d = TemplateNarrator(EVENTS).narrate(pressure, "neutral", lang)
         assert phrase in d.text
         assert lint_text(d.text, d.claims, ROSTER, language=lang).ok
-    # Pencere ifadesi dışında yazılan aynı sayı hâlâ iddiasız.
-    text = f"{d.text} {HOME} 10 dakikadır baskıda."
-    assert ("unsupported_number", "10") in _codes(lint_text(text, d.claims, ROSTER, language="tr"))
+    # The same number written outside the window phrase is still unsupported.
+    text = f"{d.text} {HOME} have pressed for 10 minutes."
+    assert ("unsupported_number", "10") in _codes(lint_text(text, d.claims, ROSTER, language="en"))
 
 
-# --- iddiasız isim -------------------------------------------------------------------
+# --- name without a claim -------------------------------------------------------------------
 
 
 def test_known_name_without_claim_is_rejected():
@@ -83,7 +83,7 @@ def test_team_without_claim_is_rejected():
     assert _codes(result) == [("unsupported_name", AWAY)]
 
 
-# --- uydurma isim ----------------------------------------------------------------------
+# --- made-up name ----------------------------------------------------------------------
 
 
 def test_fabricated_name_is_rejected():
@@ -100,7 +100,7 @@ def test_sentence_start_capitalized_word_is_fine():
     assert lint_text(f"{DRAFT.text} What a moment.", DRAFT.claims, ROSTER).ok
 
 
-# --- takma adlar ve sayı biçimleri ------------------------------------------------------
+# --- aliases and number formats ------------------------------------------------------
 
 
 def test_surname_and_city_aliases_are_recognised():
@@ -108,7 +108,7 @@ def test_surname_and_city_aliases_are_recognised():
     surname, city = player.split()[-1], HOME.rsplit(" ", 1)[0]
     claims = [_claim(team="home", player=player)]
     assert lint_text(f"22' — {player} scores for {city}.", claims, ROSTER).ok
-    # Yalnızca soyad reddedilir (aynı soyad iki takımda olabilir); v2 davranışı bayrakla.
+    # A surname alone is rejected (the same surname can appear in both teams); v2 behaviour via a flag.
     assert _codes(lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER)) == [("bare_surname", surname)]
     v2 = replace(DEFAULT_EXPLAIN_CONFIG, lint_bare_surname=False)
     assert lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER, v2).ok
@@ -118,7 +118,7 @@ def test_surname_and_city_aliases_are_recognised():
 
 
 def test_bare_surname_shared_across_teams_is_rejected():
-    # Her demo maçında iki takımda ortak soyad var; yalnızca soyad hangi oyuncu olduğunu belirlemez.
+    # Every demo match has a surname shared by both teams; the surname alone does not identify the player.
     home = {p.split()[-1]: p for p in [*TEAMS["home"]["lineup"], *TEAMS["home"]["bench"]]}
     away = {p.split()[-1]: p for p in [*TEAMS["away"]["lineup"], *TEAMS["away"]["bench"]]}
     surname = sorted(home.keys() & away.keys())[0]
@@ -133,9 +133,6 @@ def test_minute_formats():
     assert _codes(lint_text("45+2' — something happened.", claims, ROSTER)) == [
         ("unsupported_number", "45+2'")
     ]
-    tr_claims = [_claim(start=(2, 46, 0), end=(2, 66, 0))]
-    assert lint_text("46. dakikadan bu yana, 66' itibarıyla.", tr_claims, ROSTER).ok
-    assert not lint_text("47. dakikadan bu yana.", tr_claims, ROSTER).ok
 
 
 def test_percent_and_decimal():
@@ -143,12 +140,12 @@ def test_percent_and_decimal():
                   MatchTime(1, 0, 0), MatchTime(1, 30, 0), ())
     state = Claim("state", Subject("home"), "pressure_balance", "approx", 0.83,
                   MatchTime(1, 0, 0), MatchTime(1, 30, 0), ())
-    assert lint_text("58% possession, %58 topa sahip olma, balance +0.83.", [ratio, state], ROSTER).ok
+    assert lint_text("58% possession, balance +0.83.", [ratio, state], ROSTER).ok
     result = lint_text("60% possession, balance +0.90.", [ratio, state], ROSTER)
     assert _codes(result) == [("unsupported_number", "60%"), ("unsupported_number", "+0.90")]
 
 
-# --- yazıyla sayılar (EN/TR, 0-20) -------------------------------------------------------
+# --- number words (EN, 0-20) -------------------------------------------------------
 
 
 def _goals(value, team="home"):
@@ -160,8 +157,6 @@ def _goals(value, team="home"):
     [
         ("22' — two goals for the home side.", "en"),
         ("22' — Two goals in total.", "en"),
-        ("22' — iki gol geldi.", "tr"),
-        ("22' — İki gol geldi.", "tr"),
     ],
 )
 def test_supported_number_words(text, lang):
@@ -172,10 +167,7 @@ def test_supported_number_words(text, lang):
     "text,lang,fragment",
     [
         ("22' — three goals for the home side.", "en", "three"),
-        ("22' — üç gol geldi.", "tr", "üç"),
-        ("22' — on bir şut atıldı.", "tr", "on bir"),
         ("22' — one goal for the home side.", "en", "one"),
-        ("22' — bir gol geldi.", "tr", "bir"),
     ],
 )
 def test_unsupported_number_words(text, lang, fragment):
@@ -183,24 +175,18 @@ def test_unsupported_number_words(text, lang, fragment):
     assert [(i.code, i.fragment, i.kind) for i in result.issues] == [("unsupported_number", fragment, "word")]
 
 
-def test_multi_word_turkish_number_is_one_value():
-    assert lint_text("22' — on bir şut atıldı.", _goals(11), ROSTER, language="tr").ok
-
-
 @pytest.mark.parametrize(
     "text,lang",
     [
-        ("22' — Bir ara gerideydi.", "tr"),  # artikel
-        ("22' — Takım gol yedi.", "tr"),  # fiil
         ("22' — It was one of those days.", "en"),
-        ("22' — The goal came on the break.", "en"),  # EN "on" sayı değil
+        ("22' — The goal came on the break.", "en"),  # EN "on" is not a number
     ],
 )
 def test_ambiguous_words_without_count_noun_are_not_numbers(text, lang):
     assert lint_text(text, _goals(2), ROSTER, language=lang).ok
 
 
-def test_unknown_language_treats_cross_language_words_as_ambiguous():
+def test_unspecified_language_lints_as_english():
     assert lint_text("22' — The goal came on the break.", _goals(2), ROSTER).ok
     assert not lint_text("22' — three goals.", _goals(2), ROSTER).ok
 
@@ -214,7 +200,7 @@ def test_number_words_can_be_disabled():
     assert lint_text("22' — three goals.", _goals(2), ROSTER, off, language="en").ok
 
 
-@pytest.mark.parametrize("lang", ["en", "tr"])
+@pytest.mark.parametrize("lang", ["en"])
 def test_template_drafts_pass_with_language(lang):
     narrator = TemplateNarrator(EVENTS)
     for m in detect_moments(EVENTS):

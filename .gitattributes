@@ -1,2 +1,2 @@
-# Demo fixture'ları SHA-256 ile doğrulanır; satır sonu dönüşümü hash'i bozar.
+# Demo fixtures are checked with SHA-256; line-ending conversion would break the hash.
 data/demo/*.jsonl -text

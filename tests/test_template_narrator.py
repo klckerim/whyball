@@ -36,7 +36,7 @@ def _assert_published(narration, must_contain):
             assert needle in text, (lang, needle, text)
 
 
-# --- moment tipi başına -------------------------------------------------------------
+# --- per moment type -------------------------------------------------------------
 
 
 def test_goal():
@@ -50,59 +50,50 @@ def test_red_card():
 
 
 @pytest.mark.parametrize(
-    "seed,scenario,outcome,en,tr",
+    "seed,scenario,outcome,en",
     [
-        (42, "late_comeback", "scored", "scores from the spot", "gole çevirdi"),
-        (7, "dominant_loss", "saved", "sees the kick saved", "penaltıyı kullandı, vuruş kurtarıldı"),
+        (42, "late_comeback", "scored", "scores from the spot"),
+        (7, "dominant_loss", "saved", "sees the kick saved"),
     ],
 )
-def test_penalty(seed, scenario, outcome, en, tr):
+def test_penalty(seed, scenario, outcome, en):
     events, m, n = _find(
         seed, scenario, lambda m: m.type == "penalty" and m.detail["outcome"] == outcome
     )
     _assert_published(n, [m.detail["player"], _team(events, m.team)])
-    assert en in n.published("en") and tr in n.published("tr")
-
-
-def test_saved_penalty_keeps_taker_role_in_turkish():
-    # foundry-v3 öncesi TR metni penaltıyı kullananı "kaleci" diye anıyordu (rol ters).
-    _, m, n = _find(7, "dominant_loss", lambda m: m.type == "penalty" and m.detail["outcome"] == "saved")
-    tr = n.published("tr")
-    assert "kaleci" not in tr
-    assert f"{m.detail['player']} penaltıyı kullandı" in tr
+    assert en in n.published("en")
 
 
 @pytest.mark.parametrize(
-    "kind,en,tr",
+    "kind,en",
     [
-        ("opener", "open the scoring", "skoru açtı"),
-        ("equalizer", "draw level", "eşitliği yakaladı"),
-        ("go_ahead", "2 goals down", "2 gol gerideydi"),
+        ("opener", "open the scoring"),
+        ("equalizer", "draw level"),
+        ("go_ahead", "2 goals down"),
     ],
 )
-def test_score_change(kind, en, tr):
+def test_score_change(kind, en):
     events, m, n = _find(
         42, "late_comeback", lambda m: m.type == "score_change" and m.detail["kind"] == kind
     )
     _assert_published(n, [_team(events, m.team)])
-    assert en in n.published("en") and tr in n.published("tr")
+    assert en in n.published("en")
 
 
 def test_pressure_shift():
     events, m, n = _find(42, "red_card_swing", lambda m: m.type == "pressure_shift")
     _assert_published(n, [_team(events, m.team)])
     assert "pressure balance over the last 10 minutes of play is" in n.published("en")
-    assert "son 10 oynanmış dakikadaki baskı dengesi" in n.published("tr")
 
 
 def test_dominance_without_reward():
     events, m, n = _find(7, "dominant_loss", lambda m: m.type == "dominance_without_reward")
     _assert_published(n, [_team(events, m.team), "%"])
-    assert "without reward" in n.published("en") and "sonuç alamıyor" in n.published("tr")
+    assert "without reward" in n.published("en")
 
 
 def test_dominance_possession_and_shots_share_one_stated_window():
-    # M003 (dominant_loss/7): "58% of possession and 4–0 shots since 25'" pencereyi yalnızca şutlara bağlıyordu.
+    # M003 (dominant_loss/7): "58% of possession and 4–0 shots since 25'" tied the window to the shots only.
     _, m, n = _find(7, "dominant_loss", lambda m: m.type == "dominance_without_reward")
     (sentence,) = n.sentences
     poss, shots, opp = sentence.claims[:3]
@@ -112,11 +103,9 @@ def test_dominance_possession_and_shots_share_one_stated_window():
     en = sentence.text["en"]
     window = en.index(f"since {poss.start.minute}'")
     assert window < en.index(pct) < en.index(f"{shots.value:g}–{opp.value:g}")
-    tr = sentence.text["tr"]
-    assert tr.index(f"{poss.start.minute}. dakikadan bu yana") < tr.index(f"%{round(poss.value * 100)}")
 
 
-# --- toplu ----------------------------------------------------------------------------
+# --- bulk ----------------------------------------------------------------------------
 
 
 def _all_matches():
@@ -145,7 +134,7 @@ def test_every_moment_in_many_matches_fully_verifies():
 
 
 def test_every_windowed_claim_states_its_window():
-    """Başlangıcı maç başı ya da olay anı olmayan her count/ratio iddiasının penceresi cümlede yazılı."""
+    """Every count/ratio claim whose start is neither kickoff nor the event moment states its window in the sentence."""
     for events in _all_matches():
         for m in detect_moments(events):
             for s in narrate(m, events).sentences:
@@ -153,10 +142,9 @@ def test_every_windowed_claim_states_its_window():
                     if c.kind == "state" or c.start == KICKOFF or c.start == c.end:
                         continue
                     assert f"since {c.start.minute}'" in s.text["en"], (m.id, c.describe())
-                    assert f"{c.start.minute}. dakikadan" in s.text["tr"], (m.id, c.describe())
 
 
-# --- yayın filtresi, determinizm, ileriye bakma ---------------------------------------
+# --- publication filter, determinism, lookahead ---------------------------------------
 
 
 def test_sentence_with_failing_claim_is_not_published():
@@ -177,7 +165,7 @@ def test_narration_is_deterministic():
 
 
 def test_narration_ignores_events_after_moment():
-    # Momentten sonraki olaylar bozulur (zaman aynı, takım/tip değişir); anlatı değişmemeli.
+    # Events after the moment are corrupted (same time, team/type changed); the narration must not change.
     events = generate_match(42, "red_card_swing")
     flip = {"home": "away", "away": "home"}
     for m in detect_moments(events):

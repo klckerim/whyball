@@ -1,10 +1,10 @@
-"""Foundry bağlantı testi: tek kısa çağrı yapar ve cevabı yazdırır.
+"""Foundry connection test: makes one short call and prints the answer.
 
-Microsoft'un resmi örneğinin karşılığı; tek fark endpoint ve modelin .env'den okunması:
+Mirrors Microsoft's official sample; the only difference is that the endpoint and model come from .env:
 https://github.com/microsoft/agent-framework/blob/main/python/samples/01-get-started/01_hello_agent.py
 https://learn.microsoft.com/agent-framework/integrations/by-component/model-providers/microsoft-foundry
 
-Çalıştırma:
+Run:
     az login
     .venv/bin/pip install -e ".[llm]"
     .venv/bin/python -m app.llm.hello

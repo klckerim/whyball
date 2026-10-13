@@ -47,7 +47,7 @@ def test_role_reversal_and_overstatement_improve_but_misses_are_reported():
     for name in ("role_reversed", "qualitative_overstatement"):
         row = _row(name)
         assert row.v2.rate == row.v3.rate == 0.0, name
-        assert 0.0 < row.v4.rate < 1.0, name  # bilerek listede olmayan ifadeler kaçar
+        assert 0.0 < row.v4.rate < 1.0, name  # phrases deliberately left off the list slip through
         assert row.v4.missed_tags, name
 
 
@@ -69,14 +69,14 @@ def test_report_is_deterministic_and_complete():
     table = render_table(_report())
     for spec in INJECTION_TYPES:
         assert f"`{spec.name}`" in table
-    assert "| v2 yakalama |" in table.splitlines()[0] and "v4.1 yakalama" in table
-    verifier = first.index("## Verifier ajanının hedefi")
+    assert "| v2 caught |" in table.splitlines()[0] and "v4.1 caught" in table
+    verifier = first.index("## Target for the Verifier agent")
     for title in ("foundry-v2", "foundry-v3", "foundry-v4 (", "foundry-v4.1"):
-        assert first.index(f"### Yakalanmayan türler: {title}") > verifier
-    assert "\n## Yakalanmayan türler" not in first
-    for section in ("## v4 / v4.1 lint kuralları ve yanlış alarm", "### foundry-v4.1 değişikliklerinin yanlış alarmı",
-                    "## Nitel abartı yasak listesi",
-                    "## Şablon pencere denetimi", "## İnsan etiketleri: foundry-v3"):
+        assert first.index(f"### Uncaught types: {title}") > verifier
+    assert "\n## Uncaught types" not in first
+    for section in ("## v4 / v4.1 lint rules and false alarms", "### False alarms from the foundry-v4.1 changes",
+                    "## Qualitative overstatement ban list",
+                    "## Template window audit", "## Human labels: foundry-v3"):
         assert section in first
 
 
@@ -91,9 +91,9 @@ def test_v41_closes_player_repeat_without_regressions():
 
 def test_v41_false_alarms_are_measured_on_clean_sets():
     rows = {name: (flagged, total, hits) for name, flagged, total, hits in _report().v41_false_alarms}
-    flagged, total, hits = rows["Template taslakları (ham metin)"]
-    assert total > 0 and set(hits) <= {"They"}  # yalnızca "They had been … down"
-    assert rows["v4 slot tabanı (temiz)"][0] == 0
+    flagged, total, hits = rows["Template drafts (raw text)"]
+    assert total > 0 and set(hits) <= {"They"}  # only "They had been … down"
+    assert rows["v4 slot base (clean)"][0] == 0
 
 
 def test_v5_menu_column():
@@ -101,9 +101,9 @@ def test_v5_menu_column():
     assert report.slotified_v5 == report.samples
     assert _row("control").v5.caught == 0
     assert _row("unknown_menu_id").v5.rate == 1.0
-    assert _row("number_text_and_claim").v5.applicable == 0  # model iddia yazmaz
+    assert _row("number_text_and_claim").v5.applicable == 0  # the model writes no claims
     assert _row("wrong_slot_binding").v5.applicable > 0 and _row("wrong_slot_binding").v5.rate == 0.0
     for name in ("unsupported_sentence_qualitative", "qualitative_overstatement"):
-        assert _row(name).v5.rate == 1.0, name  # ayrı cümle: sentence_without_claim
+        assert _row(name).v5.rate == 1.0, name  # separate sentence: sentence_without_claim
     ewc = _row("event_wrong_claim")
-    assert ewc.v5.rate < ewc.v41.rate  # menü kanıtı geniş: yanlış olay çoğu zaman bir iddianın kanıtı
+    assert ewc.v5.rate < ewc.v41.rate  # menu evidence is broad: the wrong event is usually evidence of some claim

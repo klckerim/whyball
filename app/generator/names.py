@@ -1,8 +1,8 @@
-"""Sentetik isim havuzları.
+"""Synthetic name pools.
 
-Tüm isimler uydurmadır; gerçek kulüp veya oyuncu adı içermez.
-Listelerin sırası determinizm için önemlidir, sıralamayı değiştirmek
-aynı seed'in farklı çıktı üretmesine yol açar.
+All names are made up; they contain no real club or player names.
+The list order matters for determinism: reordering makes the same
+seed produce different output.
 """
 
 FIRST_NAMES: tuple[str, ...] = (

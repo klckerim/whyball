@@ -1,4 +1,4 @@
-"""Deterministik maç metrikleri ve moment detector (LLM yok)."""
+"""Deterministic match metrics and the moment detector (no LLM)."""
 
 from .config import DEFAULT_CONFIG, AnalyticsConfig
 from .metrics import (

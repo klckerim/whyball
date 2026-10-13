@@ -1,4 +1,4 @@
-"""Explain aşaması: moment seçimi, iddia doğrulama, template anlatı (LLM yok)."""
+"""Explain stage: moment selection, claim verification, template narration (no LLM)."""
 
 from .claims import (
     Claim,

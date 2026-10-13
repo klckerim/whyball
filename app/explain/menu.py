@@ -1,19 +1,19 @@
-"""Claim menüsü (foundry-v5): iddiaları kod kurar ve doğrular, model yalnızca seçer.
+"""Claim menu (foundry-v5): code builds and verifies the claims, the model only picks.
 
-Her moment için aday iddialar deterministik olarak üretilir ve `verify_claim`'den geçer;
-count iddialarında kanıt listesi doğrulayıcının saydığı olayların tamamıdır (maç başından
-sayımlar dahil). Model iddia kurmaz, olay bağlamaz: şablonda yalnızca menüdeki id'leri
-yer tutucularla kullanır (`{value:<id>}`, `{minute:<id>}`, `{start:<id>}`, `{label:<id>}`,
-`{clause:<id>}`, menü kanıtı olan `{event:<id>}`, `{score}`). Menüde olmayan id reddedilir.
+For each moment, candidate claims are generated deterministically and pass `verify_claim`;
+for count claims the evidence list is every event the verifier counted (counts since
+kickoff included). The model builds no claims and links no events: in its template it only
+uses menu ids through placeholders (`{value:<id>}`, `{minute:<id>}`, `{start:<id>}`, `{label:<id>}`,
+`{clause:<id>}`, `{event:<id>}` for menu evidence, `{score}`). An id not on the menu is rejected.
 
-Yan cümleler (`{clause:<id>}`): her iddia için kodun yazdığı doğal dil parçası ("{home} have
-had {value:possession} of the ball since kickoff"); model aynen kullanır ya da bağlaçla
-birleştirir. Yan cümle şablonları lint'ten geçmez (kod yazar), render sonrası metin
-text_lint'ten geçer (tests/test_menu.py).
+Clauses (`{clause:<id>}`): a natural-language fragment written by code for each claim ("{home} have
+had {value:possession} of the ball since kickoff"); the model uses it as is or joins clauses with a
+conjunction. Clause templates do not go through lint (code writes them); the rendered text goes
+through text_lint (tests/test_menu.py).
 
-Menüye girmeyen metrik: field_tilt ("territorial share"). Possession ile aynı biçimde
-(yüzde) ve aynı "top/alan" çağrışımıyla gelir; okur ikisini karıştırır, hiçbir moment tipinin
-ana iddiası değildir. Doğrulayıcıda metrik olarak kalır.
+Metric left off the menu: field_tilt ("territorial share"). It comes in the same form as possession
+(a percentage) with the same "ball/territory" connotation; readers confuse the two, and it is the
+primary claim of no moment type. It stays a metric in the verifier.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ from .template_narrator import _Context, _since, fmt_minute
 from .text_lint import LintIssue
 
 CLAIM_SLOTS = ("value", "minute", "start", "label")
-# Bir cümleyi bir menü iddiasına dayandıran yer tutucular ({label:} tek başına değer taşımaz).
+# Placeholders that ground a sentence in a menu claim ({label:} alone carries no value).
 GROUNDING = ("value", "minute", "start", "clause", "event", "score", "score_named")
 
 
@@ -55,7 +55,7 @@ class MenuClaim:
     def window(self) -> str:
         c = self.claim
         if c.metric == "pressure_balance":
-            return "rolling"  # son oynanmış dakikalar (etikette yazılı)
+            return "rolling"  # last minutes played (stated in the label)
         if c.start == c.end:
             return "event"
         return "since_kickoff" if c.start == KICKOFF else "window"
@@ -65,7 +65,7 @@ class MenuClaim:
 class MenuClause:
     id: str
     claim_ids: tuple[str, ...]
-    text: dict[str, str]  # dil → yer tutuculu şablon ({home}/{away}, menü id'leri)
+    text: dict[str, str]  # language → placeholder template ({home}/{away}, menu ids)
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class ClaimMenu:
     moment_id: str
     claims: tuple[MenuClaim, ...]
     clauses: tuple[MenuClause, ...]
-    # Moment tipinin ana iddiaları: her gruptan en az bir iddia cümlede kullanılmalı.
+    # The moment type's primary claims: at least one claim from each group must be used in a sentence.
     primary: tuple[frozenset[str], ...] = ()
 
     @property
@@ -88,11 +88,11 @@ class ClaimMenu:
         return {c.id: c.text.get(language, c.text["en"]) for c in self.clauses}
 
     def evidence_owner(self, ref: str) -> str | None:
-        """Olayı kanıt sayan ilk menü iddiası."""
+        """The first menu claim that counts the event as evidence."""
         return next((c.id for c in self.claims if ref in c.claim.event_ids), None)
 
 
-# --- menü kurulumu ------------------------------------------------------------------------------
+# --- menu building ------------------------------------------------------------------------------
 
 
 class _Builder:
@@ -105,16 +105,16 @@ class _Builder:
         self.clauses: list[MenuClause] = []
         self.pid = {name: pid for pid, name in player_ids(events).items()}
 
-    def add(self, cid: str, claim: Claim, en: str | None = None, tr: str | None = None) -> None:
+    def add(self, cid: str, claim: Claim, en: str | None = None) -> None:
         self.claims.append(MenuClaim(cid, claim))
         if en is not None:
-            self.clause(cid, (cid,), en, tr or en)
+            self.clause(cid, (cid,), en)
 
-    def clause(self, cid: str, claim_ids: tuple[str, ...], en: str, tr: str) -> None:
+    def clause(self, cid: str, claim_ids: tuple[str, ...], en: str) -> None:
         def sides(t: str) -> str:
             t = t.replace("{T}", "{" + self.side + "}")
             return t.replace("{O}", "{" + self.opp + "}") if self.opp else t
-        self.clauses.append(MenuClause(cid, claim_ids, {"en": sides(en), "tr": sides(tr)}))
+        self.clauses.append(MenuClause(cid, claim_ids, {"en": sides(en)}))
 
     def player(self, name: str) -> str:
         return "{player:" + self.pid[name] + "}"
@@ -124,37 +124,34 @@ class _Builder:
         for side in ("home", "away"):
             value = self.c.measured("score", side)
             self.add(SCORE_IDS[side], self.c.state("score", side, "eq", value, anchor))
-        self.clause("score", (SCORE_IDS["home"], SCORE_IDS["away"]), "the score is {score_named}", "skor {score_named}")
+        self.clause("score", (SCORE_IDS["home"], SCORE_IDS["away"]), "the score is {score_named}")
 
     def possession(self, start: MatchTime = KICKOFF) -> None:
         value = round(self.c.measured("possession", self.side, start), 2)
         claim = Claim("ratio", Subject(self.side), "possession", "approx", value, start, self.c.t,
                       (self.c.ref(self.m.at_seq),))
         if start == KICKOFF:
-            self.add("possession", claim, "{T} have had {value:possession} of the ball since kickoff",
-                     "{T} maç başından bu yana topun {value:possession} kadarına sahip")
+            self.add("possession", claim, "{T} have had {value:possession} of the ball since kickoff")
         else:
-            self.add("possession", claim, "{T} have had {value:possession} of the ball since {start:possession}",
-                     "{start:possession} sonrası {T} topun {value:possession} kadarına sahip")
+            self.add("possession", claim, "{T} have had {value:possession} of the ball since {start:possession}")
 
     def margin(self, cid: str, claim: Claim) -> None:
         v = claim.value
         if v > 0:
-            en, tr = "{T} lead by {value:%s}" % cid, "{T} {value:%s} farkla önde" % cid
+            en = "{T} lead by {value:%s}" % cid
         elif v == 0:
-            en, tr = "the sides are level", "taraflar eşit"
+            en = "the sides are level"
         else:
-            en, tr = "{T} are behind", "{T} geride"
-        self.add(cid, claim, en, tr)
+            en = "{T} are behind"
+        self.add(cid, claim, en)
 
 
 def _goal(b: _Builder) -> None:
     player = b.m.detail["player"]
     b.add("goal", b.c.count("goals", Subject(b.side, player), b.c.t),
-          f"{b.player(player)} scored for {{T}}", f"{b.player(player)} {{T}} adına gol attı")
+          f"{b.player(player)} scored for {{T}}")
     b.add("team_goals", b.c.count("goals", Subject(b.side), KICKOFF),
-          "{T} have scored {value:team_goals} {label:team_goals} so far",
-          "{T} şu ana kadar {value:team_goals} {label:team_goals} attı")
+          "{T} have scored {value:team_goals} {label:team_goals} so far")
     b.score()
     b.possession()
 
@@ -163,7 +160,7 @@ def _score_change(b: _Builder) -> None:
     d = b.m.detail
     goal_seq = b.m.event_ids[-1]
     b.add("goals", b.c.count("goals", Subject(b.side), b.c.t),
-          "{T} scored at {minute:goals}", "{T} {minute:goals} itibarıyla gol buldu")
+          "{T} scored at {minute:goals}")
     margin = b.c.measured("score_margin", b.side)
     b.margin("margin", b.c.state("score_margin", b.side, "eq", margin, [goal_seq]))
     if d.get("from_behind"):
@@ -171,7 +168,7 @@ def _score_change(b: _Builder) -> None:
         conceded = measure("goals", Subject(b.opp), KICKOFF, b.c.t, b.c.events).counted
         goals = "goal" if deficit == 1 else "goals"
         b.add("deficit", b.c.state("min_score_margin", b.side, "eq", -deficit, conceded),
-              "{T} had been {value:deficit} %s down" % goals, "{T} bir ara {value:deficit} farkla gerideydi")
+              "{T} had been {value:deficit} %s down" % goals)
     b.score()
     b.possession()
 
@@ -179,26 +176,26 @@ def _score_change(b: _Builder) -> None:
 def _red_card(b: _Builder) -> None:
     player = b.m.detail["player"]
     b.add("sent_off", b.c.count("red_cards", Subject(b.side, player), b.c.t),
-          f"{b.player(player)} of {{T}} was sent off", f"{{T}} oyuncusu {b.player(player)} oyundan atıldı")
+          f"{b.player(player)} of {{T}} was sent off")
     team_reds = measure("red_cards", Subject(b.side), KICKOFF, b.c.t, b.c.events).counted
     left = b.c.measured("players_on_pitch", b.side)
     b.add("players", b.c.state("players_on_pitch", b.side, "eq", left, team_reds),
-          "{T} are down to {value:players} {label:players}", "{T} sahada {value:players} kişi kaldı")
+          "{T} are down to {value:players} {label:players}")
     b.score()
     b.possession()
 
 
 _PENALTY_CLAUSES = {
-    "scored": ("{p} scored a penalty for {T}", "{p} {T} adına penaltıyı gole çevirdi"),
-    "saved": ("{p}'s penalty for {T} was saved", "{T} adına penaltıyı {p} kullandı, vuruş kurtarıldı"),
-    "missed": ("{p} missed a penalty for {T}", "{p} {T} adına penaltıyı kaçırdı"),
+    "scored": "{p} scored a penalty for {T}",
+    "saved": "{p}'s penalty for {T} was saved",
+    "missed": "{p} missed a penalty for {T}",
 }
 
 
 def _penalty(b: _Builder) -> None:
     player, outcome = b.m.detail["player"], b.m.detail["outcome"]
-    en, tr = (t.replace("{p}", b.player(player)) for t in _PENALTY_CLAUSES[outcome])
-    b.add("penalty", b.c.count(f"penalties_{outcome}", Subject(b.side, player), b.c.t), en, tr)
+    en = _PENALTY_CLAUSES[outcome].replace("{p}", b.player(player))
+    b.add("penalty", b.c.count(f"penalties_{outcome}", Subject(b.side, player), b.c.t), en)
     b.score()
     b.possession()
 
@@ -209,21 +206,19 @@ def _shots(b: _Builder, start: MatchTime, lead_form: bool) -> None:
     b.add("shots_for", shots)
     b.add("shots_against", opp)
     ids = ("shots_for", "shots_against")
-    tr = "{start:shots_for} sonrası {label:shots_for} sayısında {T} {value:shots_for}, {O} {value:shots_against}"
     if lead_form:
         verb = "lead" if shots.value > opp.value else ("trail" if shots.value < opp.value else "are level at")
         en = f"{{T}} {verb} {{value:shots_for}}–{{value:shots_against}} in {{label:shots_for}} since {{start:shots_for}}"
     else:
         en = ("{T} have had {value:shots_for} {label:shots_for} to {O}'s {value:shots_against} "
               "since {start:shots_for}")
-    b.clause("shots", ids, en, tr)
+    b.clause("shots", ids, en)
 
 
 def _pressure_shift(b: _Builder) -> None:
     balance = round(b.c.measured("pressure_balance", b.side), 2)
     b.add("pressure", b.c.state("pressure_balance", b.side, "approx", balance, b.m.event_ids),
-          "{T} lead the {label:pressure} at {value:pressure}",
-          "{label:pressure} {value:pressure} ile {T} lehine")
+          "{T} lead the {label:pressure} at {value:pressure}")
     _shots(b, _since(b.c.t, b.c.config.context_minutes), lead_form=False)
     b.score()
 
@@ -232,15 +227,13 @@ def _dominance(b: _Builder) -> None:
     start = _since(b.c.t, b.c.config.dominance_context_minutes)
     b.possession(start)
     _shots(b, start, lead_form=True)
-    # İki ana iddia aynı pencereden: pencere bir kez yazılır (iki yan cümle yan yana dakikayı tekrarlar).
+    # Both primary claims share one window: it is written once (two clauses side by side repeat the minute).
     shots, opp = (next(c.claim.value for c in b.claims if c.id == i) for i in ("shots_for", "shots_against"))
     balance = "a {v}–{o} lead" if shots > opp else ("a {v}–{o} deficit" if shots < opp else "level at {v}–{o}")
     balance = balance.format(v="{value:shots_for}", o="{value:shots_against}")
     b.clause("dominance", ("possession", "shots_for", "shots_against"),
              "since {start:possession} {T} have had {value:possession} of the ball and "
-             + balance + " in {label:shots_for}",
-             "{start:possession} sonrası {T} topun {value:possession} kadarına sahip, {label:shots_for} "
-             "sayısında {value:shots_for}–{value:shots_against}")
+             + balance + " in {label:shots_for}")
     b.score()
     margin = b.c.measured("score_margin", b.side)
     b.margin("margin", b.c.state("score_margin", b.side, "eq", margin, [b.m.at_seq]))
@@ -263,7 +256,7 @@ PRIMARY: dict[str, tuple[frozenset[str], ...]] = {
 def build_menu(
     moment: Moment, events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> ClaimMenu:
-    """Momentin doğrulanmış aday iddiaları ve yan cümleleri. Doğrulanmayan iddia menüye girmez."""
+    """Verified candidate claims and clauses for the moment. A claim that does not verify stays off the menu."""
     b = _Builder(moment, events, config)
     BUILDERS[moment.type](b)
     ok = {c.id for c in b.claims if verify_claim(c.claim, events, config).ok}
@@ -273,11 +266,11 @@ def build_menu(
     return ClaimMenu(moment.id, claims, clauses, primary)
 
 
-# --- model kaydı için okunur biçim ---------------------------------------------------------------
+# --- readable form for the model record ---------------------------------------------------------------
 
 
 def preview(menu: ClaimMenu, ctx: SlotContext) -> dict[str, str]:
-    """Yan cümlelerin render edilmiş hali (modele örnek)."""
+    """Rendered clauses (an example for the model)."""
     ids = tuple(c.id for c in menu.claims)
     claims = tuple(c.claim for c in menu.claims)
     verdicts = tuple(VerificationResult(True, "ok", c.value) for c in claims)
@@ -310,17 +303,17 @@ def menu_record(menu: ClaimMenu, ctx: SlotContext) -> dict[str, list[dict]]:
 
 
 def evidence_events(menu: ClaimMenu, events: Sequence[Event]) -> list[Event]:
-    """Menü iddialarının kanıt olayları (sıralı, tekrarsız)."""
+    """Evidence events of the menu claims (ordered, deduplicated)."""
     by_seq = {e.seq: e for e in events}
     seqs = sorted({parse_ref(r)[1] for c in menu.claims for r in c.claim.event_ids})
     return [by_seq[s] for s in seqs if s in by_seq]
 
 
-# --- menü taslağı: bağlama ve v5 kuralları ---------------------------------------------------------
+# --- menu draft: binding and v5 rules ---------------------------------------------------------
 
 
 def _minutes(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[str] = frozenset()) -> list[str]:
-    """Şablonun render edildiğinde yazacağı dakikalar (yan cümleler dahil)."""
+    """Minutes the template writes when rendered (clauses included)."""
     by_id, clauses = menu.by_id, menu.clause_templates(ctx.language)
     out: list[str] = []
     for ph in parse_placeholders(template)[0]:
@@ -339,7 +332,7 @@ def _minutes(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[s
 def bind_menu(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> tuple[tuple[Claim, ...], tuple[str, ...], list[LintIssue]]:
-    """Yer tutucuları menüye bağlar; (bağlanan iddialar, id'ler, sorunlar)."""
+    """Binds placeholders to the menu; (bound claims, ids, issues)."""
     placeholders, issues = parse_placeholders(template)
     by_id, clauses = menu.by_id, menu.clause_by_id
     subjects = {c.claim.subject.player for c in menu.claims if c.claim.subject.player}
@@ -382,7 +375,7 @@ def bind_menu(
 
 
 def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
-    """Yer tutucuların başvurduğu menü iddiaları (yan cümleler ve olay sahipleri dahil)."""
+    """Menu claims the placeholders refer to (clauses and event owners included)."""
     clauses = menu.clause_by_id
     out: set[str] = set()
     for ph in placeholders:
@@ -402,7 +395,7 @@ def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
 def menu_rule_issues(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[LintIssue]:
-    """Her cümle bir menü iddiasına dayanır; ana iddia kullanılır; bir cümlede aynı dakika bir kez."""
+    """Each sentence rests on a menu claim; the primary claim is used; a minute appears once per sentence."""
     placeholders = parse_placeholders(template)[0]
     issues: list[LintIssue] = []
     for start, end in template_sentences(template):

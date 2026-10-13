@@ -32,7 +32,7 @@ from app.explain.pipeline import run_match, run_moment
 from app.explain.slots import player_ids
 from tests.explain_helpers import match, moment_case
 
-EVENTS, MOMENT = moment_case("goal")  # red_card_swing 42, 22' ev sahibi golü
+EVENTS, MOMENT = moment_case("goal")  # red_card_swing 42, home goal at 22'
 MATCH_ID = EVENTS[0].match_id
 IDS = player_ids(EVENTS)
 ID_OF = {name: pid for pid, name in IDS.items()}
@@ -40,7 +40,7 @@ GOAL_REF = f"{MATCH_ID}#{MOMENT.event_ids[-1]}"
 
 
 def text_json(template):
-    """Modelin döndüreceği JSON (foundry-v5: yalnızca metin)."""
+    """The JSON the model returns (foundry-v5: text only)."""
     return json.dumps({"text": template})
 
 
@@ -54,7 +54,7 @@ class Sleep:
 
 
 class FakeChatClient:
-    """Sırayla yanıt verir; son adım tekrarlanır. Adım: str, callable(messages)->str, Sleep, Exception."""
+    """Replies in order; the last step repeats. Step: str, callable(messages)->str, Sleep, Exception."""
 
     def __init__(self, *script):
         self.script = list(script)
@@ -82,7 +82,7 @@ def _narrator(client, **cfg):
 
 
 def responder(events):
-    """Her momentte menüden geçerli bir şablon seçen sahte model (yalnızca moment kaydı)."""
+    """A fake model that picks a valid template from the menu for each moment (moment record only)."""
     moments = {m.id: m for m in detect_moments(events)}
 
     def respond(messages):
@@ -106,27 +106,27 @@ def _narrator(client, **cfg):
     return FoundryNarrator(EVENTS, client, config=replace(DEFAULT_EXPLAIN_CONFIG, **cfg))
 
 
-# --- moment kaydı ve kapalı şema ---------------------------------------------------------
+# --- moment record and closed schema ---------------------------------------------------------
 
 
 def test_record_holds_menu_clauses_and_evidence_events():
-    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "tr"))
-    assert "Turkish" in system and "analyst" in system and "No outside knowledge" in system
+    system, user = (m["content"] for m in build_messages(MOMENT, EVENTS, "analyst", "en"))
+    assert "English" in system and "analyst" in system and "No outside knowledge" in system
     assert "NEVER write digits" in system and "{clause:<clause id>}" in system
     assert "do not link events" in system
     record = json.loads(user)
-    assert record == moment_record(MOMENT, EVENTS, "tr")
+    assert record == moment_record(MOMENT, EVENTS, "en")
     assert "metrics_at_moment" not in record and "metric_labels" not in record
     menu = build_menu(MOMENT, EVENTS)
     assert [c["id"] for c in record["claims_menu"]] == [c.id for c in menu.claims]
     evidence = {r for c in menu.claims for r in c.claim.event_ids}
-    assert {e["id"] for e in record["events"]} == evidence  # her iddianın kanıt olayları
+    assert {e["id"] for e in record["events"]} == evidence  # every claim's evidence events
     goal = next(e for e in record["events"] if e["id"] == GOAL_REF)
-    assert goal["phrase"] == f"{MOMENT.detail['player']} gol attı (22')" and goal["selectable"]
+    assert goal["phrase"] == f"{MOMENT.detail['player']} scored at 22'" and goal["selectable"]
     assert goal["player"] == ID_OF[MOMENT.detail["player"]] and goal["minute"] == "22'"
     poss = next(c for c in record["claims_menu"] if c["id"] == "possession")
-    assert poss["label"] == "topa sahip olma" and poss["value"].startswith("%")
-    assert next(c for c in record["clauses"] if c["id"] == "score")["text"].startswith("skor ")
+    assert poss["label"] == "possession" and poss["value"].endswith("%")
+    assert next(c for c in record["clauses"] if c["id"] == "score")["text"].startswith("the score is ")
     assert record["squads"]["home"][0] == {"id": "h01", "name": IDS["h01"]}
 
 
@@ -144,7 +144,7 @@ def test_v5_prompt_rules():
 def test_response_schema_has_no_claims_or_event_ids():
     schema = to_strict_json_schema(_narrator(FakeChatClient("{}")).response_model(MOMENT))
     assert set(schema["properties"]) == {"text"} and schema["additionalProperties"] is False
-    assert "$defs" not in schema  # iddia / olay bağlama alanı yok: evidence_mismatch yolu kapalı
+    assert "$defs" not in schema  # no field for claims / event links: the evidence_mismatch path is closed
 
 
 def test_parse_draft_returns_menu_draft():
@@ -154,7 +154,7 @@ def test_parse_draft_returns_menu_draft():
     assert draft.claims == () and draft.menu is menu
 
 
-# --- geçerli yanıt -----------------------------------------------------------------------
+# --- valid response -----------------------------------------------------------------------
 
 
 def test_valid_response_logs_usage_and_sends_reasoning_effort(caplog):
@@ -204,7 +204,7 @@ def test_protocol_prompt_version_and_defaults():
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 
-# --- menü ihlalleri geri bildirimle düzelir ---------------------------------------------------
+# --- menu violations are fixed through feedback ---------------------------------------------------
 
 
 def test_raw_values_in_template_are_rejected_then_fixed():
@@ -226,7 +226,7 @@ def test_id_outside_menu_is_rejected():
 
 
 def test_event_outside_menu_evidence_is_rejected():
-    bad = text_json(f"{{event:{MATCH_ID}#{MOMENT.event_ids[0]}}}, making it {{score}}.")  # şut olayı
+    bad = text_json(f"{{event:{MATCH_ID}#{MOMENT.event_ids[0]}}}, making it {{score}}.")  # shot event
     record = run_moment(MOMENT, _narrator(FakeChatClient(bad, text_json(goal_text()))), EVENTS)
     assert record.attempts == 2 and "event_not_evidence" in record.trace[3]["codes"]
 
@@ -241,7 +241,7 @@ def test_free_role_verb_is_rejected_then_clause_accepted():
     assert record.text.startswith(moment.detail["player"]) and "saved a penalty" not in record.text
 
 
-# --- bozuk JSON --------------------------------------------------------------------------
+# --- broken JSON --------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -254,7 +254,7 @@ def test_broken_json_raises_invalid_output(bad):
     with pytest.raises(InvalidNarratorOutput):
         narrator.narrate(MOMENT, "neutral", "en")
     assert narrator.usage[0].outcome == "invalid_output"
-    assert "Şemaya uymayan" in narrator.usage[0].error
+    assert "Response does not match the schema" in narrator.usage[0].error
 
 
 def test_pipeline_retries_after_broken_json_with_feedback():
@@ -266,7 +266,7 @@ def test_pipeline_retries_after_broken_json_with_feedback():
     assert "FEEDBACK" not in _user(client.calls[0])
 
 
-# --- zaman aşımı ve istemci hatası ---------------------------------------------------------
+# --- timeout and client error ---------------------------------------------------------
 
 
 def test_timeout_raises_narrator_timeout():
@@ -295,7 +295,7 @@ def test_client_exception_message_is_logged():
     assert "ConnectionError('boom')" in narrator.usage[0].error
 
 
-# --- bütçe aşımı -------------------------------------------------------------------------
+# --- budget exceeded -------------------------------------------------------------------------
 
 
 def test_budget_exceeded_before_calling_client():
@@ -323,7 +323,7 @@ def test_budget_exceeded_falls_back_cleanly_for_rest_of_match():
         assert r.ok
 
 
-# --- feedback prompta giriyor --------------------------------------------------------------
+# --- feedback goes into the prompt --------------------------------------------------------------
 
 
 def test_feedback_items_appear_in_prompt():
@@ -344,7 +344,7 @@ def test_pipeline_feeds_lint_feedback_into_second_call():
     assert "sentence_without_claim" in _user(client.calls[1])
 
 
-# --- Agent Framework adaptörü ---------------------------------------------------------------
+# --- Agent Framework adapter ---------------------------------------------------------------
 
 
 class _InnerClient:
@@ -356,7 +356,7 @@ class _InnerClient:
 
         class Response:
             text = '{"text": "x"}'
-            # agent-framework-core 1.21: UsageDetails bir TypedDict (dict)
+            # agent-framework-core 1.21: UsageDetails is a TypedDict (dict)
             usage_details = {"input_token_count": 12, "output_token_count": 34,
                              "reasoning_output_token_count": 20}
 
@@ -382,7 +382,7 @@ def test_adapter_maps_options_and_usage(effort):
 
 
 def test_adapter_without_agent_framework_gives_install_hint(monkeypatch):
-    # Paket kurulu olsa da olmasa da: sys.modules'ta None → import ImportError verir.
+    # Whether the package is installed or not: None in sys.modules → the import raises ImportError.
     monkeypatch.setitem(sys.modules, "agent_framework.foundry", None)
     with pytest.raises(ImportError, match="agent-framework-foundry"):
         FoundryChatClientAdapter(project_endpoint="https://example", model="m")

@@ -1,11 +1,11 @@
-"""foundry-v4 / v4.1 lint kurallarının yan ölçümleri (eval.inject bunları docs/EVAL.md'ye yazar).
+"""Side measurements for the foundry-v4 / v4.1 lint rules (eval.inject writes them to docs/EVAL.md).
 
-- İzinli cümle başı listesinin temiz taslaklardan çıkarılması (`derive_sentence_starts`);
-  sonuç app/explain/config.py'ye dondurulur, tests/test_lint_rates.py eşitliği denetler.
-- Kural başına yanlış alarm: template taslakları, v3/v4 slot şablonları ve gerçek LLM çıktıları
-  (foundry-v2 serbest metin, foundry-v3 ve foundry-v4 şablon) üzerinde.
-- foundry-v3 insan etiketlerinin ham sayımı.
-- Template anlatıcının pencere denetimi (hangi iddia hangi pencereden, metinde yazılı mı).
+- Deriving the allowed sentence-start list from clean drafts (`derive_sentence_starts`);
+  the result is frozen into app/explain/config.py and tests/test_lint_rates.py checks equality.
+- False alarms per rule: on template drafts, v3/v4 slot templates and real LLM outputs
+  (foundry-v2 free text, foundry-v3 and foundry-v4 templates).
+- Raw counts of the foundry-v3 human labels.
+- The template narrator's window audit (which claim uses which window, and whether the text states it).
 """
 
 from __future__ import annotations
@@ -51,30 +51,30 @@ V2_RUN = DOCS / "LLM_RUN.foundry-v2.json"
 V3_RUN = DOCS / "LLM_RUN.foundry-v3.json"
 V4_RUN = DOCS / "LLM_RUN.foundry-v4.json"
 V3_REVIEW = DOCS / "human_review.foundry-v3.csv"
-LANGS = ("en", "tr")
+LANGS = ("en",)
 LABELS = ("correct", "wrong_fact", "misleading", "dull")
 
 
-# --- metin birimleri ---------------------------------------------------------------------------
+# --- text units ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class Text:
-    """Ölçülen tek taslak. `template` yer tutuculu biçim (ham metinde adlar/sayılar yer tutucuya çevrilir)."""
+    """One measured draft. `template` is the placeholder form (names/numbers in raw text become placeholders)."""
 
     source: str
     lang: str
     moment_id: str
     moment_type: str
     template: str
-    raw: str | None = None  # ham metin (bare_surname için)
+    raw: str | None = None  # raw text (for bare_surname)
     roster: Roster | None = None
-    label: dict[str, str] | None = None  # insan etiketi (yalnızca foundry-v3)
-    ctx: SlotContext | None = None  # {event:}/{player:} kuralları için (yalnızca slot şablonları)
+    label: dict[str, str] | None = None  # human label (foundry-v3 only)
+    ctx: SlotContext | None = None  # for the {event:}/{player:} rules (slot templates only)
 
 
 def to_template(text: str, roster: Roster) -> str:
-    """Ham metin → yer tutuculu biçim: kadro adları ve sayılar yer tutucu sayılır."""
+    """Raw text → placeholder form: squad names and numbers count as placeholders."""
     return NUMBER_RE.sub("{n}", roster.pattern.sub("{name}", text))
 
 
@@ -83,7 +83,7 @@ def _mask(template: str) -> str:
 
 
 def template_drafts(corpus: Iterable[tuple[int, str | None]]) -> list[Text]:
-    """Template anlatıcının taslakları (ham metin), tüm momentler, EN ve TR."""
+    """The template narrator's drafts (raw text), all moments, EN."""
     out = []
     for seed, scenario in corpus:
         events = generate_match(seed, scenario)
@@ -108,7 +108,7 @@ def _review() -> dict[str, dict[str, str]]:
 
 
 def llm_outputs() -> list[Text]:
-    """Gerçek model çıktıları: foundry-v2 serbest metin (ham) ve foundry-v3 kabul edilen şablonlar."""
+    """Real model outputs: foundry-v2 free text (raw) and foundry-v3 accepted templates."""
     out: list[Text] = []
     review = _review()
     for path, version in ((V2_RUN, "llm-v2"), (V3_RUN, "llm-v3")):
@@ -131,7 +131,7 @@ def llm_outputs() -> list[Text]:
 
 
 def llm_v4_outputs() -> list[Text]:
-    """foundry-v4'ün kabul edilen şablonları (izinli liste türetmesine girmez; v4.1 kurallarının hedefi)."""
+    """foundry-v4's accepted templates (not used to derive the allowed list; the target of the v4.1 rules)."""
     if not V4_RUN.exists():
         return []
     run = json.loads(V4_RUN.read_text(encoding="utf-8"))
@@ -149,19 +149,18 @@ def llm_v4_outputs() -> list[Text]:
     return out
 
 
-# --- izinli cümle başı listesi --------------------------------------------------------------------
+# --- allowed sentence-start list --------------------------------------------------------------------
 
 
-# Zamirler takım yer tutucusunun yerini tutar; cümle başında {home}/{away} yazılır (foundry-v4.1).
+# Pronouns stand in for a team placeholder; a sentence starts with {home}/{away} instead (foundry-v4.1).
 PRONOUNS = {
     "en": frozenset({"they", "their", "them", "we", "he", "she", "it", "its"}),
-    "tr": frozenset({"onlar", "bunlar", "o"}),
 }
 
 
-# foundry-v5: zaman edatları dakikayı cümle başına taşır ("At 29' … since kickoff"), dakika yer tutucu ya da
-# yan cümleden gelir; metrik adları ("Possession …") {label:}/{clause:} ile gelir.
-TIME_PREPOSITIONS = {"en": frozenset({"at", "since", "in", "after", "before", "by"}), "tr": frozenset()}
+# foundry-v5: time prepositions move the minute to the sentence start ("At 29' … since kickoff"); the minute
+# comes from a placeholder or a clause, and metric names ("Possession …") come via {label:}/{clause:}.
+TIME_PREPOSITIONS = {"en": frozenset({"at", "since", "in", "after", "before", "by"})}
 LABEL_WORDS = {
     lang: frozenset(w.casefold() for label in labels.values() for w in label.split())
     for lang, labels in METRIC_LABELS.items()
@@ -169,8 +168,8 @@ LABEL_WORDS = {
 
 
 def _excluded(word: str, lang: str) -> bool:
-    """Başlangıç listesine girmeyecek kelimeler: home/away, zamir, zaman edatı, metrik adı, sayı kelimesi,
-    olay sözcüğü, abartı."""
+    """Words that never enter the start list: home/away, pronouns, time prepositions, metric names, number words,
+    event words, overstatement."""
     w = word.casefold()
     return bool(
         SIDE_LABEL_RE[lang].fullmatch(word)
@@ -184,7 +183,7 @@ def _excluded(word: str, lang: str) -> bool:
 
 
 def start_words(template: str) -> list[tuple[int, int, str]]:
-    """Yer tutucuyla başlamayan cümlelerin ilk kelimeleri."""
+    """First words of sentences that do not start with a placeholder."""
     upper = PLACEHOLDER_RE.sub(lambda m: "X" * len(m.group()), template)
     spans = [(m.start(), m.end()) for m in PLACEHOLDER_RE.finditer(template)]
     out = []
@@ -200,7 +199,7 @@ def _clean(t: Text) -> bool:
 
 
 def derive_sentence_starts(texts: Iterable[Text]) -> dict[str, tuple[str, ...]]:
-    """Temiz taslakların cümle başı kelimeleri (dil başına, ilk görülen yazılış, alfabetik)."""
+    """Sentence-start words of clean drafts (per language, first spelling seen, alphabetical)."""
     seen: dict[str, dict[str, str]] = {lang: {} for lang in LANGS}
     for t in texts:
         if not _clean(t):
@@ -212,19 +211,19 @@ def derive_sentence_starts(texts: Iterable[Text]) -> dict[str, tuple[str, ...]]:
 
 
 def derive_frozen(corpus: Iterable[tuple[int, str | None]]) -> dict[str, tuple[str, ...]]:
-    """config.py'deki dondurulmuş liste: template taslakları + gerçek LLM çıktıları (v3'te yalnızca 'correct')."""
+    """The frozen list in config.py: template drafts + real LLM outputs (v3: only 'correct')."""
     return derive_sentence_starts([*template_drafts(corpus), *llm_outputs()])
 
 
-# --- kural başına tetiklenme --------------------------------------------------------------------
+# --- firings per rule --------------------------------------------------------------------
 
 RULES = ("sentence_start", "number_words", "overstatement", "bare_surname", "event_word",
          "event_type", "player_repeat", "article_team")
-V41_RULES = ("event_type", "player_repeat", "article_team")  # foundry-v4.1 ile eklenen kurallar
+V41_RULES = ("event_type", "player_repeat", "article_team")  # rules added in foundry-v4.1
 
 
 def fired(t: Text, rule: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> list[str]:
-    """Kuralın bu taslakta yakaladığı parçalar (boş = tetiklenmedi)."""
+    """Fragments the rule catches in this draft (empty = did not fire)."""
     masked = _mask(t.template)
     if rule == "sentence_start":
         return [i.fragment for i in sentence_start_issues(t.template, t.lang, config)]
@@ -271,10 +270,9 @@ def rule_rates(datasets: Sequence[tuple[str, Sequence[Text]]], config: ExplainCo
 
 
 def held_out_sentence_starts(templates: Sequence[Text], llm: Sequence[Text]) -> tuple[dict[str, tuple[str, ...]], int, int, Counter[str]]:
-    """Liste yalnızca template taslaklarından çıkarılsaydı gerçek LLM çıktılarında kaç cümle reddedilirdi."""
+    """How many sentences of real LLM outputs would be rejected if the list came from template drafts only."""
     allowed = derive_sentence_starts(templates)
-    config = replace(DEFAULT_EXPLAIN_CONFIG, sentence_start_allowed_en=allowed["en"],
-                     sentence_start_allowed_tr=allowed["tr"])
+    config = replace(DEFAULT_EXPLAIN_CONFIG, sentence_start_allowed_en=allowed["en"])
     sentences = flagged = 0
     examples: Counter[str] = Counter()
     for t in llm:
@@ -285,7 +283,7 @@ def held_out_sentence_starts(templates: Sequence[Text], llm: Sequence[Text]) -> 
     return allowed, flagged, sentences, examples
 
 
-# --- insan etiketleri (foundry-v3) ------------------------------------------------------------------
+# --- human labels (foundry-v3) ------------------------------------------------------------------
 
 
 def human_review_counts() -> dict[str, Any] | None:
@@ -307,21 +305,21 @@ def human_review_counts() -> dict[str, Any] | None:
     return {"texts": texts, "by_source": by_source, "ids": ids, "total": len(review)}
 
 
-# --- şablon pencere denetimi ------------------------------------------------------------------------
+# --- template window audit ------------------------------------------------------------------------
 
 
 def _window(c) -> str:
     if c.metric == "pressure_balance":
-        return "kayan pencere (son oynanmış dakikalar)"
+        return "rolling window (last minutes played)"
     if c.start == c.end:
-        return "olay anı"
+        return "at the event"
     if c.start == KICKOFF:
-        return "maç başı → an"
-    return "pencere (X' → an)"
+        return "kickoff → now"
+    return "window (X' → now)"
 
 
 def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> dict[str, Any]:
-    """Moment tipi başına iddia pencereleri ve pencerenin metinde yazılı olup olmadığı."""
+    """Claim windows per moment type, and whether the text states the window."""
     rows: dict[tuple[str, str, str, str], list[int]] = {}
     clamped_pressure = clamped_dominance = pressure_total = dominance_total = 0
     clamp_example = None
@@ -332,10 +330,9 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
             for s in n.sentences:
                 for c in s.claims:
                     stated = None
-                    if _window(c) == "pencere (X' → an)":
-                        stated = (f"since {c.start.minute}'" in s.text["en"]
-                                  and f"{c.start.minute}. dakikadan" in s.text["tr"])
-                    elif c.metric == "pressure_balance":  # pencere etiketin içinde
+                    if _window(c) == "window (X' → now)":
+                        stated = f"since {c.start.minute}'" in s.text["en"]
+                    elif c.metric == "pressure_balance":  # the window is inside the label
                         stated = all(metric_label(c.metric, lang) in s.text[lang] for lang in LANGS)
                     key = (m.type, c.metric, c.kind, _window(c))
                     entry = rows.setdefault(key, [0, 0])
@@ -363,7 +360,7 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
     }
 
 
-# --- yasak listesi (rapor için okunur biçim) ------------------------------------------------------
+# --- ban list (readable form for the report) ------------------------------------------------------
 
 
 def overstatement_table() -> list[tuple[str, str, str]]:

@@ -1,12 +1,12 @@
-"""Anlatım hattı: moment → anlatıcı → text_lint + verify_claim → (geri bildirimle
-yeniden deneme) → kabul ya da etiketli template yedeği.
+"""Narration pipeline: moment → narrator → text_lint + verify_claim → (retry with
+feedback) → accept, or the labelled template fallback.
 
-CLAUDE.md: doğrulanmayan cümle yayınlanmaz; en fazla `max_retries` yeniden
-deneme, sonra template fallback.
+CLAUDE.md: an unverified sentence is never published; at most `max_retries` retries,
+then the template fallback.
 
-Ölçüm modu: `on_attempt` her denemeyi (taslak, ret kodları, verify sonuçları) çağırana
-verir. Bu kayıt yalnızca çağıranda kalır; `NarrationRecord`'a (trace dahil) ve önbelleğe
-reddedilen taslak yazılmaz.
+Measurement mode: `on_attempt` hands every attempt (draft, rejection codes, verify results) to
+the caller. This record stays with the caller only; rejected drafts are never written to
+`NarrationRecord` (trace included) or to the cache.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from .narrator import Draft, Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
 from .slots import SlotContext, bind_template, lint_template, render
 from .template_narrator import narrate as template_narrate
+from .template_narrator import require_language
 from .text_lint import LintIssue, Roster, lint_text
 
 
@@ -40,12 +41,12 @@ class NarrationRecord:
     claims: tuple[Claim, ...]
     verification: tuple[VerificationResult, ...]
     lint_issues: tuple[LintIssue, ...]
-    attempts: int  # anlatıcı çağrısı sayısı
+    attempts: int  # number of narrator calls
     source: str  # "llm" | "template" | "template_fallback"
     cache_hit: bool
     cache_key: str | None
     trace: tuple[dict[str, Any], ...]
-    template: str | None = None  # slot tabanlı taslakta render öncesi şablon
+    template: str | None = None  # pre-render template of a slot-based draft
 
     @property
     def ok(self) -> bool:
@@ -91,16 +92,16 @@ class NarrationRecord:
 
 @dataclass(frozen=True)
 class AttemptLog:
-    """Bir anlatıcı denemesi (ölçüm modu). `items` boşsa deneme kabul edildi."""
+    """One narrator attempt (measurement mode). Empty `items` means the attempt was accepted."""
 
     moment: Moment
     attempt: int
-    draft: Draft | None  # anlatıcı hatasında None
+    draft: Draft | None  # None on a narrator error
     error: NarratorError | None
     items: tuple[FeedbackItem, ...]
     lint_issues: tuple[LintIssue, ...]
     verification: tuple[VerificationResult, ...]
-    claims: tuple[Claim, ...]  # bağlanmış iddialar (otomatik skor iddiaları dahil)
+    claims: tuple[Claim, ...]  # bound claims (automatic score claims included)
     claim_ids: tuple[str, ...]
 
     @property
@@ -119,7 +120,7 @@ def check_draft(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     language: str | None = None,
 ) -> tuple[list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...]]:
-    """Bir taslağın yayınlanabilirliği: boş liste = yeşil. (feedback öğeleri, lint, verify)"""
+    """Whether a draft can be published: empty list = green. (feedback items, lint, verify)"""
     items: list[FeedbackItem] = []
     if not text.strip():
         items.append(FeedbackItem("draft", "empty_text"))
@@ -144,7 +145,7 @@ def check_slot_draft(
     list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...],
     tuple[Claim, ...], tuple[str, ...],
 ]:
-    """Slot taslağı: şablon lint + yer tutucu bağlama + verify (otomatik skor iddiaları dahil)."""
+    """Slot draft: template lint + placeholder binding + verify (automatic score claims included)."""
     items: list[FeedbackItem] = []
     if not template.strip():
         items.append(FeedbackItem("draft", "empty_text"))
@@ -171,7 +172,7 @@ def check_menu_draft(
     list[FeedbackItem], tuple[LintIssue, ...], tuple[VerificationResult, ...],
     tuple[Claim, ...], tuple[str, ...],
 ]:
-    """Menü taslağı: şablon lint + menüye bağlama + v5 kuralları + verify (menü iddiaları zaten doğrulanmış)."""
+    """Menu draft: template lint + menu binding + v5 rules + verify (menu claims are already verified)."""
     items: list[FeedbackItem] = []
     if not template.strip():
         items.append(FeedbackItem("draft", "empty_text"))
@@ -201,6 +202,7 @@ def run_moment(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     on_attempt: AttemptHook | None = None,
 ) -> NarrationRecord:
+    require_language(language)
     persona = persona or config.default_persona
     version = prompt_version or narrator.prompt_version
     roster = Roster.from_events(events)
@@ -221,7 +223,7 @@ def run_moment(
             try:
                 cached = NarrationRecord.from_dict(stored)
             except (KeyError, TypeError, ValueError):
-                cached = None  # bozuk kayıt: miss
+                cached = None  # corrupt entry: miss
         trace.append({"attempt": 0, "step": "cache", "ok": cached is not None,
                       "hit": cached is not None, "key": key})
         if cached is not None:
@@ -288,7 +290,7 @@ def run_moment(
         trace.append({"attempt": attempt, "step": "feedback", "ok": False,
                       "codes": list(feedback.codes), "will_retry": attempt < max_attempts})
 
-    # Etiketli template yedeği: yalnızca iddiaları doğrulanan ve lint'ten geçen cümleler.
+    # Labelled template fallback: only sentences whose claims verify and that pass lint.
     narration = template_narrate(moment, events, config)
     text_parts: list[str] = []
     claims: list[Claim] = []
@@ -320,6 +322,7 @@ def run_match(
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
     on_attempt: AttemptHook | None = None,
 ) -> list[tuple[Moment, NarrationRecord]]:
+    require_language(language)
     moments = detect_moments(events)
     if select:
         moments = select_moments(moments, config)

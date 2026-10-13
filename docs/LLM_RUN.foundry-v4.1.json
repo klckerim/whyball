@@ -218,7 +218,7 @@
                       },
                       "claim_id": "c2",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -432,7 +432,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -595,7 +595,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     },
                     {
                       "actual": 1,
@@ -641,7 +641,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -802,7 +802,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -970,7 +970,7 @@
                       },
                       "claim_id": "c1",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -1193,7 +1193,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "olay anı"
+                      "window": "at the event"
                     }
                   ]
                 }
@@ -1514,7 +1514,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -1697,7 +1697,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -2045,7 +2045,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -2236,7 +2236,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -2655,7 +2655,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -2818,7 +2818,7 @@
                       },
                       "claim_id": "c2",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -3029,7 +3029,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     },
                     {
                       "actual": 1,
@@ -3075,7 +3075,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -3451,7 +3451,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     },
                     {
                       "actual": null,
@@ -3480,7 +3480,7 @@
                       },
                       "claim_id": "c4",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -3745,7 +3745,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -3892,7 +3892,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -4053,7 +4053,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     },
                     {
                       "actual": 3,
@@ -4107,7 +4107,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -4309,7 +4309,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "olay anı"
+                      "window": "at the event"
                     }
                   ]
                 },
@@ -4470,7 +4470,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -4655,7 +4655,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -4883,7 +4883,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "olay anı"
+                      "window": "at the event"
                     }
                   ]
                 },
@@ -5058,7 +5058,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "olay anı"
+                      "window": "at the event"
                     }
                   ]
                 }
@@ -5489,7 +5489,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -5714,7 +5714,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -5964,7 +5964,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -6403,7 +6403,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -6651,7 +6651,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -6836,7 +6836,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -7279,7 +7279,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -7479,7 +7479,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -7670,7 +7670,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -8013,7 +8013,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "olay anı"
+                      "window": "at the event"
                     },
                     {
                       "actual": null,
@@ -8042,7 +8042,7 @@
                       },
                       "claim_id": "c2",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -8218,7 +8218,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     },
                     {
                       "actual": null,
@@ -8247,7 +8247,7 @@
                       },
                       "claim_id": "c2",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -8658,7 +8658,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -8883,7 +8883,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -9211,7 +9211,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -9632,7 +9632,7 @@
                       },
                       "claim_id": "c3",
                       "reason": "invalid_subject",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
@@ -9898,7 +9898,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -10079,7 +10079,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 },
@@ -10264,7 +10264,7 @@
                         }
                       ],
                       "reason": "evidence_mismatch",
-                      "window": "maç başı → an"
+                      "window": "kickoff → now"
                     }
                   ]
                 }
