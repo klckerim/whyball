@@ -41,10 +41,11 @@ from .narrator import (
     NarratorError,
     NarratorTimeout,
 )
-from .phrases import event_phrase
-from .slots import METRIC_LABELS, player_ids
+from .labels import METRIC_LABELS
+from .phrases import event_phrase, selectable
+from .slots import player_ids
 
-PROMPT_VERSION = "foundry-v4"
+PROMPT_VERSION = "foundry-v4.1"
 INSTALL_HINT = "FoundryNarrator için: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
@@ -76,6 +77,7 @@ def moment_record(moment: Moment, events: Sequence[Event], language: str = "en")
             "outcome": e.outcome,
             "score_after": e.score,
             "phrase": event_phrase(e, teams, language),  # {event:<id>} bu metne render edilir
+            "selectable": selectable(e, moment.type),  # {event:} yalnızca bu olaylar için
         })
     return {
         "match_id": match_id,
@@ -265,14 +267,17 @@ comments around placeholders. NEVER name an event type or a player's role yourse
 NEVER write digits, number words (not even "{one_word}"), team names, player names, minutes, scores, \
 the words "home"/"away" (or "ev sahibi"/"deplasman"), or metric identifiers such as field_tilt. \
 Use placeholders:
-- {{event:<event id>}}: an event's phrase; copy the id exactly from events[].id. The event must be in the \
-event_ids of one of your claims.
-- {{home}}, {{away}}: team names.
+- {{event:<event id>}}: an event's phrase; copy the id exactly from events[].id. Only events with \
+"selectable": true may be used (passes, dribbles, offsides, fouls, corners never), and the event must be \
+in the event_ids of one of your claims.
+- {{home}}, {{away}}: team names. Always name a team with these placeholders: never refer to a team with a \
+pronoun ("they", "their", "them") and never put an article before it (not "the {{home}}").
 - {{score}}: the score at this moment as digits in home-away order, e.g. "1–0" (no team names).
 - {{score_named}}: the same score with both team names, e.g. "Brannoch FC 1–0 Morvane Athletic". It \
 already names both teams, so never attach a team placeholder to it.
 - {{player:<id>}}: a player by squad id (e.g. h07), rendered as the full name; that player must be the \
-subject of one of your claims.
+subject of one of your claims. An {{event:}} phrase already names its player: never add that player's \
+{{player:}} in the same sentence (no "{{event:...}} by {{player:...}}").
 - {{minute:<claim_id>}}: the end minute of a claim; {{start:<claim_id>}}: its start minute.
 - {{value:<claim_id>}}: the verified value of a claim (code formats percentages and signs).
 - {{label:<claim_id>}}: the readable name of a claim's metric (see metric_labels).
@@ -323,6 +328,9 @@ FEEDBACK_HINTS = {
     "sentence_start": "start every sentence with a placeholder or an allowed word",
     "overstatement": "remove the hype/judgement wording",
     "raw_number": "use placeholders instead of digits or number words",
+    "event_type_not_allowed": "use {event:} only for events with \"selectable\": true",
+    "player_repeat": "the {event:} phrase already names this player; remove the {player:} from that sentence",
+    "article_team": "write {home}/{away} without \"the\"",
 }
 
 

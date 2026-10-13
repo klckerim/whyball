@@ -56,6 +56,17 @@ def test_number_without_claim_is_rejected():
     assert text[issue.start : issue.end] == "7" and issue.kind == "integer"
 
 
+def test_pressure_window_phrase_is_not_a_claim_number():
+    pressure = next(m for m in detect_moments(EVENTS) if m.type == "pressure_shift")
+    for lang, phrase in (("en", "over the last 10 minutes of play"), ("tr", "son 10 oynanmış dakikadaki")):
+        d = TemplateNarrator(EVENTS).narrate(pressure, "neutral", lang)
+        assert phrase in d.text
+        assert lint_text(d.text, d.claims, ROSTER, language=lang).ok
+    # Pencere ifadesi dışında yazılan aynı sayı hâlâ iddiasız.
+    text = f"{d.text} {HOME} 10 dakikadır baskıda."
+    assert ("unsupported_number", "10") in _codes(lint_text(text, d.claims, ROSTER, language="tr"))
+
+
 # --- iddiasız isim -------------------------------------------------------------------
 
 

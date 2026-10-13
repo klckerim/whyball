@@ -138,3 +138,83 @@ def test_human_review_csv_never_overwrites_annotations(tmp_path):
     target = write_human_review(run, path, stamp="T1")
     assert target.name == "human_review.T1.csv"
     assert path.read_text(encoding="utf-8") == annotated
+
+
+# --- ölçüm modu: reddedilen taslaklar, çoklu koşu, sürüm karşılaştırması --------------------------
+
+
+def _shots_responder(events):
+    """Her momentte 'maç başından beri ev sahibi şutu' iddiası, yalnızca ilk olaya bağlı (evidence_mismatch)."""
+    from app.explain.claims import KICKOFF, Claim, MatchTime, Subject
+    from tests.test_llm_narrator import slot_json
+
+    def respond(messages):
+        record, _ = json.JSONDecoder().raw_decode(messages[1]["content"])
+        end = MatchTime(**record["moment"]["time"])
+        claim = Claim("count", Subject("home"), "shots", "eq", 1, KICKOFF, end, (record["events"][0]["id"],))
+        return slot_json("{home} had {value:c1} {label:c1}.", (claim,), ("c1",), events)
+
+    return respond
+
+
+def _measured_run(script_factory):
+    client = FakeChatClient(script_factory(EVENTS))
+    narrator = FoundryNarrator(EVENTS, client, model_tag="fake")
+    logs = []
+    results = run_match(EVENTS, narrator, on_attempt=logs.append)
+    return collect_match("red_card_swing_seed42", results, narrator.usage, logs, EVENTS)
+
+
+def test_rejected_drafts_are_recorded_with_message_and_evidence():
+    data = _measured_run(_shots_responder)
+    rejected = [r for mo in data["moments"] for r in mo["rejections"]]
+    assert rejected and all(r["message"] for r in rejected)
+    mismatch = [f for r in rejected for f in r["verify_failures"] if f["reason"] == "evidence_mismatch"]
+    assert mismatch
+    f = mismatch[0]
+    assert f["claim"]["metric"] == "shots" and f["window"] == "maç başı → an"
+    assert len(f["cited"]) == 1 and all(e["type"] == "shot" for e in f["counted"])
+    first = next(r for r in rejected if "evidence_mismatch" in r["codes"])
+    assert first["template"] == "{home} had {value:c1} {label:c1}."
+    assert first["claims"][0]["id"] == "c1"
+    assert "cited [#" in first["message"] and "counted [#" in first["message"]
+
+    report = render_report({"meta": _meta(), "matches": [data]})
+    assert "## evidence_mismatch: bağlanan ve sayılan olaylar" in report
+    assert "count shots home" in report and "shot×" in report
+    assert "## Reddedilen taslaklar" in report and "{home} had {value:c1} {label:c1}." in report
+
+
+def test_trace_rejections_have_messages_without_attempt_log():
+    data, _ = _run(_shots_responder)
+    rejected = [r for mo in data["moments"] for r in mo["rejections"]]
+    assert rejected and all(r["message"] and "evidence_mismatch" in r["message"] for r in rejected
+                            if "evidence_mismatch" in r["codes"])
+    assert "template" not in rejected[0]  # taslak yalnızca ölçüm modunda
+
+
+def test_multi_run_report_comparison_and_review_from_last_run(tmp_path):
+    import csv
+
+    from eval.llm_run import REVIEW_COLUMNS, write_human_review
+
+    ok = _measured_run(responder)
+    bad = _measured_run(_shots_responder)
+    meta = {**_meta(), "prompt_version": "foundry-v4.1:fake", "repeats": 2}
+    run = {"meta": meta, "runs": [
+        {"started_at": "a", "finished_at": "b", "matches": [bad]},
+        {"started_at": "c", "finished_at": "d", "matches": [ok]},
+    ]}
+    baseline = {"meta": {**_meta(), "prompt_version": "foundry-v4:fake"}, "matches": [bad]}
+    report = render_report(run, {"foundry-v4": baseline})
+    assert "### Koşu 2 (c – d)" in report and "### Koşu başına yedeğe düşen" in report
+    assert "## Sürüm karşılaştırması: foundry-v4, foundry-v4.1" in report
+    assert "foundry-v4.1 · koşu 1" in report and "**foundry-v4.1 · toplam (2 koşu)**" in report
+    assert "### Koşu 1 · red_card_swing_seed42" in report
+    n = len(bad["moments"])
+    assert f"| 1 | {n} | {n} |" in report and f"| 2 | {n} | 0 |" in report  # koşu başına yedek
+
+    rows = list(csv.DictReader(write_human_review(run, tmp_path / "hr.csv").open(encoding="utf-8")))
+    assert [r["text"] for r in rows] == [mo["text"] for mo in ok["moments"]]
+    assert tuple(rows[0]) == REVIEW_COLUMNS
+    assert render_report(json.loads(json.dumps(run)), {"foundry-v4": baseline}) == report

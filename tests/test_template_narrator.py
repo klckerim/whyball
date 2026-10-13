@@ -91,7 +91,8 @@ def test_score_change(kind, en, tr):
 def test_pressure_shift():
     events, m, n = _find(42, "red_card_swing", lambda m: m.type == "pressure_shift")
     _assert_published(n, [_team(events, m.team)])
-    assert "pressure balance" in n.published("en") and "baskı dengesi" in n.published("tr")
+    assert "pressure balance over the last 10 minutes of play is" in n.published("en")
+    assert "son 10 oynanmış dakikadaki baskı dengesi" in n.published("tr")
 
 
 def test_dominance_without_reward():

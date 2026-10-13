@@ -130,10 +130,27 @@ def test_prompt_contains_only_the_moment_record():
     assert record["metrics_at_moment"] == MOMENT.metrics
     assert record["events"][-1]["phrase"] == f"{MOMENT.detail['player']} gol attı (22')"
     assert record["metric_labels"]["possession"] == "topa sahip olma"
+    assert record["metric_labels"]["pressure_balance"] == "son 10 oynanmış dakikadaki baskı dengesi"
     assert record["squads"]["home"][0] == {"id": "h01", "name": IDS["h01"]}
     allowed = {f"{MATCH_ID}#{s}" for s in MOMENT.event_ids}
     mentioned = {tok.strip('",') for tok in user.split() if f"{MATCH_ID}#" in tok}
     assert mentioned <= allowed
+
+
+def test_v41_prompt_rules_and_selectable_events():
+    from tests.explain_helpers import moment_case
+
+    system = build_messages(MOMENT, EVENTS, "neutral", "en")[0]["content"]
+    assert '"selectable": true' in system
+    assert "pronoun" in system and 'not "the {home}"' in system
+    assert "never add that player's" in system
+    assert '"They"' not in system  # izinli cümle başı listesinden çıktı
+    events, pressure = moment_case("pressure_shift")
+    by_type = {}
+    for e in moment_record(pressure, events)["events"]:
+        by_type.setdefault(e["type"], set()).add(e["selectable"])
+    assert by_type["pass"] == {False} and by_type["shot"] == {True}
+    assert all(e["selectable"] for e in moment_record(MOMENT, EVENTS)["events"] if e["type"] == "goal")
 
 
 def test_response_schema_is_closed_per_moment():
@@ -207,8 +224,8 @@ def test_away_goal_score_is_rendered_home_first():
 def test_protocol_prompt_version_and_defaults():
     narrator = _narrator(FakeChatClient("{}"))
     assert isinstance(narrator, Narrator)
-    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v4"
-    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v4:gpt-x"
+    assert narrator.prompt_version == PROMPT_VERSION == "foundry-v4.1"
+    assert FoundryNarrator(EVENTS, FakeChatClient("{}"), model_tag="gpt-x").prompt_version == "foundry-v4.1:gpt-x"
     assert DEFAULT_EXPLAIN_CONFIG.llm_max_calls_per_run == 60
 
 

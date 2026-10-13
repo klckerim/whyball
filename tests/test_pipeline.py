@@ -3,7 +3,7 @@ import json
 import pytest
 
 from app.explain import select_moments
-from app.explain.narrator import FakeNarrator, TemplateNarrator
+from app.explain.narrator import FakeNarrator, InvalidNarratorOutput, TemplateNarrator
 from app.explain.pipeline import NarrationRecord, run_match, run_moment
 from app.explain.template_narrator import narrate as template_narrate
 from tests.explain_helpers import MOMENT_TYPES, match, moment_case
@@ -91,6 +91,40 @@ def test_failing_modes_fall_back_to_labelled_template(mode, mtype, lang):
 
     assert record.text == template_narrate(moment, events).published(lang)
     _assert_publishable(record)
+
+
+# --- ölçüm modu: deneme kaydı ---------------------------------------------------------------
+
+
+def test_on_attempt_sees_every_draft_but_record_and_cache_do_not(tmp_path):
+    from app.explain.cache import NarrationCache
+
+    events, moment = moment_case("goal")
+    logs = []
+    cache = NarrationCache(tmp_path)
+    record = run_moment(moment, FakeNarrator(events, "wrong_number"), events, cache=cache,
+                        on_attempt=logs.append)
+    assert [log.attempt for log in logs] == [1, 2, 3]
+    assert all(not log.accepted and log.draft is not None for log in logs)
+    assert all("value_mismatch" in [i.code for i in log.items] for log in logs)
+    assert all(len(log.claims) == len(log.verification) for log in logs)
+    stored = json.dumps(record.to_dict()) + "".join(p.read_text() for p in tmp_path.rglob("*") if p.is_file())
+    assert logs[0].draft.text not in stored  # reddedilen taslak yayına ve önbelleğe girmez
+
+
+def test_on_attempt_reports_accepted_and_narrator_errors():
+    events, moment = moment_case("goal")
+    logs = []
+    run_moment(moment, FakeNarrator(events, "fixes_after_feedback"), events, on_attempt=logs.append)
+    assert [log.accepted for log in logs] == [False, True]
+
+    class Broken(FakeNarrator):
+        def narrate(self, *args, **kwargs):
+            raise InvalidNarratorOutput("bozuk JSON")
+
+    logs = []
+    run_moment(moment, Broken(events, "correct"), events, on_attempt=logs.append)
+    assert len(logs) == 3 and all(log.error is not None and log.draft is None for log in logs)
 
 
 # --- kayıt ve maç düzeyi ------------------------------------------------------------------

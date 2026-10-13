@@ -6,7 +6,9 @@ tarafından doğrulanmış iddialardan, olay verisinden ve olay anındaki maç d
 etiketi ya da ham metrik adı kalırsa reddedilir; bağlanamayan yer tutucu da
 reddedilir. foundry-v4 kuralları (config `slot_*` bayrakları): olay tipi / rol
 sözcükleri, izinsiz cümle başı, bağlamdan bağımsız yazıyla sayı ve moment tipinin
-desteklemediği nitel abartı da reddedilir (bkz. phrases.py).
+desteklemediği nitel abartı da reddedilir (bkz. phrases.py). foundry-v4.1: moment
+tipinin izin vermediği olay tipine {event:}, aynı cümlede olayın oyuncusunu yeniden
+anan {player:} ve takım yer tutucusundan önce "the" artikeli de reddedilir.
 
 Yer tutucular:
   {home} {away}          takım adı
@@ -30,7 +32,15 @@ from app.generator.models import Event
 
 from .claims import KICKOFF, Claim, MatchTime, Subject, VerificationResult, measure
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
-from .phrases import event_phrase, event_word_spans, first_word, overstatement_spans, sentence_starts
+from .labels import METRIC_LABELS, metric_label
+from .phrases import (
+    event_phrase,
+    event_word_spans,
+    first_word,
+    overstatement_spans,
+    selectable,
+    sentence_starts,
+)
 from .template_narrator import fmt_minute
 from .text_lint import LintIssue, LintResult, Roster, _capitalized_groups, _is_sentence_start, _number_words
 
@@ -42,34 +52,13 @@ SLOT_ARG_RE = re.compile(r"[A-Za-z0-9_\-]+")
 EVENT_ARG_RE = re.compile(r"[A-Za-z0-9_\-]+#\d+")
 SCORE_IDS = {"home": "score_home", "away": "score_away"}
 
-METRIC_LABELS: dict[str, dict[str, str]] = {
-    "en": {
-        "goals": "goals", "shots": "shots", "shots_on_target": "shots on target",
-        "corners": "corners", "fouls": "fouls", "yellow_cards": "yellow cards",
-        "red_cards": "red cards", "penalties_scored": "penalties scored",
-        "penalties_saved": "penalties saved", "penalties_missed": "penalties missed",
-        "substitutions": "substitutions", "possession": "possession",
-        "field_tilt": "territorial share", "score": "goals", "score_margin": "goal margin",
-        "min_score_margin": "largest deficit", "players_on_pitch": "players on the pitch",
-        "pressure_balance": "pressure balance",
-    },
-    "tr": {
-        "goals": "gol", "shots": "şut", "shots_on_target": "isabetli şut",
-        "corners": "korner", "fouls": "faul", "yellow_cards": "sarı kart",
-        "red_cards": "kırmızı kart", "penalties_scored": "atılan penaltı",
-        "penalties_saved": "kurtarılan penaltı", "penalties_missed": "kaçan penaltı",
-        "substitutions": "oyuncu değişikliği", "possession": "topa sahip olma",
-        "field_tilt": "saha üstünlüğü", "score": "gol", "score_margin": "gol farkı",
-        "min_score_margin": "en büyük geri kalış farkı", "players_on_pitch": "sahadaki oyuncu",
-        "pressure_balance": "baskı dengesi",
-    },
-}
 SIDE_LABEL_RE = {
     "en": re.compile(r"(?<!\w)(?:home|away)(?!\w)", re.IGNORECASE),
     "tr": re.compile(r"(?<!\w)(?:ev sahibi|deplasman)", re.IGNORECASE),
 }
 METRIC_NAME_RE = re.compile(r"(?<![\w{])[a-z]+(?:_[a-z]+)+(?!\w)")
 DIGIT_RE = re.compile(r"\d+(?:[.,]\d+)?")
+ARTICLE_TEAM_RE = re.compile(r"(?<!\w)the\s+\{(?:home|away|score_named)\}", re.IGNORECASE)
 
 
 def player_ids(events: Sequence[Event]) -> dict[str, str]:
@@ -240,6 +229,54 @@ def sentence_start_issues(
     return issues
 
 
+def template_sentences(template: str) -> list[tuple[int, int]]:
+    """Şablonun cümle aralıkları (başlangıç, bitiş)."""
+    starts = sorted({0, *(pos for pos, _ in template_sentence_starts(template))})
+    return list(zip(starts, [*starts[1:], len(template)]))
+
+
+def _event_players(e: Event, players: dict[str, str]) -> set[str]:
+    """Olayın ifadesinde adı geçen oyuncuların kadro id'leri (değişiklikte giren oyuncu dahil)."""
+    names = {e.player, (e.data or {}).get("player_in")} - {None}
+    return {pid for pid, name in players.items() if name in names}
+
+
+def event_type_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
+    """{event:} olayı, moment tipinin izinli olay tiplerinden olmalı (pas, çalım, ofsayt… değil)."""
+    issues = []
+    for ph in parse_placeholders(template)[0]:
+        if ph.kind != "event":
+            continue
+        e = ctx.event(ph.arg)
+        if e is not None and not selectable(e, ctx.moment_type):
+            issues.append(LintIssue("event_type_not_allowed", ph.raw, ph.start, ph.end, "placeholder"))
+    return issues
+
+
+def player_repeat_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
+    """Aynı cümlede {event:X} oyuncuyu zaten anıyorsa o oyuncunun {player:} yer tutucusu tekrar."""
+    placeholders = parse_placeholders(template)[0]
+    issues = []
+    for start, end in template_sentences(template):
+        inside = [ph for ph in placeholders if start <= ph.start < end]
+        named: set[str] = set()
+        for ph in inside:
+            e = ctx.event(ph.arg) if ph.kind == "event" else None
+            if e is not None:
+                named |= _event_players(e, ctx.players)
+        issues += [
+            LintIssue("player_repeat", ph.raw, ph.start, ph.end, "placeholder")
+            for ph in inside if ph.kind == "player" and ph.arg in named
+        ]
+    return issues
+
+
+def article_team_issues(template: str) -> list[LintIssue]:
+    """Takım adı artikelsiz yazılır: "The {home}" / "the {score_named}" reddedilir."""
+    return [LintIssue("article_team", m.group(), m.start(), m.end(), "name")
+            for m in ARTICLE_TEAM_RE.finditer(template)]
+
+
 def lint_template(
     template: str, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> LintResult:
@@ -272,6 +309,12 @@ def lint_template(
             issues.append(LintIssue("overstatement", template[start:end], start, end, "label"))
     if config.slot_sentence_start:
         issues += sentence_start_issues(template, ctx.language, config)
+    if config.slot_event_type_allowlist:
+        issues += event_type_issues(template, ctx)
+    if config.slot_player_repeat:
+        issues += player_repeat_issues(template, ctx)
+    if config.slot_article_team:
+        issues += article_team_issues(template)
 
     side_res = [SIDE_LABEL_RE[ctx.language]] if ctx.language in SIDE_LABEL_RE else list(SIDE_LABEL_RE.values())
     for pattern in side_res:
@@ -302,7 +345,6 @@ def render(
 ) -> str:
     """Bağlanmış ve doğrulanmış şablondan nihai metin."""
     by_id = {cid: (c, v) for cid, c, v in zip(claim_ids, claims, verdicts)}
-    labels = METRIC_LABELS.get(ctx.language, METRIC_LABELS["en"])
     starts = {pos for pos, is_placeholder in template_sentence_starts(template) if is_placeholder}
 
     def verified(cid: str) -> float:
@@ -337,7 +379,7 @@ def render(
         if kind == "start":
             return fmt_minute(claim.start.period, claim.start.minute)
         if kind == "label":
-            return labels.get(claim.metric, claim.metric.replace("_", " "))
+            return metric_label(claim.metric, ctx.language)
         return format_value(claim.metric, verified(arg), ctx.language)
 
     return PLACEHOLDER_RE.sub(fill, template)

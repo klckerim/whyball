@@ -1,9 +1,9 @@
-"""foundry-v4 lint kurallarının yan ölçümleri (eval.inject bunları docs/EVAL.md'ye yazar).
+"""foundry-v4 / v4.1 lint kurallarının yan ölçümleri (eval.inject bunları docs/EVAL.md'ye yazar).
 
 - İzinli cümle başı listesinin temiz taslaklardan çıkarılması (`derive_sentence_starts`);
   sonuç app/explain/config.py'ye dondurulur, tests/test_lint_rates.py eşitliği denetler.
-- Kural başına yanlış alarm: template taslakları, v3 slot şablonları ve gerçek LLM çıktıları
-  (foundry-v2 serbest metin, foundry-v3 şablon) üzerinde.
+- Kural başına yanlış alarm: template taslakları, v3/v4 slot şablonları ve gerçek LLM çıktıları
+  (foundry-v2 serbest metin, foundry-v3 ve foundry-v4 şablon) üzerinde.
 - foundry-v3 insan etiketlerinin ham sayımı.
 - Template anlatıcının pencere denetimi (hangi iddia hangi pencereden, metinde yazılı mı).
 """
@@ -28,7 +28,17 @@ from app.explain.phrases import (
     first_word,
     overstatement_spans,
 )
-from app.explain.slots import PLACEHOLDER_RE, SIDE_LABEL_RE, sentence_start_issues, template_sentence_starts
+from app.explain.labels import metric_label
+from app.explain.slots import (
+    PLACEHOLDER_RE,
+    SIDE_LABEL_RE,
+    SlotContext,
+    article_team_issues,
+    event_type_issues,
+    player_repeat_issues,
+    sentence_start_issues,
+    template_sentence_starts,
+)
 from app.explain.template_narrator import narrate
 from app.explain.text_lint import NUMBER_RE, NUMBER_WORDS, Roster, _number_words, bare_surname_spans
 from app.generator import generate_match
@@ -39,6 +49,7 @@ DOCS = REPO_ROOT / "docs"
 DEMO_DIR = REPO_ROOT / "data" / "demo"
 V2_RUN = DOCS / "LLM_RUN.foundry-v2.json"
 V3_RUN = DOCS / "LLM_RUN.foundry-v3.json"
+V4_RUN = DOCS / "LLM_RUN.foundry-v4.json"
 V3_REVIEW = DOCS / "human_review.foundry-v3.csv"
 LANGS = ("en", "tr")
 LABELS = ("correct", "wrong_fact", "misleading", "dull")
@@ -59,6 +70,7 @@ class Text:
     raw: str | None = None  # ham metin (bare_surname için)
     roster: Roster | None = None
     label: dict[str, str] | None = None  # insan etiketi (yalnızca foundry-v3)
+    ctx: SlotContext | None = None  # {event:}/{player:} kuralları için (yalnızca slot şablonları)
 
 
 def to_template(text: str, roster: Roster) -> str:
@@ -118,14 +130,41 @@ def llm_outputs() -> list[Text]:
     return out
 
 
+def llm_v4_outputs() -> list[Text]:
+    """foundry-v4'ün kabul edilen şablonları (izinli liste türetmesine girmez; v4.1 kurallarının hedefi)."""
+    if not V4_RUN.exists():
+        return []
+    run = json.loads(V4_RUN.read_text(encoding="utf-8"))
+    lang = run["meta"]["lang"]
+    runs = run.get("runs") or [run]
+    out: list[Text] = []
+    for one in runs:
+        for match in one["matches"]:
+            events = _demo_events(match["match_id"])
+            moments = {m.id: m for m in detect_moments(events)}
+            for mo in match["moments"]:
+                if mo["source"] == "llm" and mo["template"]:
+                    ctx = SlotContext.from_moment(moments[mo["id"]], events, lang)
+                    out.append(Text("llm-v4", lang, mo["id"], mo["type"], mo["template"], ctx=ctx))
+    return out
+
+
 # --- izinli cümle başı listesi --------------------------------------------------------------------
 
 
+# Zamirler takım yer tutucusunun yerini tutar; cümle başında {home}/{away} yazılır (foundry-v4.1).
+PRONOUNS = {
+    "en": frozenset({"they", "their", "them", "we", "he", "she", "it", "its"}),
+    "tr": frozenset({"onlar", "bunlar", "o"}),
+}
+
+
 def _excluded(word: str, lang: str) -> bool:
-    """Başlangıç listesine girmeyecek kelimeler: home/away, sayı kelimesi, olay sözcüğü, abartı."""
+    """Başlangıç listesine girmeyecek kelimeler: home/away, zamir, sayı kelimesi, olay sözcüğü, abartı."""
     w = word.casefold()
     return bool(
         SIDE_LABEL_RE[lang].fullmatch(word)
+        or w in PRONOUNS[lang]
         or w in NUMBER_WORDS[lang]
         or event_word_spans(word, lang)
         or overstatement_spans(word, lang, None)
@@ -167,7 +206,9 @@ def derive_frozen(corpus: Iterable[tuple[int, str | None]]) -> dict[str, tuple[s
 
 # --- kural başına tetiklenme --------------------------------------------------------------------
 
-RULES = ("sentence_start", "number_words", "overstatement", "bare_surname", "event_word")
+RULES = ("sentence_start", "number_words", "overstatement", "bare_surname", "event_word",
+         "event_type", "player_repeat", "article_team")
+V41_RULES = ("event_type", "player_repeat", "article_team")  # foundry-v4.1 ile eklenen kurallar
 
 
 def fired(t: Text, rule: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> list[str]:
@@ -185,6 +226,14 @@ def fired(t: Text, rule: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) ->
         if t.raw is None or t.roster is None:
             return []
         return [t.raw[s:e] for s, e in bare_surname_spans(t.raw, t.roster)]
+    if rule == "article_team":
+        return [i.fragment for i in article_team_issues(t.template)] if config.slot_article_team else []
+    if rule in ("event_type", "player_repeat"):
+        if t.ctx is None:
+            return []
+        if rule == "event_type":
+            return [i.fragment for i in event_type_issues(t.template, t.ctx)] if config.slot_event_type_allowlist else []
+        return [i.fragment for i in player_repeat_issues(t.template, t.ctx)] if config.slot_player_repeat else []
     raise ValueError(rule)
 
 
@@ -250,6 +299,8 @@ def human_review_counts() -> dict[str, Any] | None:
 
 
 def _window(c) -> str:
+    if c.metric == "pressure_balance":
+        return "kayan pencere (son oynanmış dakikalar)"
     if c.start == c.end:
         return "olay anı"
     if c.start == KICKOFF:
@@ -272,6 +323,8 @@ def window_audit(corpus: Iterable[tuple[int, str | None]], config: ExplainConfig
                     if _window(c) == "pencere (X' → an)":
                         stated = (f"since {c.start.minute}'" in s.text["en"]
                                   and f"{c.start.minute}. dakikadan" in s.text["tr"])
+                    elif c.metric == "pressure_balance":  # pencere etiketin içinde
+                        stated = all(metric_label(c.metric, lang) in s.text[lang] for lang in LANGS)
                     key = (m.type, c.metric, c.kind, _window(c))
                     entry = rows.setdefault(key, [0, 0])
                     entry[0] += 1

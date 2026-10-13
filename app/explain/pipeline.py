@@ -3,11 +3,15 @@ yeniden deneme) → kabul ya da etiketli template yedeği.
 
 CLAUDE.md: doğrulanmayan cümle yayınlanmaz; en fazla `max_retries` yeniden
 deneme, sonra template fallback.
+
+Ölçüm modu: `on_attempt` her denemeyi (taslak, ret kodları, verify sonuçları) çağırana
+verir. Bu kayıt yalnızca çağıranda kalır; `NarrationRecord`'a (trace dahil) ve önbelleğe
+reddedilen taslak yazılmaz.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
@@ -18,7 +22,7 @@ from app.generator.models import Event
 from .cache import NarrationCache, cache_key
 from .claims import Claim, VerificationResult, verify_claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
-from .narrator import Feedback, FeedbackItem, Narrator, NarratorError
+from .narrator import Draft, Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
 from .slots import SlotContext, bind_template, lint_template, render
 from .template_narrator import narrate as template_narrate
@@ -84,6 +88,28 @@ class NarrationRecord:
         )
 
 
+@dataclass(frozen=True)
+class AttemptLog:
+    """Bir anlatıcı denemesi (ölçüm modu). `items` boşsa deneme kabul edildi."""
+
+    moment: Moment
+    attempt: int
+    draft: Draft | None  # anlatıcı hatasında None
+    error: NarratorError | None
+    items: tuple[FeedbackItem, ...]
+    lint_issues: tuple[LintIssue, ...]
+    verification: tuple[VerificationResult, ...]
+    claims: tuple[Claim, ...]  # bağlanmış iddialar (otomatik skor iddiaları dahil)
+    claim_ids: tuple[str, ...]
+
+    @property
+    def accepted(self) -> bool:
+        return self.error is None and not self.items
+
+
+AttemptHook = Callable[[AttemptLog], None]
+
+
 def check_draft(
     text: str,
     claims: Sequence[Claim],
@@ -145,6 +171,7 @@ def run_moment(
     cache: NarrationCache | None = None,
     prompt_version: str | None = None,
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+    on_attempt: AttemptHook | None = None,
 ) -> NarrationRecord:
     persona = persona or config.default_persona
     version = prompt_version or narrator.prompt_version
@@ -184,6 +211,8 @@ def run_moment(
         except NarratorError as e:
             trace.append({"attempt": attempt, "step": "narrate", "ok": False, "narrator": narrator.name,
                           "claims": 0, "feedback": feedback_codes, "error": e.code, "message": str(e)})
+            if on_attempt is not None:
+                on_attempt(AttemptLog(moment, attempt, None, e, (), (), (), (), ()))
             if not e.retryable:
                 fallback_reason = e.code
                 break
@@ -200,7 +229,10 @@ def run_moment(
             )
         else:
             items, issues, results = check_draft(draft.text, draft.claims, events, roster, config, language)
-            claims_out = draft.claims
+            claims_out, ids_out = draft.claims, draft.claim_ids
+        if on_attempt is not None:
+            on_attempt(AttemptLog(moment, attempt, draft, None, tuple(items), tuple(issues), results,
+                                  tuple(claims_out), tuple(ids_out)))
         trace.append({"attempt": attempt, "step": "lint", "ok": not issues,
                       "issues": [{"code": i.code, "fragment": i.fragment} for i in issues]})
         trace.append({"attempt": attempt, "step": "verify", "ok": all(r.ok for r in results),
@@ -252,12 +284,13 @@ def run_match(
     cache: NarrationCache | None = None,
     prompt_version: str | None = None,
     config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG,
+    on_attempt: AttemptHook | None = None,
 ) -> list[tuple[Moment, NarrationRecord]]:
     moments = detect_moments(events)
     if select:
         moments = select_moments(moments, config)
     return [
         (m, run_moment(m, narrator, events, persona=persona, language=language, cache=cache,
-                       prompt_version=prompt_version, config=config))
+                       prompt_version=prompt_version, config=config, on_attempt=on_attempt))
         for m in moments
     ]

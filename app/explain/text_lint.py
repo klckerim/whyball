@@ -17,6 +17,7 @@ from app.generator.models import Event
 
 from .claims import Claim
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
+from .labels import window_phrase_spans
 
 NUMBER_RE = re.compile(
     r"(?P<trmin>\d{1,3})\.\s*dakika"  # TR: "46. dakikadan"
@@ -212,6 +213,9 @@ def lint_text(
         ):
             issues.append(LintIssue("unsupported_name", m.group(), m.start(), m.end(), "name"))
         masked[m.start() : m.end()] = " " * (m.end() - m.start())
+    # Kodun ürettiği sabit pencere ifadeleri ("over the last 10 minutes of play"): iddia değil.
+    for start, end in window_phrase_spans(text):
+        masked[start:end] = "x" * (end - start)
     masked_text = "".join(masked)
 
     # 2) Kadroda olmayan isim benzeri kelimeler.

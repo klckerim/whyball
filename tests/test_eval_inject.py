@@ -19,7 +19,7 @@ def test_every_injection_type_is_measured():
     assert [r.spec.name for r in _report().results] == [t.name for t in INJECTION_TYPES]
     for r in _report().results:
         for variant in VARIANTS:
-            injector = getattr(r.spec, variant)
+            injector = r.spec.injector(variant)
             assert getattr(r, variant).applicable > 0 or injector is None, (r.spec.name, variant)
 
 
@@ -27,7 +27,7 @@ def test_all_drafts_slotify_and_control_has_no_false_alarms():
     report = _report()
     assert report.slotified == report.slotified_v4 == report.samples
     control = _row("control")
-    assert control.v2.caught == control.v3.caught == control.v4.caught == 0
+    assert control.v2.caught == control.v3.caught == control.v4.caught == control.v41.caught == 0
 
 
 def test_slot_types_are_caught_by_slots_but_not_free_text():
@@ -69,9 +69,28 @@ def test_report_is_deterministic_and_complete():
     table = render_table(_report())
     for spec in INJECTION_TYPES:
         assert f"`{spec.name}`" in table
-    assert "| v2 yakalama |" in table.splitlines()[0] and "v4 yakalama" in table
-    for title in ("foundry-v2", "foundry-v3", "foundry-v4"):
-        assert f"## Yakalanmayan türler: {title}" in first
-    for section in ("## v4 lint kuralları ve yanlış alarm", "## Nitel abartı yasak listesi",
+    assert "| v2 yakalama |" in table.splitlines()[0] and "v4.1 yakalama" in table
+    verifier = first.index("## Verifier ajanının hedefi")
+    for title in ("foundry-v2", "foundry-v3", "foundry-v4 (", "foundry-v4.1"):
+        assert first.index(f"### Yakalanmayan türler: {title}") > verifier
+    assert "\n## Yakalanmayan türler" not in first
+    for section in ("## v4 / v4.1 lint kuralları ve yanlış alarm", "### foundry-v4.1 değişikliklerinin yanlış alarmı",
+                    "## Nitel abartı yasak listesi",
                     "## Şablon pencere denetimi", "## İnsan etiketleri: foundry-v3"):
         assert section in first
+
+
+def test_v41_closes_player_repeat_without_regressions():
+    row = _row("player_repeat")
+    assert row.v2.rate == row.v3.rate == row.v4.rate == 0.0
+    assert row.v41.rate == 1.0 and row.v41.applicable > 0
+    for r in _report().results:
+        if r.v4.applicable:
+            assert r.v41.applicable == r.v4.applicable and r.v41.caught >= r.v4.caught, r.spec.name
+
+
+def test_v41_false_alarms_are_measured_on_clean_sets():
+    rows = {name: (flagged, total, hits) for name, flagged, total, hits in _report().v41_false_alarms}
+    flagged, total, hits = rows["Template taslakları (ham metin)"]
+    assert total > 0 and set(hits) <= {"They"}  # yalnızca "They had been … down"
+    assert rows["v4 slot tabanı (temiz)"][0] == 0

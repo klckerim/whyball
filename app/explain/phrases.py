@@ -7,7 +7,8 @@ penaltıyı kurtaran oyuncu alanı yok: kurtarış ifadelerinde kaleci adı geç
 (`save` olayı yalnızca takım adıyla anılır).
 
 Sözlükler: olay tipi / rol sözcükleri (yer tutucu dışında yasak), nitel abartı
-ifadeleri (moment tipi desteklemiyorsa yasak) ve cümle başı denetimi.
+ifadeleri (moment tipi desteklemiyorsa yasak), cümle başı denetimi ve (foundry-v4.1)
+moment tipine göre `{event:}` ile seçilebilir olay tipleri.
 """
 
 from __future__ import annotations
@@ -49,6 +50,23 @@ _PHRASES: dict[tuple[str, str | None], tuple[str, str]] = {
     ("save", None): ("{team} made a save at {m}", "{team} kurtarış yaptı ({m})"),
 }
 NARRATABLE = frozenset(t for t, _ in _PHRASES)
+
+# {event:} ile seçilebilir olay tipleri, moment tipine göre (foundry-v4.1). Pas, çalım, ofsayt,
+# faul, korner, kurtarış hiçbir momentte seçilemez: momentin kendisini anlatmazlar.
+_KEY_EVENTS = frozenset({"goal", "shot", "penalty", "red_card", "yellow_card", "substitution"})
+SELECTABLE_EVENT_TYPES: dict[str, frozenset[str]] = {
+    "goal": frozenset({"goal", "shot", "penalty"}),
+    "score_change": frozenset({"goal", "shot", "penalty"}),
+    "red_card": frozenset({"red_card", "yellow_card"}),
+    "penalty": frozenset({"penalty"}),
+    "pressure_shift": _KEY_EVENTS,
+    "dominance_without_reward": _KEY_EVENTS,
+}
+
+
+def selectable(e: Event, moment_type: str) -> bool:
+    """Olay bu moment tipinde {event:} ile anılabilir mi (bilinmeyen moment tipinde hayır)."""
+    return e.type.value in SELECTABLE_EVENT_TYPES.get(moment_type, frozenset())
 
 
 def _variant(e: Event) -> str | None:

@@ -19,7 +19,7 @@ from app.explain.template_narrator import fmt_minute
 from app.generator import generate_match
 from app.generator.freeze import demo_paths
 from app.generator.models import read_jsonl
-from tests.explain_helpers import match
+from tests.explain_helpers import match, moment_case
 
 V3_RULES = replace(
     DEFAULT_EXPLAIN_CONFIG, slot_event_words=False, slot_sentence_start=False,
@@ -325,3 +325,104 @@ def test_overstatement_needs_moment_type_support():
     dominance = replace(ctx(), moment_type="dominance_without_reward")
     assert lint_template("{home} dominate without reward.", dominance).ok
     assert not lint_template("{home} dominate without reward.", pressure).ok
+
+
+# --- foundry-v4.1 kuralları -------------------------------------------------------------------
+
+V4_RULES = replace(
+    DEFAULT_EXPLAIN_CONFIG, slot_event_type_allowlist=False, slot_player_repeat=False,
+    slot_article_team=False, sentence_start_allowed_en=("At", "Possession", "The", "They"),
+)
+
+
+def _case_ctx(mtype, lang="en"):
+    events, moment = moment_case(mtype)
+    return events, moment, SlotContext.from_moment(moment, events, lang)
+
+
+def _ref(events, e):
+    return f"{events[0].match_id}#{e.seq}"
+
+
+def _evidence_of_type(events, moment, etype):
+    by_seq = {e.seq: e for e in events}
+    return next(by_seq[s] for s in moment.event_ids if by_seq[s].type.value == etype)
+
+
+@pytest.mark.parametrize("mtype,etype,allowed", [
+    ("pressure_shift", "pass", False),
+    ("pressure_shift", "shot", True),
+    ("red_card", "foul", False),
+    ("red_card", "red_card", True),
+    ("penalty", "foul", False),
+    ("penalty", "penalty", True),
+    ("goal", "goal", True),
+])
+def test_event_type_allowlist_by_moment_type(mtype, etype, allowed):
+    events, moment, c = _case_ctx(mtype)
+    template = "{event:%s}." % _ref(events, _evidence_of_type(events, moment, etype))
+    found = [code for code, _ in codes(lint_template(template, c).issues)]
+    assert ("event_type_not_allowed" in found) is not allowed
+    assert "event_type_not_allowed" not in [i.code for i in lint_template(template, c, V4_RULES).issues]
+
+
+def test_event_type_allowlist_substitution_only_in_open_play_moments():
+    sub = next(e for e in EVENTS if e.type.value == "substitution")
+    template = "{event:%s}." % _ref(EVENTS, sub)
+    assert ("event_type_not_allowed", template[:-1]) in codes(lint_template(template, ctx()).issues)
+    pressure = replace(ctx(), moment_type="pressure_shift")
+    assert "event_type_not_allowed" not in [i.code for i in lint_template(template, pressure).issues]
+
+
+def test_player_repeat_in_event_sentence_is_rejected():
+    template = "{event:%s} by {player:%s}, making it {score}." % (REF, PID)
+    assert ("player_repeat", f"{{player:{PID}}}") in codes(lint_template(template, ctx()).issues)
+    assert lint_template(template, ctx(), V4_RULES).ok
+
+
+def test_player_in_another_sentence_is_not_a_repeat():
+    template = "{event:%s}, making it {score}. {player:%s} had been quiet before." % (REF, PID)
+    assert "player_repeat" not in [i.code for i in lint_template(template, ctx()).issues]
+
+
+def test_player_repeat_covers_substitute_coming_on():
+    sub = next(e for e in EVENTS if e.type.value == "substitution")
+    in_id = {name: pid for pid, name in player_ids(EVENTS).items()}[sub.data["player_in"]]
+    template = "{event:%s}, with {player:%s} fresh." % (_ref(EVENTS, sub), in_id)
+    assert ("player_repeat", f"{{player:{in_id}}}") in codes(lint_template(template, ctx()).issues)
+
+
+@pytest.mark.parametrize("template,fragment", [
+    ("The {home} have had {value:c1} of the ball.", "The {home}"),
+    ("{event:%s}, making it the {score_named}." % REF, "the {score_named}"),
+    ("Possession favours the {away}.", "the {away}"),
+])
+def test_article_before_team_placeholder_is_rejected(template, fragment):
+    assert ("article_team", fragment) in codes(lint_template(template, ctx()).issues)
+    assert "article_team" not in [i.code for i in lint_template(template, ctx(), V4_RULES).issues]
+
+
+def test_article_before_other_words_is_allowed():
+    assert lint_template("The {label:c1} favours {home}.", ctx()).ok
+
+
+def test_they_is_no_longer_an_allowed_sentence_start():
+    template = "{event:%s}. They have had {value:c1} of the ball." % REF
+    assert ("sentence_start", "They") in codes(lint_template(template, ctx()).issues)
+    assert lint_template(template, ctx(), V4_RULES).ok
+
+
+# --- baskı dengesi penceresi ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("lang,expected", [
+    ("en", "pressure balance over the last 10 minutes of play"),
+    ("tr", "son 10 oynanmış dakikadaki baskı dengesi"),
+])
+def test_pressure_balance_label_states_window(lang, expected):
+    from app.analytics.config import DEFAULT_CONFIG
+
+    assert f"{DEFAULT_CONFIG.pressure_window_min:g}" == "10"
+    claim = Claim("state", Subject("home"), "pressure_balance", "approx", 0.5, KICKOFF, T, (REF,))
+    text = render("{label:c1} {value:c1}.", (claim,), ("c1",), (VerificationResult(True, "ok", 0.5),), ctx(lang))
+    assert text == expected[0].upper() + expected[1:] + " +0.50."

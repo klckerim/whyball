@@ -38,9 +38,13 @@ class ExplainConfig:
     slot_sentence_start: bool = True  # cümlenin ilk kelimesi yer tutucu ya da izinli başlangıç
     slot_strict_number_words: bool = True  # yazıyla sayı bağlamdan bağımsız yasak ("one of", "bir ara")
     slot_overstatement: bool = True  # nitel abartı listesi (moment tipi desteklemiyorsa)
+    # --- foundry-v4.1 kuralları ---
+    slot_event_type_allowlist: bool = True  # {event:} yalnızca moment tipinin izinli olay tiplerinden
+    slot_player_repeat: bool = True  # aynı cümlede {event:X} + X'in oyuncusu için {player:} yasak
+    slot_article_team: bool = True  # takım yer tutucusundan önce "the" yasak ("The {home}")
     # Temiz taslaklardan çıkarılmış cümle başı kelimeleri (eval/lint_rates.py `derive_sentence_starts`).
     # Elle düzenlemeyin; tests/test_lint_rates.py yeniden çıkarılan listeyle eşitliği denetler.
-    sentence_start_allowed_en: tuple[str, ...] = ("At", "Possession", "The", "They")
+    sentence_start_allowed_en: tuple[str, ...] = ("At", "Possession", "The")
     sentence_start_allowed_tr: tuple[str, ...] = ("Skor",)
 
     # --- LLM anlatıcı güvenliği ---

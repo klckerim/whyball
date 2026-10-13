@@ -23,6 +23,7 @@ from .claims import (
     verify_claim,
 )
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
+from .labels import metric_label
 
 LANGS = ("en", "tr")
 
@@ -242,9 +243,10 @@ def _pressure_shift(c: _Context) -> list[Sentence]:
     return [
         Sentence(
             {
-                "en": f"{c.minute} — {team} take control: pressure balance {balance:+.2f} "
-                      f"in their favour.",
-                "tr": f"{c.minute} — Baskı {team} tarafına geçti: baskı dengesi {balance:+.2f}.",
+                "en": f"{c.minute} — {team} take control: {metric_label('pressure_balance', 'en')} "
+                      f"is {balance:+.2f} in their favour.",
+                "tr": f"{c.minute} — Baskı {team} tarafına geçti: "
+                      f"{metric_label('pressure_balance', 'tr')} {balance:+.2f}.",
             },
             (c.state("pressure_balance", side, "approx", balance, c.m.event_ids),),
         ),
