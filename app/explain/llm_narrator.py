@@ -1,17 +1,17 @@
-"""LLM anlatıcı: Microsoft Foundry üzerinde Narrator protokolü.
+"""LLM narrator: the Narrator protocol on Microsoft Foundry.
 
-İstemci enjekte edilir (`ChatClient` protokolü). Agent Framework'e özgü tek
-yer `FoundryChatClientAdapter`'dır; testler sahte istemci kullanır.
+The client is injected (`ChatClient` protocol). The only Agent Framework-specific place
+is `FoundryChatClientAdapter`; tests use a fake client.
 
-foundry-v5 (claim menüsü, bkz. menu.py): iddiaları kod kurar ve doğrular. Modele
-moment, doğrulanmış iddia menüsü (değer, etiket, aralık, tam kanıt listesi), kodun yazdığı
-yan cümleler, kanıt olayları ve kadro verilir. Model iddia kurmaz ve olay bağlamaz:
-çıktısı yalnızca yer tutuculu bir metindir (`{"text": ...}`), menü id'lerini kullanır.
-Somut değerleri pipeline menüden render eder.
+foundry-v5 (claim menu, see menu.py): code builds and verifies the claims. The model gets
+the moment, the verified claim menu (value, label, range, full evidence list), clauses written
+by code, the evidence events and the squads. The model builds no claims and links no events:
+its output is only placeholder text (`{"text": ...}`) that uses menu ids.
+The pipeline renders the concrete values from the menu.
 
-Güvenlik: çağrı başına zaman aşımı, yanıt token üst sınırı, anlatıcı başına
-maksimum çağrı sayısı (aşılınca `BudgetExceeded`), her çağrının token
-kullanımı ve süresi `whyball.llm` logger'ına ve `FoundryNarrator.usage`'a yazılır.
+Safety: a per-call timeout, a response token cap, a maximum number of calls per narrator
+(`BudgetExceeded` once exceeded); the token usage and duration of each call are written to
+the `whyball.llm` logger and to `FoundryNarrator.usage`.
 """
 
 from __future__ import annotations
@@ -45,12 +45,12 @@ from .slots import SlotContext, player_ids
 from .template_narrator import fmt_minute
 
 PROMPT_VERSION = "foundry-v5"
-INSTALL_HINT = "FoundryNarrator için: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
+INSTALL_HINT = "For FoundryNarrator: pip install -e '.[llm]' (agent-framework-foundry, azure-identity)"
 logger = logging.getLogger("whyball.llm")
 SIDES = ("home", "away")
 
 
-# --- moment kaydı --------------------------------------------------------------------------
+# --- moment record --------------------------------------------------------------------------
 
 
 def _time(period: int, minute: int, second: int) -> dict[str, int]:
@@ -60,7 +60,7 @@ def _time(period: int, minute: int, second: int) -> dict[str, int]:
 def moment_record(
     moment: Moment, events: Sequence[Event], language: str = "en", menu: ClaimMenu | None = None
 ) -> dict[str, Any]:
-    """Modelin görebileceği tek bilgi: moment, claim menüsü, yan cümleler, kanıt olayları, kadro."""
+    """All the model may see: the moment, claim menu, clauses, evidence events, squads."""
     menu = menu or build_menu(moment, events)
     ctx = SlotContext.from_moment(moment, events, language)
     match_id = events[0].match_id
@@ -73,8 +73,8 @@ def moment_record(
             "minute": fmt_minute(e.period, e.minute),
             "team": e.team,
             "player": id_of.get(e.player) if e.player else None,
-            "phrase": event_phrase(e, ctx.teams, language),  # {event:<id>} bu metne render edilir
-            "selectable": selectable(e, moment.type),  # {event:} yalnızca bu olaylar için
+            "phrase": event_phrase(e, ctx.teams, language),  # {event:<id>} renders to this text
+            "selectable": selectable(e, moment.type),  # {event:} only for these events
         }
         for e in evidence_events(menu, events)
     ]
@@ -96,23 +96,23 @@ def moment_record(
     }
 
 
-# --- kapalı çıktı şeması ------------------------------------------------------------------
+# --- closed output schema ------------------------------------------------------------------
 
 
 class MenuDraftOut(BaseModel):
-    """Model yalnızca yer tutuculu metni döndürür; iddia ve olay bağlama alanı yok."""
+    """The model returns only placeholder text; there is no field for claims or event links."""
 
     model_config = ConfigDict(extra="forbid")
     text: str
 
 
 def parse_draft(raw: str, menu: ClaimMenu) -> Draft:
-    """Model çıktısı → menü taslağı (iddialar menüden bağlanır)."""
+    """Model output → menu draft (claims are bound from the menu)."""
     out = MenuDraftOut.model_validate_json(raw)
     return Draft(out.text, (), template=out.text, menu=menu)
 
 
-# --- istemci katmanı --------------------------------------------------------------------
+# --- client layer --------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -142,12 +142,12 @@ def _usage_value(usage: Any, name: str) -> int | None:
 
 
 class FoundryChatClientAdapter:
-    """Agent Framework `FoundryChatClient` üzerine ince sarmalayıcı.
+    """Thin wrapper over Agent Framework `FoundryChatClient`.
 
-    `get_response(messages, options={"max_tokens", "response_format"})`: Agent Framework
-    `max_tokens`'ı Responses `max_output_tokens`'a, Pydantic modelini json_schema
-    `text.format`'a çevirir; `reasoning={"effort": ...}` (`OpenAIChatOptions.reasoning`,
-    Foundry'de `FoundryChatOptions = OpenAIChatOptions`) akıl yürütme çabasını ayarlar. `usage_details` bir TypedDict'tir (agent-framework-core 1.21):
+    `get_response(messages, options={"max_tokens", "response_format"})`: Agent Framework turns
+    `max_tokens` into Responses `max_output_tokens` and the Pydantic model into the json_schema
+    `text.format`; `reasoning={"effort": ...}` (`OpenAIChatOptions.reasoning`,
+    `FoundryChatOptions = OpenAIChatOptions` on Foundry) sets the reasoning effort. `usage_details` is a TypedDict (agent-framework-core 1.21):
     `input_token_count`, `output_token_count`, `reasoning_output_token_count`.
     """
 
@@ -245,7 +245,7 @@ Examples: "{{event:<goal event id>}}, and {{clause:possession}}." · "{{clause:p
 
 Respond only with JSON: {{"text": "<template>"}}."""
 
-# Prompt'taki okunur listeler; denetimin kendisi phrases.py sözlükleriyle yapılır.
+# Readable lists for the prompt; the check itself uses the phrases.py lexicons.
 EVENT_WORD_EXAMPLES = {
     "en": "goal, scored, shot, saved, penalty, missed, sent off, card, booked, foul, corner, offside, "
           "substitute, equalised, levelled, conceded, assist, header, keeper",
@@ -328,7 +328,7 @@ def build_messages(
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-# --- anlatıcı ----------------------------------------------------------------------------
+# --- narrator ----------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -340,7 +340,7 @@ class UsageRecord:
     output_tokens: int | None
     reasoning_tokens: int | None
     latency_ms: int
-    error: str | None = None  # hata mesajı (istemci, zaman aşımı, şema)
+    error: str | None = None  # error message (client, timeout, schema)
 
 
 class FoundryNarrator:
@@ -363,7 +363,7 @@ class FoundryNarrator:
         self.calls = 0
         self.usage: list[UsageRecord] = []
         self._menus: dict[str, ClaimMenu] = {}
-        # Kalıcı loop: senkron pipeline'dan çağrılır, istemci tek loop'a bağlı kalır.
+        # Persistent loop: called from the synchronous pipeline, the client stays bound to one loop.
         self._loop = asyncio.new_event_loop()
 
     def close(self) -> None:
@@ -406,7 +406,7 @@ class FoundryNarrator:
         cfg = self.config
         if self.calls >= cfg.llm_max_calls_per_run:
             raise BudgetExceeded(
-                f"LLM çağrı bütçesi aşıldı: {self.calls}/{cfg.llm_max_calls_per_run}"
+                f"LLM call budget exceeded: {self.calls}/{cfg.llm_max_calls_per_run}"
             )
         self.calls += 1
         model = self.response_model(moment)
@@ -420,11 +420,11 @@ class FoundryNarrator:
         try:
             result = self._loop.run_until_complete(asyncio.wait_for(call, cfg.llm_timeout_s))
         except TimeoutError:
-            message = f"LLM {cfg.llm_timeout_s:g} sn içinde yanıt vermedi"
+            message = f"LLM did not respond within {cfg.llm_timeout_s:g} s"
             self._record(moment, "timeout", started, None, message)
             raise NarratorTimeout(message) from None
         except Exception as e:
-            message = f"LLM istemci hatası: {e!r}"
+            message = f"LLM client error: {e!r}"
             self._record(moment, "client_error", started, None, message)
             raise NarratorError(message) from e
         try:
@@ -432,7 +432,7 @@ class FoundryNarrator:
         except ValidationError as e:
             first = e.errors()[0]
             message = (
-                f"Şemaya uymayan yanıt ({e.error_count()} hata): {first['type']} at "
+                f"Response does not match the schema ({e.error_count()} errors): {first['type']} at "
                 f"{'.'.join(map(str, first['loc'])) or '<root>'}"
             )
             self._record(moment, "invalid_output", started, result, message)
@@ -444,7 +444,7 @@ class FoundryNarrator:
 def foundry_narrator_from_env(
     events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> FoundryNarrator:
-    """FOUNDRY_PROJECT_ENDPOINT ve FOUNDRY_MODEL ortamdan ya da .env'den; sır kodda tutulmaz."""
+    """FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL from the environment or .env; no secrets in code."""
     try:
         from dotenv import load_dotenv
     except ImportError:
@@ -454,7 +454,7 @@ def foundry_narrator_from_env(
     endpoint = os.environ.get("FOUNDRY_PROJECT_ENDPOINT")
     model = os.environ.get("FOUNDRY_MODEL")
     if not endpoint or not model:
-        raise ValueError("foundry anlatıcı için FOUNDRY_PROJECT_ENDPOINT ve FOUNDRY_MODEL gerekli")
+        raise ValueError("FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL are required for the foundry narrator")
     try:
         from azure.identity import AzureCliCredential
     except ImportError as e:

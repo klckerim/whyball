@@ -26,7 +26,7 @@ def _codes(result):
     return [(i.code, i.fragment) for i in result.issues]
 
 
-# --- her şey desteklenmiş metin ----------------------------------------------------
+# --- fully supported text ----------------------------------------------------
 
 
 def test_template_draft_is_fully_supported():
@@ -45,7 +45,7 @@ def test_all_template_drafts_pass(seed, scenario, lang):
         assert result.ok, (m.type, d.text, _codes(result))
 
 
-# --- iddiasız sayı ------------------------------------------------------------------
+# --- number without a claim ------------------------------------------------------------------
 
 
 def test_number_without_claim_is_rejected():
@@ -62,12 +62,12 @@ def test_pressure_window_phrase_is_not_a_claim_number():
         d = TemplateNarrator(EVENTS).narrate(pressure, "neutral", lang)
         assert phrase in d.text
         assert lint_text(d.text, d.claims, ROSTER, language=lang).ok
-    # Pencere ifadesi dışında yazılan aynı sayı hâlâ iddiasız.
+    # The same number written outside the window phrase is still unsupported.
     text = f"{d.text} {HOME} have pressed for 10 minutes."
     assert ("unsupported_number", "10") in _codes(lint_text(text, d.claims, ROSTER, language="en"))
 
 
-# --- iddiasız isim -------------------------------------------------------------------
+# --- name without a claim -------------------------------------------------------------------
 
 
 def test_known_name_without_claim_is_rejected():
@@ -83,7 +83,7 @@ def test_team_without_claim_is_rejected():
     assert _codes(result) == [("unsupported_name", AWAY)]
 
 
-# --- uydurma isim ----------------------------------------------------------------------
+# --- made-up name ----------------------------------------------------------------------
 
 
 def test_fabricated_name_is_rejected():
@@ -100,7 +100,7 @@ def test_sentence_start_capitalized_word_is_fine():
     assert lint_text(f"{DRAFT.text} What a moment.", DRAFT.claims, ROSTER).ok
 
 
-# --- takma adlar ve sayı biçimleri ------------------------------------------------------
+# --- aliases and number formats ------------------------------------------------------
 
 
 def test_surname_and_city_aliases_are_recognised():
@@ -108,7 +108,7 @@ def test_surname_and_city_aliases_are_recognised():
     surname, city = player.split()[-1], HOME.rsplit(" ", 1)[0]
     claims = [_claim(team="home", player=player)]
     assert lint_text(f"22' — {player} scores for {city}.", claims, ROSTER).ok
-    # Yalnızca soyad reddedilir (aynı soyad iki takımda olabilir); v2 davranışı bayrakla.
+    # A surname alone is rejected (the same surname can appear in both teams); v2 behaviour via a flag.
     assert _codes(lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER)) == [("bare_surname", surname)]
     v2 = replace(DEFAULT_EXPLAIN_CONFIG, lint_bare_surname=False)
     assert lint_text(f"22' — {surname} scores for {city}.", claims, ROSTER, v2).ok
@@ -118,7 +118,7 @@ def test_surname_and_city_aliases_are_recognised():
 
 
 def test_bare_surname_shared_across_teams_is_rejected():
-    # Her demo maçında iki takımda ortak soyad var; yalnızca soyad hangi oyuncu olduğunu belirlemez.
+    # Every demo match has a surname shared by both teams; the surname alone does not identify the player.
     home = {p.split()[-1]: p for p in [*TEAMS["home"]["lineup"], *TEAMS["home"]["bench"]]}
     away = {p.split()[-1]: p for p in [*TEAMS["away"]["lineup"], *TEAMS["away"]["bench"]]}
     surname = sorted(home.keys() & away.keys())[0]
@@ -145,7 +145,7 @@ def test_percent_and_decimal():
     assert _codes(result) == [("unsupported_number", "60%"), ("unsupported_number", "+0.90")]
 
 
-# --- yazıyla sayılar (EN, 0-20) -------------------------------------------------------
+# --- number words (EN, 0-20) -------------------------------------------------------
 
 
 def _goals(value, team="home"):
@@ -179,7 +179,7 @@ def test_unsupported_number_words(text, lang, fragment):
     "text,lang",
     [
         ("22' — It was one of those days.", "en"),
-        ("22' — The goal came on the break.", "en"),  # EN "on" sayı değil
+        ("22' — The goal came on the break.", "en"),  # EN "on" is not a number
     ],
 )
 def test_ambiguous_words_without_count_noun_are_not_numbers(text, lang):

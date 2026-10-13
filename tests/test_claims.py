@@ -53,7 +53,7 @@ def _shots_claim(team, end):
     return Claim("count", Subject(team), "shots", "eq", len(shots), KICKOFF, end, _refs(shots))
 
 
-# --- doğru iddialar geçer ------------------------------------------------------------
+# --- correct claims pass ------------------------------------------------------------
 
 
 def test_true_claims_pass():
@@ -80,7 +80,7 @@ def test_true_claims_pass():
         assert result.ok, (claim.describe(), result)
 
 
-# --- bozulmuş sayı reddedilir ---------------------------------------------------------
+# --- a corrupted number is rejected ---------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -98,22 +98,22 @@ def test_tampered_number_is_rejected(claim):
     assert not result.ok and result.reason == "value_mismatch"
 
 
-# --- başka maçtan event id reddedilir --------------------------------------------------
+# --- an event id from another match is rejected --------------------------------------------------
 
 
 def test_event_id_from_another_match_is_rejected():
     other_goal = next(e for e in OTHER if e.type is EventType.GOAL)
     assert verify_claim(_first_goal_claim(event_ids=(event_ref(other_goal),)), EVENTS).reason == "foreign_event"
-    # Aynı seq, farklı maç kimliği: seq tek başına yetmez.
+    # Same seq, different match id: the seq alone is not enough.
     same_seq = f"{OTHER[0].match_id}#{GOALS[0].seq}"
     assert verify_claim(_first_goal_claim(event_ids=(same_seq,)), EVENTS).reason == "foreign_event"
 
 
-# --- gelecekteki olaya dayanan iddia reddedilir ------------------------------------------
+# --- a claim resting on a future event is rejected ------------------------------------------
 
 
 def test_claim_citing_future_event_is_rejected():
-    # 38'deki iddia, 61'deki gole dayanıyor.
+    # The claim at 38' rests on the goal at 61'.
     claim = Claim(
         "count", Subject("away"), "goals", "eq", 1, KICKOFF, T(RED), (event_ref(GOALS[1]),)
     )
@@ -123,7 +123,7 @@ def test_claim_citing_future_event_is_rejected():
 
 
 def test_future_events_are_not_counted():
-    # Dayanak göstermeden "38'e kadar away 1 gol" iddiası: 61' golü görülmez.
+    # A claim of "away 1 goal up to 38'" with no evidence: the 61' goal is not visible.
     claim = Claim("count", Subject("away"), "goals", "eq", 1, KICKOFF, T(RED), ())
     result = verify_claim(claim, EVENTS)
     assert result.reason == "value_mismatch" and result.actual == 0
@@ -135,14 +135,14 @@ def test_future_events_are_not_counted():
     ids=["count", "ratio", "count-many"],
 )
 def test_verification_ignores_everything_after_end(claim):
-    # Gelecek olaylar bozulur (zaman aynı, takım/tip değişir); sonuç değişmemeli.
+    # Future events are corrupted (same time, team/type changed); the result must not change.
     k = next(i for i, e in enumerate(EVENTS) if T(e) > claim.end)
     spliced = EVENTS[:k] + [_corrupt(e) for e in EVENTS[k:]]
     assert verify_claim(claim, spliced) == verify_claim(claim, EVENTS)
     assert verify_claim(claim, EVENTS).ok
 
 
-# --- diğer ret nedenleri -----------------------------------------------------------------
+# --- other rejection reasons -----------------------------------------------------------------
 
 
 @pytest.mark.parametrize(

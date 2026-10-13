@@ -19,7 +19,7 @@ EXPECTED = {
     "foreign_event": ("verify", "foreign_event"),
     "hallucinated_name": ("lint", "unknown_name"),
     "unsupported_sentence": ("lint", "unsupported_number"),
-    "fixes_after_feedback": ("verify", "value_mismatch"),  # feedback yokken
+    "fixes_after_feedback": ("verify", "value_mismatch"),  # without feedback
 }
 
 

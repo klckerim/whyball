@@ -50,11 +50,11 @@ def format_moment(m: Moment) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Maç akışından momentleri çıkar")
+    parser = argparse.ArgumentParser(description="Extract moments from a match event stream")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
-    parser.add_argument("--input", help="JSONL olay dosyası (seed/senaryo yerine)")
-    parser.add_argument("--jsonl", action="store_true", help="Momentleri JSON satırı olarak yaz")
+    parser.add_argument("--input", help="JSONL event file (instead of seed/scenario)")
+    parser.add_argument("--jsonl", action="store_true", help="Write moments as JSON lines")
     args = parser.parse_args(argv)
 
     if args.input:
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.seed is not None:
         events = generate_match(args.seed, args.scenario)
     else:
-        parser.error("--seed ya da --input gerekli")
+        parser.error("--seed or --input is required")
 
     for m in detect_moments(events):
         if args.jsonl:

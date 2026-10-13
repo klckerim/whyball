@@ -1,4 +1,4 @@
-"""Anlatılacak momentlerin seçimi (saf fonksiyon)."""
+"""Selection of the moments to narrate (pure function)."""
 
 from __future__ import annotations
 
@@ -12,13 +12,13 @@ from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 def select_moments(
     moments: Iterable[Moment], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[Moment]:
-    """Momentleri seçer.
+    """Selects moments.
 
-    - ``always_keep`` tipleri koşulsuz tutulur ve pencere kotasına sayılmaz.
-    - Diğerleri ``importance >= min_importance`` ise aday olur; her
-      ``window_minutes`` dakikalık pencerede (devre bazında) önem sırasına göre
-      en fazla ``max_per_window`` aday kalır.
-    - Çıktı ``(at_seq, id)`` sırasındadır; girdi sırasından bağımsızdır.
+    - ``always_keep`` types are kept unconditionally and do not count toward the window quota.
+    - The others are candidates if ``importance >= min_importance``; in each
+      ``window_minutes``-minute window (per half) at most ``max_per_window`` candidates
+      remain, by importance.
+    - The output is in ``(at_seq, id)`` order, independent of the input order.
     """
     moments = list(moments)
     kept = [m for m in moments if m.type in config.always_keep]

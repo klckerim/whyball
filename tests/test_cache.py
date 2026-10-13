@@ -44,7 +44,7 @@ def test_corrupt_cache_entry_is_a_miss(tmp_path):
     (tmp_path / f"{key}.json").write_text("{not json", encoding="utf-8")
     record = run_moment(moment, narrator, events, cache=cache)
     assert not record.cache_hit and narrator.calls == 1
-    assert cache.get(key)["text"] == record.text  # bozuk kayıt üzerine yazıldı
+    assert cache.get(key)["text"] == record.text  # the corrupt entry was overwritten
 
 
 def test_fallback_results_are_not_cached(tmp_path):

@@ -1,8 +1,8 @@
-"""Analytics eşikleri ve ağırlıkları.
+"""Analytics thresholds and weights.
 
-Metrik ve moment kodu sayısal eşik içermez; hepsi buradan okunur. Değerler
-senaryo beklentileri ve senaryosuz maçlardaki moment sıklığına göre kalibre
-edilmiştir (bkz. tests/test_moments.py).
+Metric and moment code holds no numeric thresholds; all of them are read from here. The values
+are calibrated against the scenario expectations and the moment frequency in matches without a
+scenario (see tests/test_moments.py).
 """
 
 from __future__ import annotations
@@ -12,30 +12,30 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class AnalyticsConfig:
-    # --- saha ---
+    # --- pitch ---
     pitch_length: float = 105.0
-    final_third_x: float = 70.0  # kendi kale çizgisinden uzaklık; ötesi son üçte bir
+    final_third_x: float = 70.0  # distance from own goal line; beyond it is the final third
 
-    # --- baskı endeksi ---
+    # --- pressure index ---
     pressure_window_min: float = 10.0
     w_shot: float = 3.0
     w_entry: float = 1.0
     w_corner: float = 2.0
-    min_pressure_volume: float = 6.0  # penceredeki toplam bunun altındaysa denge 0
+    min_pressure_volume: float = 6.0  # if the window total is below this, the balance is 0
 
-    # --- baskı kayması (histerezis) ---
-    shift_enter: float = 0.5  # |denge| bunu aşınca taraf baskın sayılır
-    shift_exit: float = 0.2  # |denge| bunun altına inince nötr
+    # --- pressure shift (hysteresis) ---
+    shift_enter: float = 0.5  # a side counts as dominant once |balance| exceeds this
+    shift_exit: float = 0.2  # neutral once |balance| drops below this
     shift_cooldown_min: float = 8.0
-    shift_rearm_min: float = 5.0  # bu kadar nötr kalınırsa baskı sönmüş sayılır, sonraki baskınlık yeni kayma
+    shift_rearm_min: float = 5.0  # neutral this long and the pressure has faded; the next dominance is a new shift
 
-    # --- üstünlük ama sonuçsuz ---
+    # --- dominance without reward ---
     dominance_window_min: float = 20.0
     dominance_shot_margin: int = 4
     dominance_possession: float = 0.58
     dominance_cooldown_min: float = 15.0
 
-    # --- önem skoru ---
+    # --- importance score ---
     importance_base: dict[str, float] = field(
         default_factory=lambda: {
             "goal": 0.6,
@@ -46,13 +46,13 @@ class AnalyticsConfig:
             "dominance_without_reward": 0.4,
         }
     )
-    late_game_minute: int = 75  # 2. devrede bu dakikadan sonra late_bonus
+    late_game_minute: int = 75  # late_bonus after this minute in the second half
     late_bonus: float = 0.15
-    close_game_bonus: float = 0.1  # olay sonrası fark ≤ close_game_margin ise
+    close_game_bonus: float = 0.1  # if the margin after the event is ≤ close_game_margin
     close_game_margin: int = 1
     from_behind_bonus: float = 0.15
 
-    # --- çıktı ---
+    # --- output ---
     max_evidence: int = 10
     summary_decimals: int = 3
 

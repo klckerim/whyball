@@ -1,19 +1,19 @@
-"""Gerçek LLM ölçümü: üç demo maçı FoundryNarrator ile anlatır ve raporu üretir.
+"""Real LLM measurement: narrates the three demo matches with FoundryNarrator and builds the report.
 
-    python -m eval.llm_run [--lang en] [--repeat 3]   # modeli çağırır → docs/LLM_RUN.json + .md + human_review.csv
-    python -m eval.llm_run --from-json docs/LLM_RUN.json   # yalnızca yeniden render
+    python -m eval.llm_run [--lang en] [--repeat 3]   # calls the model → docs/LLM_RUN.json + .md + human_review.csv
+    python -m eval.llm_run --from-json docs/LLM_RUN.json   # re-render only
 
-Rapor (docs/LLM_RUN.md) ve insan değerlendirme tablosu (docs/human_review.csv)
-her zaman ham çalıştırma çıktısından (JSON) üretilir; elle yazılmaz. Önbellek
-kullanılmaz: her moment gerçekten modele gider.
+The report (docs/LLM_RUN.md) and the human review sheet (docs/human_review.csv) are always
+built from the raw run output (JSON); they are never written by hand. The cache is not
+used: every moment really goes to the model.
 
-Ölçüm modu: her denemenin taslağı, ret kodları ve ret mesajı (pipeline `on_attempt`)
-yalnızca bu JSON'a yazılır; önbelleğe ve yayınlanan kayda girmez. `evidence_mismatch`
-retlerinde iddianın bağladığı ve doğrulayıcının saydığı olaylar tipleriyle kaydedilir.
+Measurement mode: each attempt's draft, rejection codes and rejection message (pipeline `on_attempt`)
+are written only to this JSON; they never enter the cache or the published record. For
+`evidence_mismatch` rejections, the events the claim cited and the verifier counted are stored with their types.
 
-JSON biçimi: `{"meta": {...}, "runs": [{"started_at", "finished_at", "matches"}]}`;
-eski tek koşulu biçim (`{"meta", "matches"}`) de okunur. Sürüm karşılaştırması
-arşivlenen önceki sürümlerden (docs/LLM_RUN.foundry-v3.json, -v4.json) okunur.
+JSON format: `{"meta": {...}, "runs": [{"started_at", "finished_at", "matches"}]}`;
+the old single-run format (`{"meta", "matches"}`) is read too. The version comparison is read
+from the archived earlier versions (docs/LLM_RUN.foundry-v3.json, -v4.json).
 """
 
 from __future__ import annotations
@@ -50,12 +50,12 @@ BASELINES = {
     "foundry-v4.1": DOCS / "LLM_RUN.foundry-v4.1.json",
 }
 REVIEW_COLUMNS = ("moment_id", "text", "correct", "wrong_fact", "misleading", "dull")
-# foundry-v4.1 / v5 ile eklenen / değişen kurallar (canlı tetiklenme tablosu)
+# Rules added / changed in foundry-v4.1 / v5 (live firing table)
 NEW_RULES = ("event_type_not_allowed", "player_repeat", "article_team", "sentence_start",
              "unknown_claim_id", "sentence_without_claim", "missing_primary_claim", "minute_repeat")
 
 
-# --- deneme kaydı ------------------------------------------------------------------------------
+# --- attempt record ------------------------------------------------------------------------------
 
 
 def _event_types(refs: Sequence[str], by_seq: dict[int, Event]) -> list[dict[str, Any]]:
@@ -73,15 +73,15 @@ def _event_types(refs: Sequence[str], by_seq: dict[int, Event]) -> list[dict[str
 
 def _window(claim: Claim) -> str:
     if claim.start == claim.end:
-        return "olay anı"
+        return "at the event"
     if claim.start == KICKOFF:
-        return "maç başı → an"
-    return f"pencere ({fmt_minute(claim.start.period, claim.start.minute)} → " \
+        return "kickoff → now"
+    return f"window ({fmt_minute(claim.start.period, claim.start.minute)} → " \
            f"{fmt_minute(claim.end.period, claim.end.minute)})"
 
 
 def verify_failures(log: AttemptLog, events: Sequence[Event]) -> list[dict[str, Any]]:
-    """Reddedilen iddialar; evidence_mismatch'te bağlanan ve sayılan olaylar tipleriyle."""
+    """Rejected claims; for evidence_mismatch, the cited and counted events with their types."""
     by_seq = {e.seq: e for e in events}
     match_id = events[0].match_id
     out = []
@@ -108,7 +108,7 @@ def _refs(items: Sequence[dict[str, Any]]) -> str:
 
 
 def describe_rejection(log: AttemptLog, failures: Sequence[dict[str, Any]]) -> str:
-    """Okunur ret mesajı; her reddedilen deneme için dolu."""
+    """Readable rejection message; filled for every rejected attempt."""
     if log.error is not None:
         return str(log.error) or log.error.code
     parts = [f"draft {i.code}" for i in log.items if i.source == "draft"]
@@ -143,7 +143,7 @@ def attempt_entry(log: AttemptLog, events: Sequence[Event]) -> dict[str, Any]:
 
 
 def _trace_message(record: NarrationRecord, attempt: int) -> str:
-    """Deneme kaydı yoksa (eski çağrı) ret mesajı izden: lint parçaları + verify nedenleri."""
+    """Without an attempt record (old call), the rejection message comes from the trace: lint fragments + verify reasons."""
     parts = []
     for step in record.trace:
         if step.get("attempt") != attempt:
@@ -156,7 +156,7 @@ def _trace_message(record: NarrationRecord, attempt: int) -> str:
 
 
 def rejections(record: NarrationRecord) -> list[dict[str, Any]]:
-    """Deneme bazında ret kodları ve mesajı (izden; taslak metni yok)."""
+    """Rejection codes and message per attempt (from the trace; no draft text)."""
     by_attempt: dict[int, dict[str, Any]] = {}
     for step in record.trace:
         if step["step"] == "narrate" and not step["ok"]:
@@ -178,7 +178,7 @@ def collect_match(
     attempts: Sequence[AttemptLog] | None = None,
     events: Sequence[Event] | None = None,
 ) -> dict[str, Any]:
-    """`attempts` (ölçüm modu) verilirse reddedilen her deneme taslağıyla kaydedilir."""
+    """With `attempts` (measurement mode), every rejected attempt is stored with its draft."""
     logs: dict[str, list[AttemptLog]] = defaultdict(list)
     for log in attempts or ():
         logs[log.moment.id].append(log)
@@ -210,11 +210,11 @@ def collect_match(
     }
 
 
-# --- toplama -------------------------------------------------------------------------------
+# --- aggregation -------------------------------------------------------------------------------
 
 
 def runs_of(run: dict[str, Any]) -> list[dict[str, Any]]:
-    """Koşular; eski tek koşulu biçim tek elemanlı listedir."""
+    """Runs; the old single-run format is a one-element list."""
     if "runs" in run:
         return run["runs"]
     return [{"started_at": run["meta"].get("started_at"), "finished_at": run["meta"].get("finished_at"),
@@ -258,7 +258,7 @@ def run_total(run: dict[str, Any]) -> dict[str, Any]:
     return _total([summarize(m) for m in run["matches"]])
 
 
-# --- rapor ---------------------------------------------------------------------------------
+# --- report ---------------------------------------------------------------------------------
 
 
 def _share(n: int, total: int) -> str:
@@ -296,15 +296,15 @@ def _types(items: Sequence[dict[str, Any]]) -> str:
 
 
 def _diff(a: Sequence[dict[str, Any]], b: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-    """a'da olup b'de olmayan olaylar (id'ye göre)."""
+    """Events in a but not in b (by id)."""
     ids = {r["id"] for r in b}
     return [r for r in a if r["id"] not in ids]
 
 
 def _summary_table(rows: Sequence[tuple[str, dict[str, Any]]]) -> list[str]:
     out = [
-        "| Maç | Moment | İlk denemede geçen | Yeniden denemeyle geçen | Yedeğe düşen | Çağrı "
-        "| Token giriş / çıkış | Reasoning (çıkışın %'si) | Ort. süre | Medyan | Maks. |",
+        "| Match | Moment | Passed first try | Passed after retry | Fell back | Calls "
+        "| Tokens in / out | Reasoning (% of output) | Avg. duration | Median | Max. |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for name, s in rows:
@@ -325,8 +325,8 @@ def _version_rows(label: str, run: dict[str, Any]) -> list[tuple[str, dict[str, 
     totals = [run_total(r) for r in runs]
     if len(runs) == 1:
         return [(label, totals[0])]
-    rows = [(f"{label} · koşu {i}", t) for i, t in enumerate(totals, start=1)]
-    return [*rows, (f"**{label} · toplam ({len(runs)} koşu)**", _total(totals))]
+    rows = [(f"{label} · run {i}", t) for i, t in enumerate(totals, start=1)]
+    return [*rows, (f"**{label} · total ({len(runs)} runs)**", _total(totals))]
 
 
 def render_comparison(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
@@ -334,19 +334,19 @@ def render_comparison(run: dict[str, Any], baselines: dict[str, dict[str, Any]])
     rows = [r for label, base in baselines.items() for r in _version_rows(label, base)]
     rows += _version_rows(version, run)
     out = [
-        f"## Sürüm karşılaştırması: {', '.join([*baselines, version])}",
+        f"## Version comparison: {', '.join([*baselines, version])}",
         "",
-        "Önceki sürümler arşivlenen ham çıktılardan (`docs/LLM_RUN.<sürüm>.json`). Ret = yayınlanmayan "
-        "deneme; `evidence_mismatch` sütunu bu kodu içeren reddedilen deneme sayısı.",
+        "Earlier versions come from the archived raw outputs (`docs/LLM_RUN.<version>.json`). Rejected = an attempt "
+        "that was not published; the `evidence_mismatch` column counts rejected attempts with that code.",
         "",
-        "| Sürüm / koşu | Moment | İlk denemede | Yeniden denemeyle | Yedeğe düşen | Çağrı | Reddedilen deneme "
-        "| evidence_mismatch | Token çıkış |",
+        "| Version / run | Moments | First try | After retry | Fell back | Calls | Rejected attempts "
+        "| evidence_mismatch | Tokens out |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for name, s in rows:
         out.append(f"| {name} | {s['moments']} | {s['first_try']} | {s['after_retry']} | {s['fallback']} | "
                    f"{s['calls']} | {s['rejected']} | {s['evidence_mismatch']} | {s['output_tokens']} |")
-    # moment tipine göre evidence_mismatch
+    # evidence_mismatch per moment type
     types = sorted({mo["type"] for r in [run, *baselines.values()] for rr in runs_of(r)
                     for m in rr["matches"] for mo in m["moments"]})
     labels = [*baselines, version]
@@ -358,10 +358,10 @@ def render_comparison(run: dict[str, Any], baselines: dict[str, dict[str, Any]])
     n_runs = {label: len(runs_of(r)) for label, r in [*baselines.items(), (version, run)]}
     out += [
         "",
-        "`evidence_mismatch` içeren reddedilen denemeler, moment tipine göre (sürümün tüm koşuları; "
-        "parantezde koşu sayısı):",
+        "Rejected attempts with `evidence_mismatch`, per moment type (all runs of the version; "
+        "number of runs in parentheses):",
         "",
-        "| Moment tipi | " + " | ".join(f"{label} ({n_runs[label]})" for label in labels) + " |",
+        "| Moment type | " + " | ".join(f"{label} ({n_runs[label]})" for label in labels) + " |",
         "|---|" + "---:|" * len(labels),
     ]
     for t in types:
@@ -370,7 +370,7 @@ def render_comparison(run: dict[str, Any], baselines: dict[str, dict[str, Any]])
 
 
 def render_code_frequency(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
-    """Ret kodu sıklığı sürüm başına (koşu başına ortalama; reddedilen denemelerdeki kod sayısı)."""
+    """Rejection code frequency per version (average per run; number of codes in rejected attempts)."""
     version = run["meta"]["prompt_version"].split(":", 1)[0]
     versions = [*baselines.items(), (version, run)]
     counts = {
@@ -380,11 +380,11 @@ def render_code_frequency(run: dict[str, Any], baselines: dict[str, dict[str, An
     n_runs = {label: len(runs_of(r)) for label, r in versions}
     codes = sorted({c for cnt in counts.values() for c in cnt}, key=lambda c: (-sum(cnt[c] for cnt in counts.values()), c))
     out = [
-        "## Ret kodu sıklığı",
+        "## Rejection code frequency",
         "",
-        "Reddedilen denemelerdeki kodlar, koşu başına ortalama (bir denemede birden fazla kod olabilir).",
+        "Codes in rejected attempts, average per run (an attempt can have more than one code).",
         "",
-        "| Kod | " + " | ".join(f"{label} ({n_runs[label]} koşu)" for label, _ in versions) + " |",
+        "| Code | " + " | ".join(f"{label} ({n_runs[label]} runs)" for label, _ in versions) + " |",
         "|---|" + "---:|" * len(versions),
     ]
     for code in codes:
@@ -395,7 +395,7 @@ def render_code_frequency(run: dict[str, Any], baselines: dict[str, dict[str, An
 
 
 def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]]) -> list[str]:
-    """Aynı momentlerin yayınlanan metni sürüm sürüm (çok koşulu sürümlerde son koşu)."""
+    """Published text of the same moments, version by version (last run for multi-run versions)."""
     version = run["meta"]["prompt_version"].split(":", 1)[0]
     versions = [*baselines.items(), (version, run)]
     texts: dict[str, dict[str, tuple[str, str]]] = {}
@@ -405,25 +405,25 @@ def render_side_by_side(run: dict[str, Any], baselines: dict[str, dict[str, Any]
                 texts.setdefault(mo["id"], {})[label] = (mo["source"], mo["text"])
     order = [(m["match_id"], mo) for m in runs_of(run)[-1]["matches"] for mo in m["moments"]]
     out = [
-        "## Yan yana: aynı momentler, sürüm sürüm",
+        "## Side by side: the same moments, version by version",
         "",
-        "Yayınlanan metin; çok koşulu sürümlerde son koşu. *(yedek)* = template yedeği.",
+        "Published text; the last run for multi-run versions. *(fallback)* = template fallback.",
         "",
-        "| Moment | Tip | " + " | ".join(label for label, _ in versions) + " |",
+        "| Moment | Type | " + " | ".join(label for label, _ in versions) + " |",
         "|---|---|" + "---|" * len(versions),
     ]
     for match_id, mo in order:
         cells = []
         for label, _ in versions:
             source, text = texts.get(mo["id"], {}).get(label, (None, None))
-            mark = "*(yedek)* " if source == "template_fallback" else ""
+            mark = "*(fallback)* " if source == "template_fallback" else ""
             cells.append(f"{mark}{_cell(text)}" if text is not None else "—")
         out.append(f"| {match_id.split('_seed')[0]} {_short(mo['id'])} | {mo['type']} | " + " | ".join(cells) + " |")
     return [*out, ""]
 
 
 def render_evidence_groups(run: dict[str, Any]) -> list[str]:
-    """evidence_mismatch retleri: model hangi iddiaya hangi olayları bağladı, doğrulayıcı neyi saydı."""
+    """evidence_mismatch rejections: which events the model cited for which claim, and what the verifier counted."""
     groups: Counter[tuple[str, ...]] = Counter()
     examples: list[str] = []
     for rr in runs_of(run):
@@ -436,19 +436,19 @@ def render_evidence_groups(run: dict[str, Any]) -> list[str]:
                     continue
                 c = f["claim"]
                 claim = f"{c['kind']} {c['metric']} {c['subject']['team'] or '—'}" + (
-                    " + oyuncu" if c["subject"]["player"] else "")
+                    " + player" if c["subject"]["player"] else "")
                 groups[(mo["type"], claim, f["window"], _types(f["cited"]), _types(f["counted"]),
                          _types(_diff(f["counted"], f["cited"])), _types(_diff(f["cited"], f["counted"])))] += 1
-    out = ["## evidence_mismatch: bağlanan ve sayılan olaylar", ""]
+    out = ["## evidence_mismatch: cited and counted events", ""]
     if not groups:
-        return [*out, "Bu ölçümde `evidence_mismatch` reddi yok (foundry-v5: iddiaları ve kanıtlarını kod kurar, "
-                      "model olay bağlamaz). Önceki sürümlerin dökümü arşivlenen JSON'lardan yeniden render edilebilir.", ""]
+        return [*out, "No `evidence_mismatch` rejections in this run (foundry-v5: code builds the claims and their evidence, "
+                      "the model links no events). Earlier versions' breakdown can be re-rendered from the archived JSONs.", ""]
     out += [
-        "Her satır bir reddedilen iddia grubu. Bağlanan = modelin `event_ids`'i; sayılan = doğrulayıcının "
-        "aynı özne, metrik ve aralıkta saydığı olaylar. Eksik = sayılan ama bağlanmayan, fazla = bağlanan "
-        "ama sayılmayan.",
+        "Each row is a group of rejected claims. Cited = the model's `event_ids`; counted = the events the verifier "
+        "counted for the same subject, metric and range. Missing = counted but not cited, extra = cited "
+        "but not counted.",
         "",
-        "| Moment tipi | İddia | Aralık | Bağlanan | Sayılan | Eksik | Fazla | Adet |",
+        "| Moment type | Claim | Range | Cited | Counted | Missing | Extra | Count |",
         "|---|---|---|---|---|---|---|---:|",
     ]
     for key, n in sorted(groups.items(), key=lambda kv: (-kv[1], kv[0])):
@@ -456,22 +456,22 @@ def render_evidence_groups(run: dict[str, Any]) -> list[str]:
     by_type = Counter()
     for key, n in groups.items():
         by_type[key[0]] += n
-    out += ["", "Moment tipine göre (reddedilen iddia): " + ", ".join(
-        f"{t} {n}" for t, n in by_type.most_common()) + ".", "", "Örnek ret mesajları:", "", *examples, ""]
+    out += ["", "Per moment type (rejected claims): " + ", ".join(
+        f"{t} {n}" for t, n in by_type.most_common()) + ".", "", "Example rejection messages:", "", *examples, ""]
     return out
 
 
 def render_rule_hits(run: dict[str, Any]) -> list[str]:
-    """v4.1 kurallarının canlı tetiklenmesi: kuralı içeren ve yalnız o kural yüzünden reddedilen denemeler."""
+    """Live firing of the v4.1 rules: attempts that contain the rule, and attempts rejected by that rule alone."""
     rejected = [rej for rr in runs_of(run) for _, _, rej in _rejected(rr["matches"]) if "lint" in rej]
     out = [
-        "## foundry-v4.1 / v5 kurallarının canlı tetiklenmesi",
+        "## Live firing of the foundry-v4.1 / v5 rules",
         "",
-        "Yalnız bu kural = denemenin tek ret nedeni bu kuraldı (başka lint ya da verify hatası yok): "
-        "kural olmasa yayınlanacaktı. Kuralın hedeflediği kalıpsa doğru ret, değilse yanlış alarm; "
-        "taslaklar aşağıda.",
+        "This rule only = the rule was the attempt's only rejection reason (no other lint or verify error): "
+        "without the rule it would have been published. A correct rejection if it is the pattern the rule targets, "
+        "otherwise a false alarm; drafts below.",
         "",
-        "| Kural | Tetiklenen deneme | Yalnız bu kural | Parçalar |",
+        "| Rule | Attempts fired | This rule only | Fragments |",
         "|---|---:|---:|---|",
     ]
     only: list[tuple[str, dict[str, Any]]] = []
@@ -483,7 +483,7 @@ def render_rule_hits(run: dict[str, Any]) -> list[str]:
         out.append(f"| `{rule}` | {len(hits)} | {len(alone)} | "
                    f"{', '.join(f'`{_cell(f)}`×{n}' for f, n in fragments.most_common(8)) or '—'} |")
     if only:
-        out += ["", "Yalnız yeni kural yüzünden reddedilen taslaklar:", ""]
+        out += ["", "Drafts rejected by a new rule alone:", ""]
         out += [f"- `{rule}`: `{_cell(rej['template'])}`" for rule, rej in only]
     return [*out, ""]
 
@@ -495,22 +495,22 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
     baselines = {label: b for label, b in (baselines or {}).items() if label != current}
 
     out = [
-        "# LLM anlatım ölçümü (gerçek model)",
+        "# LLM narration measurement (real model)",
         "",
-        "Bu dosya `python -m eval.llm_run` çalıştırmasının ham çıktısından (`docs/LLM_RUN.json`) "
-        "üretilir; elle düzenlemeyin.",
+        "This file is built from the raw output of a `python -m eval.llm_run` run (`docs/LLM_RUN.json`); "
+        "do not edit it by hand.",
         "",
-        f"- Model: `{meta['model']}` · Prompt sürümü: `{meta['prompt_version']}` · Dil: `{meta['lang']}` "
-        f"· Reasoning çabası: `{meta.get('reasoning_effort') or 'varsayılan'}`",
-        f"- Çalıştırma: {meta['started_at']} – {meta['finished_at']} (UTC)"
-        + (f", {len(runs)} koşu (aynı prompt)" if len(runs) > 1 else ""),
-        f"- Ayarlar: çalıştırma (maç) başına en fazla {meta['max_calls_per_run']} çağrı, "
-        f"`max_output_tokens` {meta['max_tokens']}, çağrı zaman aşımı {meta['timeout_s']:g} sn, "
-        f"en fazla {meta['max_retries']} yeniden deneme, önbellek kapalı",
-        "- Her taslak lint + yer tutucu bağlama + verify_claim'den geçti; geçmeyen yayınlanmadı ve "
-        "template yedeğine düştü. Yayınlanan LLM metinlerinde somut değerleri kod render etti.",
+        f"- Model: `{meta['model']}` · Prompt version: `{meta['prompt_version']}` · Language: `{meta['lang']}` "
+        f"· Reasoning effort: `{meta.get('reasoning_effort') or 'default'}`",
+        f"- Run: {meta['started_at']} – {meta['finished_at']} (UTC)"
+        + (f", {len(runs)} runs (same prompt)" if len(runs) > 1 else ""),
+        f"- Settings: at most {meta['max_calls_per_run']} calls per run (match), "
+        f"`max_output_tokens` {meta['max_tokens']}, call timeout {meta['timeout_s']:g} s, "
+        f"at most {meta['max_retries']} retries, cache off",
+        "- Every draft went through lint + placeholder binding + verify_claim; a draft that failed was not published "
+        "and fell back to the template. Code rendered the concrete values in the published LLM texts.",
         "",
-        "## Özet",
+        "## Summary",
         "",
     ]
     totals = []
@@ -518,17 +518,17 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
         summaries = [summarize(m) for m in rr["matches"]]
         totals.append(_total(summaries))
         if len(runs) > 1:
-            out += [f"### Koşu {i} ({rr['started_at']} – {rr['finished_at']})", ""]
+            out += [f"### Run {i} ({rr['started_at']} – {rr['finished_at']})", ""]
         rows = [(m["match_id"], s) for m, s in zip(rr["matches"], summaries)]
-        out += _summary_table([*rows, ("**Toplam**", totals[-1])])
+        out += _summary_table([*rows, ("**Total**", totals[-1])])
         out.append("")
     if len(runs) > 1:
-        out += ["### Koşu başına yedeğe düşen", "",
-                "| Koşu | Moment | Yedeğe düşen | Reddedilen deneme | evidence_mismatch |", "|---|---:|---:|---:|---:|"]
+        out += ["### Fallbacks per run", "",
+                "| Run | Moments | Fell back | Rejected attempts | evidence_mismatch |", "|---|---:|---:|---:|---:|"]
         for i, t in enumerate(totals, start=1):
             out.append(f"| {i} | {t['moments']} | {t['fallback']} | {t['rejected']} | {t['evidence_mismatch']} |")
         grand = _total(totals)
-        out += [f"| **Toplam** | {grand['moments']} | {grand['fallback']} | {grand['rejected']} | "
+        out += [f"| **Total** | {grand['moments']} | {grand['fallback']} | {grand['rejected']} | "
                 f"{grand['evidence_mismatch']} |", ""]
 
     out += [*render_comparison(run, baselines), ""]
@@ -538,34 +538,34 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
     out += render_rule_hits(run)
 
     multi = len(runs) > 1
-    run_col = "Koşu | " if multi else ""
+    run_col = "Run | " if multi else ""
     run_sep = "---|" if multi else ""
 
     def tag(i: int) -> str:
         return f"{i} | " if multi else ""
 
-    out += ["## Yedeğe düşen momentler", ""]
+    out += ["## Moments that fell back", ""]
     fallbacks = [(i, m["match_id"], mo) for i, rr in enumerate(runs, start=1) for m in rr["matches"]
                  for mo in m["moments"] if mo["source"] == "template_fallback"]
     if not fallbacks:
-        out.append("Yok.")
+        out.append("None.")
     else:
-        out += [f"| {run_col}Maç | Moment | Tip | Dakika | Yedek sebebi | Deneme bazında ret kodları |",
+        out += [f"| {run_col}Match | Moment | Type | Minute | Fallback reason | Rejection codes per attempt |",
                 f"|{run_sep}---|---|---|---|---|---|"]
         for i, match_id, mo in fallbacks:
             per_attempt = "; ".join(f"#{r['attempt']}: {_codes(r['codes'])}" for r in mo["rejections"])
             out.append(f"| {tag(i)}{match_id} | {_short(mo['id'])} | {mo['type']} | {_minute(mo)} | "
                        f"`{mo['fallback_reason']}` | {per_attempt} |")
         all_codes = Counter(c for _, _, mo in fallbacks for r in mo["rejections"] for c in r["codes"])
-        out += ["", "Yedeğe düşen momentlerde ret kodu sıklığı: " + _codes(list(all_codes.elements()))]
+        out += ["", "Rejection code frequency in moments that fell back: " + _codes(list(all_codes.elements()))]
 
-    out += ["", "## Yeniden denemeyle geçen momentler", ""]
+    out += ["", "## Moments that passed after a retry", ""]
     retried = [(i, m["match_id"], mo) for i, rr in enumerate(runs, start=1) for m in rr["matches"]
                for mo in m["moments"] if mo["source"] != "template_fallback" and mo["attempts"] > 1]
     if not retried:
-        out.append("Yok.")
+        out.append("None.")
     else:
-        out += [f"| {run_col}Maç | Moment | Tip | Deneme | Reddedilen denemeler |", f"|{run_sep}---|---|---|---:|---|"]
+        out += [f"| {run_col}Match | Moment | Type | Attempts | Rejected attempts |", f"|{run_sep}---|---|---|---:|---|"]
         for i, match_id, mo in retried:
             per_attempt = "; ".join(f"#{r['attempt']}: {_codes(r['codes'])}" for r in mo["rejections"])
             out.append(f"| {tag(i)}{match_id} | {_short(mo['id'])} | {mo['type']} | {mo['attempts']} | {per_attempt} |")
@@ -573,8 +573,8 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
     drafts = [(i, match_id, mo, rej) for i, rr in enumerate(runs, start=1)
               for match_id, mo, rej in _rejected(rr["matches"]) if "template" in rej]
     if drafts:
-        out += ["", "## Reddedilen taslaklar", "",
-                f"| {run_col}Maç | Moment | Tip | Deneme | Ret kodları | Model şablonu | Ret mesajı |",
+        out += ["", "## Rejected drafts", "",
+                f"| {run_col}Match | Moment | Type | Attempt | Rejection codes | Model template | Rejection message |",
                 f"|{run_sep}---|---|---|---:|---|---|---|"]
         for i, match_id, mo, rej in drafts:
             draft = rej.get("template") or rej.get("text")
@@ -582,23 +582,23 @@ def render_report(run: dict[str, Any], baselines: dict[str, dict[str, Any]] | No
                        f"{_codes(rej['codes'])} | {f'`{_cell(draft)}`' if draft else '—'} | "
                        f"{_cell(rej['message'])} |")
 
-    out += ["", "## İstemci hataları", ""]
+    out += ["", "## Client errors", ""]
     errors = [(i, m["match_id"], u) for i, rr in enumerate(runs, start=1) for m in rr["matches"]
               for u in m["usage"] if u.get("error")]
     if not errors:
-        out.append("Yok.")
+        out.append("None.")
     else:
-        out += [f"| {run_col}Maç | Moment | Çağrı | Sonuç | Mesaj |", f"|{run_sep}---|---|---:|---|---|"]
+        out += [f"| {run_col}Match | Moment | Call | Result | Message |", f"|{run_sep}---|---|---:|---|---|"]
         for i, match_id, u in errors:
             out.append(f"| {tag(i)}{match_id} | {_short(u['moment_id'])} | {u['call']} | `{u['outcome']}` | "
                        f"{_cell(u['error'])} |")
 
-    out += ["", "## Moment ayrıntıları", ""]
+    out += ["", "## Moment details", ""]
     for i, rr in enumerate(runs, start=1):
         for m in rr["matches"]:
-            title = f"Koşu {i} · {m['match_id']}" if multi else m["match_id"]
+            title = f"Run {i} · {m['match_id']}" if multi else m["match_id"]
             out += [f"### {title}", "",
-                    "| Moment | Tip | Dakika | Kaynak | Deneme | Yayınlanan metin | Model şablonu |",
+                    "| Moment | Type | Minute | Source | Attempts | Published text | Model template |",
                     "|---|---|---|---|---:|---|---|"]
             for mo in m["moments"]:
                 template = f"`{_cell(mo.get('template'))}`" if mo.get("template") else "—"
@@ -612,11 +612,11 @@ def load_baselines(paths: dict[str, Path] = BASELINES) -> dict[str, dict[str, An
     return {label: json.loads(p.read_text(encoding="utf-8")) for label, p in paths.items() if p.exists()}
 
 
-# --- insan değerlendirmesi --------------------------------------------------------------------
+# --- human review --------------------------------------------------------------------
 
 
 def review_rows(run: dict[str, Any]) -> list[dict[str, str]]:
-    """Son koşunun yayınlanan metinleri."""
+    """Published texts of the last run."""
     last = runs_of(run)[-1]
     return [
         {"moment_id": mo["id"], "text": mo["text"], "correct": "", "wrong_fact": "", "misleading": "", "dull": ""}
@@ -633,12 +633,12 @@ def _has_annotations(path: Path) -> bool:
 
 
 def write_human_review(run: dict[str, Any], path: Path, stamp: str | None = None) -> Path:
-    """CSV yazar; elle doldurulmuş bir dosyanın üzerine yazmaz (yanına zaman damgalı yazar)."""
+    """Writes the CSV; never overwrites a hand-filled file (writes a timestamped one next to it)."""
     target = path
     if path.exists() and _has_annotations(path):
         stamp = stamp or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         target = path.with_name(f"{path.stem}.{stamp}{path.suffix}")
-        print(f"UYARI: {path} elle doldurulmuş; üzerine yazılmadı → {target}", file=sys.stderr)
+        print(f"WARNING: {path} was filled in by hand; not overwritten → {target}", file=sys.stderr)
     with target.open("w", encoding="utf-8", newline="") as fp:
         writer = csv.DictWriter(fp, fieldnames=REVIEW_COLUMNS)
         writer.writeheader()
@@ -646,11 +646,11 @@ def write_human_review(run: dict[str, Any], path: Path, stamp: str | None = None
     return target
 
 
-# --- çalıştırma ----------------------------------------------------------------------------
+# --- run ----------------------------------------------------------------------------
 
 
 def run_once(lang: str, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG) -> tuple[dict[str, Any], str, str]:
-    """Üç demo maçın bir koşusu; (koşu, model, prompt sürümü)."""
+    """One run over the three demo matches; (run, model, prompt version)."""
     from app.explain.llm_narrator import foundry_narrator_from_env
 
     started = datetime.now(UTC).isoformat(timespec="seconds")
@@ -675,7 +675,7 @@ def run_live(lang: str, repeat: int = 1, config: ExplainConfig = DEFAULT_EXPLAIN
     started = datetime.now(UTC).isoformat(timespec="seconds")
     runs, model, prompt_version = [], None, None
     for i in range(1, repeat + 1):
-        print(f"### koşu {i}/{repeat}", file=sys.stderr)
+        print(f"### run {i}/{repeat}", file=sys.stderr)
         one, model, prompt_version = run_once(lang, config)
         runs.append(one)
     return {
@@ -697,10 +697,10 @@ def run_live(lang: str, repeat: int = 1, config: ExplainConfig = DEFAULT_EXPLAIN
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Gerçek LLM ile üç demo maç ölçümü")
+    parser = argparse.ArgumentParser(description="Measure the three demo matches with the real LLM")
     parser.add_argument("--lang", choices=("en",), default="en")
-    parser.add_argument("--repeat", type=int, default=1, help="Aynı prompt'la koşu sayısı")
-    parser.add_argument("--from-json", help="Modeli çağırmadan bu ham çıktıdan yeniden render et")
+    parser.add_argument("--repeat", type=int, default=1, help="Number of runs with the same prompt")
+    parser.add_argument("--from-json", help="Re-render from this raw output without calling the model")
     parser.add_argument("--out-json", default=str(DEFAULT_JSON))
     parser.add_argument("--out-md", default=str(DEFAULT_MD))
     parser.add_argument("--out-csv", default=str(DEFAULT_CSV))
@@ -715,10 +715,10 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.out_json).write_text(
             json.dumps(run, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-        print(f"Yazıldı: {args.out_json}", file=sys.stderr)
+        print(f"Written: {args.out_json}", file=sys.stderr)
     Path(args.out_md).write_text(render_report(run, load_baselines()), encoding="utf-8")
     csv_path = write_human_review(run, Path(args.out_csv))
-    print(f"Yazıldı: {args.out_md}, {csv_path}", file=sys.stderr)
+    print(f"Written: {args.out_md}, {csv_path}", file=sys.stderr)
     return 0
 
 

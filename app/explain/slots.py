@@ -1,26 +1,26 @@
-"""Slot tabanlı anlatı: model somut değer yazmaz, yer tutucu yazar.
+"""Slot-based narration: the model writes placeholders, never concrete values.
 
-Takım ve oyuncu adları, dakikalar, skor, olay ifadeleri ve metrik değerleri kod
-tarafından doğrulanmış iddialardan, olay verisinden ve olay anındaki maç durumundan
-üretilir. Şablonda yer tutucu dışında rakam, sayı kelimesi, isim, ham home/away
-etiketi ya da ham metrik adı kalırsa reddedilir; bağlanamayan yer tutucu da
-reddedilir. foundry-v4 kuralları (config `slot_*` bayrakları): olay tipi / rol
-sözcükleri, izinsiz cümle başı, bağlamdan bağımsız yazıyla sayı ve moment tipinin
-desteklemediği nitel abartı da reddedilir (bkz. phrases.py). foundry-v4.1: moment
-tipinin izin vermediği olay tipine {event:}, aynı cümlede olayın oyuncusunu yeniden
-anan {player:} ve takım yer tutucusundan önce "the" artikeli de reddedilir.
+Team and player names, minutes, the score, event phrases and metric values are produced
+by code from verified claims, the event data and the match state at the moment of the event.
+A template that keeps a digit, number word, name, raw home/away label or raw metric name
+outside a placeholder is rejected; so is a placeholder that cannot be bound.
+foundry-v4 rules (config `slot_*` flags): event type / role words, a disallowed sentence
+start, number words regardless of context and qualitative overstatement the moment type
+does not support are rejected too (see phrases.py). foundry-v4.1: {event:} for an event type
+the moment type does not allow, a {player:} that names the event's player again in the same
+sentence, and the article "the" before a team placeholder are rejected as well.
 
-Yer tutucular:
-  {home} {away}          takım adı
-  {score}                olay anındaki skor, "1–2" (ev sahibi–deplasman sırası, takım adı yok)
-  {score_named}          aynı skor takım adlarıyla, "Ev 1–2 Deplasman"
-  {event:<olay id>}      olayın standart ifadesi ("X was sent off at 63'"); olay bir iddianın dayanağı olmalı
-  {player:<id>}          oyuncu (kadro id'si: h01…, a01…); bir iddianın öznesi olmalı
-  {minute:<claim_id>}    iddianın bitiş dakikası; {start:<claim_id>} başlangıç dakikası
-  {value:<claim_id>}     iddianın doğrulanmış değeri (metriğe göre biçimli)
-  {label:<claim_id>}     iddianın metriğinin okunur adı (hemen önünde aynı iddianın {value:}'su
-                         varsa sayıyla uyumlu: "1 shot", "2 shots")
-  {clause:<clause_id>}   yalnızca claim menüsünde (foundry-v5, menu.py): kodun yazdığı yan cümle
+Placeholders:
+  {home} {away}          team name
+  {score}                score at the moment of the event, "1–2" (home–away order, no team names)
+  {score_named}          the same score with team names, "Home 1–2 Away"
+  {event:<event id>}     the event's standard phrase ("X was sent off at 63'"); the event must be evidence of a claim
+  {player:<id>}          player (squad id: h01…, a01…); must be the subject of a claim
+  {minute:<claim_id>}    the claim's end minute; {start:<claim_id>} its start minute
+  {value:<claim_id>}     the claim's verified value (formatted by metric)
+  {label:<claim_id>}     readable name of the claim's metric (agrees with the number if the same
+                         claim's {value:} comes right before it: "1 shot", "2 shots")
+  {clause:<clause_id>}   claim menu only (foundry-v5, menu.py): a clause written by code
 """
 
 from __future__ import annotations
@@ -59,12 +59,12 @@ SIDE_LABEL_RE = {
 }
 METRIC_NAME_RE = re.compile(r"(?<![\w{])[a-z]+(?:_[a-z]+)+(?!\w)")
 DIGIT_RE = re.compile(r"\d+(?:[.,]\d+)?")
-# Yan cümleler kendi öznesi / artikeliyle başlar ("the score is …", "{home} have had …").
+# Clauses start with their own subject / article ("the score is …", "{home} have had …").
 ARTICLE_TEAM_RE = re.compile(r"(?<!\w)the\s+\{(?:home|away|score_named|clause:[^{}]*)\}", re.IGNORECASE)
 
 
 def player_ids(events: Sequence[Event]) -> dict[str, str]:
-    """Kadro id'leri → ad: ev sahibi h01…, deplasman a01… (ilk 11 + yedekler sırasıyla)."""
+    """Squad ids → name: home h01…, away a01… (first 11, then substitutes in order)."""
     teams = events[0].data["teams"]
     out = {}
     for side, prefix in (("home", "h"), ("away", "a")):
@@ -90,7 +90,7 @@ class SlotContext:
     events: Sequence[Event]
     language: str
     teams: dict[str, str]
-    players: dict[str, str]  # id → ad
+    players: dict[str, str]  # id → name
     moment_time: MatchTime
     anchor_ref: str
     roster: Roster = field(repr=False)
@@ -142,9 +142,9 @@ def parse_placeholders(template: str) -> tuple[list[Placeholder], list[LintIssue
 def bind_template(
     template: str, claims: Sequence[Claim], claim_ids: Sequence[str], ctx: SlotContext
 ) -> tuple[tuple[Claim, ...], tuple[str, ...], list[LintIssue]]:
-    """Yer tutucuları iddialara bağlar; {score}/{score_named} için olay anındaki skor iddialarını ekler.
+    """Binds placeholders to claims; adds the score claims at the moment of the event for {score}/{score_named}.
 
-    {event:<id>} yalnızca iddiaların dayanak olaylarından biri olabilir.
+    {event:<id>} can only be one of the claims' evidence events.
     """
     placeholders, issues = parse_placeholders(template)
     ids = list(claim_ids)
@@ -175,7 +175,7 @@ def bind_template(
         elif ph.kind in ("minute", "start", "value", "label"):
             bound = ph.arg in by_id
         elif ph.kind == "clause":
-            bound = False  # yan cümleler yalnızca menü taslağında (menu.bind_menu)
+            bound = False  # clauses only exist in menu drafts (menu.bind_menu)
         else:
             bound = True
         if not bound:
@@ -195,7 +195,7 @@ def bind_template(
 
 
 def _mask_placeholders(template: str, char: str = "x") -> str:
-    # Küçük harf kelimeyle maskeleme: cümle başı / büyük harf tespiti bozulmasın, id rakamları gizlensin.
+    # Mask with a lowercase word: keeps sentence-start / capital detection intact and hides id digits.
     return PLACEHOLDER_RE.sub(lambda m: char * len(m.group()), template)
 
 
@@ -206,7 +206,7 @@ def allowed_sentence_starts(language: str | None, config: ExplainConfig) -> froz
 
 
 def template_sentence_starts(template: str) -> list[tuple[int, bool]]:
-    """Şablondaki cümle başları: (konum, yer tutucuyla mı başlıyor)."""
+    """Sentence starts in the template: (position, whether it starts with a placeholder)."""
     upper = _mask_placeholders(template, "X")
     spans = [(m.start(), m.end()) for m in PLACEHOLDER_RE.finditer(template)]
     return [(pos, any(s <= pos < e for s, e in spans)) for pos in sentence_starts(upper)]
@@ -215,7 +215,7 @@ def template_sentence_starts(template: str) -> list[tuple[int, bool]]:
 def sentence_start_issues(
     template: str, language: str | None, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[LintIssue]:
-    """Cümlenin ilk kelimesi yer tutucu ya da izinli başlangıç listesinde değilse ret."""
+    """Reject when the first word of a sentence is neither a placeholder nor on the allowed start list."""
     allowed = allowed_sentence_starts(language, config)
     upper = _mask_placeholders(template, "X")
     spans = [(m.start(), m.end()) for m in PLACEHOLDER_RE.finditer(template)]
@@ -234,19 +234,19 @@ def sentence_start_issues(
 
 
 def template_sentences(template: str) -> list[tuple[int, int]]:
-    """Şablonun cümle aralıkları (başlangıç, bitiş)."""
+    """Sentence spans of the template (start, end)."""
     starts = sorted({0, *(pos for pos, _ in template_sentence_starts(template))})
     return list(zip(starts, [*starts[1:], len(template)]))
 
 
 def _event_players(e: Event, players: dict[str, str]) -> set[str]:
-    """Olayın ifadesinde adı geçen oyuncuların kadro id'leri (değişiklikte giren oyuncu dahil)."""
+    """Squad ids of the players named in the event's phrase (the player coming on included)."""
     names = {e.player, (e.data or {}).get("player_in")} - {None}
     return {pid for pid, name in players.items() if name in names}
 
 
 def event_type_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
-    """{event:} olayı, moment tipinin izinli olay tiplerinden olmalı (pas, çalım, ofsayt… değil)."""
+    """The {event:} event must be of a type the moment type allows (not a pass, dribble, offside…)."""
     issues = []
     for ph in parse_placeholders(template)[0]:
         if ph.kind != "event":
@@ -258,7 +258,7 @@ def event_type_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
 
 
 def player_repeat_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
-    """Aynı cümlede {event:X} oyuncuyu zaten anıyorsa o oyuncunun {player:} yer tutucusu tekrar."""
+    """If {event:X} already names the player in the same sentence, a {player:} for that player is a repeat."""
     placeholders = parse_placeholders(template)[0]
     issues = []
     for start, end in template_sentences(template):
@@ -276,7 +276,7 @@ def player_repeat_issues(template: str, ctx: SlotContext) -> list[LintIssue]:
 
 
 def article_team_issues(template: str) -> list[LintIssue]:
-    """Takım adı ve yan cümle artikelsiz yazılır: "The {home}", "the {score_named}", "The {clause:score}"."""
+    """Team names and clauses are written without an article: "The {home}", "the {score_named}", "The {clause:score}"."""
     return [LintIssue("article_team", m.group(), m.start(), m.end(), "name")
             for m in ARTICLE_TEAM_RE.finditer(template)]
 
@@ -284,7 +284,7 @@ def article_team_issues(template: str) -> list[LintIssue]:
 def lint_template(
     template: str, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> LintResult:
-    """Yer tutucu dışında rakam, sayı kelimesi, isim, home/away ya da ham metrik adı kalmamalı."""
+    """No digit, number word, name, home/away or raw metric name may remain outside placeholders."""
     issues: list[LintIssue] = []
     masked = list(_mask_placeholders(template))
     for m in ctx.roster.pattern.finditer("".join(masked)):
@@ -348,7 +348,7 @@ def render(
     ctx: SlotContext,
     clauses: dict[str, str] | None = None,
 ) -> str:
-    """Bağlanmış ve doğrulanmış şablondan nihai metin. `clauses`: menü yan cümleleri (id → şablon)."""
+    """Final text from a bound and verified template. `clauses`: menu clauses (id → template)."""
     by_id = {cid: (c, v) for cid, c, v in zip(claim_ids, claims, verdicts)}
     starts = {pos for pos, is_placeholder in template_sentence_starts(template) if is_placeholder}
 

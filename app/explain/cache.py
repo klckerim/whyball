@@ -1,7 +1,7 @@
-"""Dosya tabanlı anlatı önbelleği (data/cache/, git'e girmez).
+"""File-based narration cache (data/cache/, not tracked by git).
 
-Anahtar = moment içeriğinin hash'i + persona + dil + prompt_version.
-Anlatıcı kimliği prompt_version üzerinden anahtara girer.
+Key = hash of the moment content + persona + language + prompt_version.
+The narrator identity enters the key through prompt_version.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ class NarrationCache:
         return self.root / f"{key}.json"
 
     def get(self, key: str) -> dict[str, Any] | None:
-        """Kayıt yoksa ya da okunamıyorsa None (miss)."""
+        """None if the entry is missing or unreadable (miss)."""
         try:
             data = json.loads(self._path(key).read_text(encoding="utf-8"))
         except (OSError, ValueError):

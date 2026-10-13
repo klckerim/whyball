@@ -14,7 +14,7 @@ from app.generator.names import FIRST_NAMES, LAST_NAMES, TEAM_CITIES
 ROOT = Path(__file__).resolve().parent.parent
 SEEDS = [0, 1, 42, 2024, 987654321]
 SCENARIO_SEEDS = [0, 42, 2024]
-# Senaryosuz seed'ler + her senaryo × birkaç seed
+# Seeds without a scenario + each scenario × a few seeds
 ALL_CASES = [(s, None) for s in SEEDS] + [
     (s, name) for name in sorted(SCENARIOS) for s in SCENARIO_SEEDS
 ]
@@ -34,7 +34,7 @@ def _run_cli(seed: int, hash_seed: str, *extra: str) -> bytes:
     return result.stdout
 
 
-# --- determinizm -----------------------------------------------------------
+# --- determinism -----------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -75,7 +75,7 @@ def test_scenarios_differ_from_each_other():
     assert len(outputs) == len(SCENARIOS) + 1
 
 
-# --- akış bütünlüğü ----------------------------------------------------------
+# --- stream integrity ----------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -140,7 +140,7 @@ def test_names_are_synthetic(seed, scenario):
             assert e.data["player_in"] in rostered
 
 
-# --- kadro bütünlüğü ---------------------------------------------------------
+# --- squad integrity ---------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed,scenario", ALL_CASES)
@@ -153,7 +153,7 @@ def test_departed_players_never_reappear(seed, scenario):
 
     for e in events:
         if e.player is not None:
-            assert e.player not in gone, f"seq {e.seq}: {e.player} oyundan çıkmıştı"
+            assert e.player not in gone, f"seq {e.seq}: {e.player} had already left the pitch"
             appeared.add(e.player)
         if e.type is EventType.SUBSTITUTION:
             sub_in = e.data["player_in"]
@@ -173,7 +173,7 @@ def test_at_most_eleven_on_pitch(seed, scenario):
 
     for e in events:
         if e.player is not None:
-            assert e.player in on_pitch[e.team], f"seq {e.seq}: {e.player} sahada değil"
+            assert e.player in on_pitch[e.team], f"seq {e.seq}: {e.player} is not on the pitch"
         if e.type is EventType.SUBSTITUTION:
             on_pitch[e.team].remove(e.player)
             on_pitch[e.team].add(e.data["player_in"])
@@ -183,9 +183,9 @@ def test_at_most_eleven_on_pitch(seed, scenario):
             assert len(on_pitch[side]) <= LINEUP_SIZE
 
 
-# --- istatistik gerçekçiliği -------------------------------------------------
+# --- statistical realism -------------------------------------------------
 
-# Maç başına ortalama; bilerek geniş tutuldu, amaç bariz kaymaları yakalamak.
+# Per-match average; kept deliberately wide, the aim is to catch obvious drift.
 STAT_RANGES = {
     EventType.GOAL: (1.5, 4.0),
     EventType.SHOT: (12, 30),
@@ -203,10 +203,10 @@ def test_averages_over_200_seeds_are_realistic():
         counts.update(e.type for e in generate_match(seed))
     for etype, (lo, hi) in STAT_RANGES.items():
         avg = counts[etype] / n
-        assert lo <= avg <= hi, f"{etype.value}: maç başı {avg:.3f}, beklenen {lo}–{hi}"
+        assert lo <= avg <= hi, f"{etype.value}: per match {avg:.3f}, expected {lo}–{hi}"
 
 
-# --- senaryolar ---------------------------------------------------------------
+# --- scenarios ---------------------------------------------------------------
 
 
 @pytest.mark.parametrize("seed", SCENARIO_SEEDS)
@@ -223,12 +223,12 @@ def test_scenario_forced_events_present(name, seed):
             and f.minute <= e.minute <= f.minute + 1
             and (f.outcome is None or e.outcome == f.outcome)
         ]
-        assert hits, f"{name} seed={seed}: zorunlu olay yok: {f}"
+        assert hits, f"{name} seed={seed}: forced event missing: {f}"
     assert events[-1].score == scenario.final_score
 
 
 def test_dominant_loss_home_dominates_but_loses():
-    # Tek maçta pay ±0.04 oynar (atak zincirleri uzun); bu yüzden ortalamaya bakılır.
+    # In a single match the share moves by ±0.04 (attack chains are long); hence the average.
     shares, shots = [], Counter()
     for seed in range(50):
         events = generate_match(seed, "dominant_loss")
@@ -244,7 +244,7 @@ def test_dominant_loss_home_dominates_but_loses():
 
 
 def test_unknown_scenario_raises():
-    with pytest.raises(ValueError, match="Bilinmeyen senaryo"):
+    with pytest.raises(ValueError, match="Unknown scenario"):
         generate_match(42, "no_such_scenario")
 
 

@@ -1,12 +1,12 @@
-"""Metriklerin okunur adları ({label:} yer tutucusu, template anlatıcı, model kaydı).
+"""Readable metric names ({label:} placeholder, template narrator, model record).
 
-Sayılabilir etiketler sayıyla uyumlu çekilir (EN "1 shot" / "2 shots"). Penaltı etiketleri penaltıyı kullanan takım açısındandır ("penalty taken and
-saved"), kaleci açısından okunamaz.
+Countable labels agree with the number (EN "1 shot" / "2 shots"). Penalty labels are from the
+side of the team taking the penalty ("penalty taken and saved"), not the goalkeeper's.
 
-`pressure_balance` kayan bir pencereden ölçülür (son `pressure_window_min` oynanmış
-dakika); adı bu pencereyi yazar. Penceredeki sayı bir iddia değil, analytics
-ayarından gelen sabittir: text_lint bu kod ifadelerini sayı denetiminden önce maskeler
-(`window_phrases`). Doğrulayıcı pencereyi denetlemez.
+`pressure_balance` is measured over a rolling window (the last `pressure_window_min` minutes
+played); its name states that window. The number in the window is not a claim but a constant from
+the analytics config: text_lint masks these code-written phrases before the number check
+(`window_phrases`). The verifier does not check the window.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
 }
 
 
-# EN tekil biçimler (değer 1 iken).
+# EN singular forms (when the value is 1).
 SINGULAR_EN: dict[str, str] = {
     "goals": "goal", "score": "goal", "shots": "shot", "shots_on_target": "shot on target",
     "corners": "corner", "fouls": "foul", "yellow_cards": "yellow card", "red_cards": "red card",
@@ -46,14 +46,14 @@ SINGULAR_EN: dict[str, str] = {
 
 
 def metric_label(metric: str, language: str, value: float | None = None) -> str:
-    """Okunur ad; `value` verilirse sayıyla uyumlu (yalnızca değerin hemen ardından yazıldığında)."""
+    """Readable name; with `value`, it agrees with the number (only when written right after the value)."""
     if language == "en" and value is not None and abs(value) == 1 and metric in SINGULAR_EN:
         return SINGULAR_EN[metric]
     labels = METRIC_LABELS.get(language, METRIC_LABELS["en"])
     return labels.get(metric, metric.replace("_", " "))
 
 
-# Sayı içeren sabit etiketler (dil başına); text_lint bunları maskeler.
+# Fixed labels that contain a number (per language); text_lint masks them.
 WINDOW_PHRASES = tuple(
     label for labels in METRIC_LABELS.values() for label in labels.values() if re.search(r"\d", label)
 )

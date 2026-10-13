@@ -1,8 +1,8 @@
-"""Olay akışından deterministik maç metrikleri.
+"""Deterministic match metrics from the event stream.
 
-Çekirdek ``MatchTracker`` olayları tek tek tüketir; gelecekteki bir olayı hiç
-görmediği için ileriye bakma yapısal olarak imkânsızdır. Fonksiyonel API
-(``metrics_at`` vb.) tracker'ı kesme noktasına kadar besleyip durur.
+The core ``MatchTracker`` consumes events one by one; it never sees a future event,
+so lookahead is structurally impossible. The functional API (``metrics_at`` etc.)
+feeds the tracker up to the cut-off point and stops.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ SECOND_HALF_START = 45 * 60
 ON_BALL = (EventType.PASS, EventType.DRIBBLE, EventType.SHOT, EventType.CORNER)
 TOUCHES = (EventType.PASS, EventType.DRIBBLE)
 
-# Pencere kayıt türleri
+# Window record types
 SHOT, ENTRY, CORNER, TOUCH, GOAL = "shot", "entry", "corner", "touch", "goal"
 
 
@@ -37,17 +37,17 @@ def _share(counts: dict[str, int | float]) -> dict[str, float]:
 
 @dataclass(frozen=True)
 class Record:
-    """Pencere hesapları için olay özeti."""
+    """Event summary for window calculations."""
 
     seq: int
-    played: int  # oynanan saniye (devre arası hariç)
+    played: int  # seconds played (half-time break excluded)
     team: str
     kind: str
 
 
 @dataclass(frozen=True)
 class MetricSnapshot:
-    seq: int | None  # dahil edilen son olay
+    seq: int | None  # last event included
     period: int
     minute: int
     second: int
@@ -135,10 +135,10 @@ class MatchTracker:
         elif t is EventType.GOAL:
             self._record(e, GOAL)
 
-    # --- pencere sorguları ---------------------------------------------
+    # --- window queries ---------------------------------------------
 
     def window(self, minutes: float) -> list[Record]:
-        """Son `minutes` oynanan dakikadaki kayıtlar (eski → yeni)."""
+        """Records in the last `minutes` played minutes (old → new)."""
         start = self.played - minutes * 60
         out = []
         for r in reversed(self.records):
@@ -190,7 +190,7 @@ class MatchTracker:
         )
 
 
-# --- fonksiyonel API ------------------------------------------------------
+# --- functional API ------------------------------------------------------
 
 
 def _included(e: Event, until_seq: int | None, until_minute: int | None) -> bool:
@@ -210,11 +210,11 @@ def metrics_at(
     until_minute: int | None = None,
     config: AnalyticsConfig = DEFAULT_CONFIG,
 ) -> MetricSnapshot:
-    """Kesme noktasına kadarki olaylardan metrikler.
+    """Metrics from the events up to the cut-off point.
 
-    until_minute=t: t < 45 ise 1. devrenin t. dakikasına, aksi halde 2. devrenin
-    t. dakikasına kadar (o dakika dahil). Akış zaman sıralı olduğundan kesmeyi
-    geçen ilk olayda durulur; sonrası hiç okunmaz.
+    until_minute=t: up to minute t of the first half if t < 45, otherwise up to minute t
+    of the second half (that minute included). The stream is time-ordered, so it stops at
+    the first event past the cut-off; nothing after it is read.
     """
     tracker = MatchTracker(config)
     for e in events:
@@ -241,6 +241,6 @@ def field_tilt(events: Iterable[Event], **cut: Any) -> dict[str, float]:
 
 
 def pressure_index(events: Iterable[Event], **cut: Any) -> dict[str, float]:
-    """Son pencere için {"home", "away", "balance"}."""
+    """{"home", "away", "balance"} for the last window."""
     snap = metrics_at(events, **cut)
     return {**snap.pressure, "balance": snap.pressure_balance}

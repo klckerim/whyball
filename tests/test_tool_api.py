@@ -20,7 +20,7 @@ END = MatchTime.of(EVENTS[-1])
 
 
 def _call(name, payload):
-    """Payload ve sonuç JSON'dan gidip gelir."""
+    """Payload and result round-trip through JSON."""
     out = TOOLS[name](json.loads(json.dumps(payload)))
     assert json.loads(json.dumps(out)) == out
     return out

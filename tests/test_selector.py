@@ -32,7 +32,7 @@ def _m(k, mtype, minute, importance, period=None):
     )
 
 
-# --- gol ve kırmızı kart --------------------------------------------------------
+# --- goals and red cards --------------------------------------------------------
 
 
 @pytest.mark.parametrize("config", [DEFAULT_EXPLAIN_CONFIG, STRICT], ids=["default", "strict"])
@@ -49,7 +49,7 @@ def test_goals_and_red_cards_kept_regardless_of_importance_and_cap():
     assert select_moments(moments, STRICT) == moments
 
 
-# --- eşik ve pencere kotası -------------------------------------------------------
+# --- threshold and window quota -------------------------------------------------------
 
 
 def test_low_importance_pressure_shifts_are_dropped():
@@ -108,7 +108,7 @@ def test_real_matches_respect_window_cap():
         assert all(n <= cfg.max_per_window for n in per_window.values())
 
 
-# --- determinizm ------------------------------------------------------------------
+# --- determinism ------------------------------------------------------------------
 
 
 def test_selection_is_deterministic_and_pure():

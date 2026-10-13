@@ -1,4 +1,4 @@
-"""CLI: anlatım hattını çalıştırır, her momentin sonucunu ve izini yazar.
+"""CLI: runs the narration pipeline and prints each moment's result and trace.
 
 python -m app.explain.run --input data/demo/red_card_swing_seed42.jsonl --narrator fake:wrong_number
 python -m app.explain.run --seed 42 --scenario late_comeback --narrator template --lang en --no-cache
@@ -53,17 +53,17 @@ def format_step(step: dict[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Anlatım hattını çalıştır")
-    parser.add_argument("--input", help="JSONL olay dosyası")
+    parser = argparse.ArgumentParser(description="Run the narration pipeline")
+    parser.add_argument("--input", help="JSONL event file")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
     parser.add_argument(
         "--narrator", default="template",
-        help=f"template | foundry | fake:<mod> ({', '.join(FAKE_MODES)})",
+        help=f"template | foundry | fake:<mode> ({', '.join(FAKE_MODES)})",
     )
     parser.add_argument("--persona")
     parser.add_argument("--lang", choices=LANGS, default="en")
-    parser.add_argument("--all", action="store_true", help="Seçimi atla, tüm momentler")
+    parser.add_argument("--all", action="store_true", help="Skip selection, all moments")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--cache-dir", default=str(DEFAULT_CACHE_DIR))
     parser.add_argument("--prompt-version")
@@ -74,14 +74,14 @@ def main(argv: list[str] | None = None) -> int:
     elif args.seed is not None:
         events = generate_match(args.seed, args.scenario)
     else:
-        parser.error("--input ya da --seed gerekli")
+        parser.error("--input or --seed is required")
     try:
         narrator = make_narrator(args.narrator, events)
     except ValueError as e:
         parser.error(str(e))
     cache = None if args.no_cache else NarrationCache(args.cache_dir)
     usage = getattr(narrator, "usage", None)
-    if usage is not None:  # LLM anlatıcı: her çağrının token ve süresi stderr'e
+    if usage is not None:  # LLM narrator: tokens and duration of each call go to stderr
         logging.basicConfig(level=logging.WARNING, format="%(message)s", stream=sys.stderr)
         logging.getLogger("whyball.llm").setLevel(logging.INFO)
 
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         cache_state = "off" if cache is None else ("hit" if r.cache_hit else "miss")
         out.write(f"{short_id}  {m.period}H {m.minute:02d}:{m.second:02d}  {m.type}\n")
         out.write(f"  source={r.source}  attempts={r.attempts}  cache={cache_state}  ok={r.ok}\n")
-        out.write(f"  text: {r.text or '(boş)'}\n")
+        out.write(f"  text: {r.text or '(empty)'}\n")
         for step in r.trace:
             out.write(f"    {format_step(step)}\n")
         out.write("\n")
@@ -113,15 +113,15 @@ def main(argv: list[str] | None = None) -> int:
         tokens_out = sum(u.output_tokens or 0 for u in usage)
         avg_ms = sum(u.latency_ms for u in usage) / len(usage) if usage else 0
         out.write(
-            f"LLM çağrı: {len(usage)} · token: {tokens_in} giriş + {tokens_out} çıkış "
-            f"· ortalama süre: {avg_ms / 1000:.1f} sn\n"
+            f"LLM calls: {len(usage)} · tokens: {tokens_in} in + {tokens_out} out "
+            f"· average duration: {avg_ms / 1000:.1f} s\n"
         )
     budget_hits = [r for _, r in results if r.trace and r.trace[-1].get("reason") == "budget_exceeded"]
     if budget_hits:
         limit = getattr(getattr(narrator, "config", None), "llm_max_calls_per_run", "?")
         out.write(
-            f"UYARI: LLM çağrı bütçesi aşıldı ({limit}/{limit}): "
-            f"{len(budget_hits)} moment yedeğe düştü\n"
+            f"WARNING: LLM call budget exceeded ({limit}/{limit}): "
+            f"{len(budget_hits)} moments fell back to the template\n"
         )
     return 0 if all(r.ok for _, r in results) else 1
 

@@ -1,7 +1,7 @@
-"""Template anlatıcı: bir momentten tipli iddialar ve EN düz metin üretir.
+"""Template narrator: produces typed claims and EN plain text from a moment.
 
-LLM anlatıcının fallback'idir. Metindeki her somut ifade bir iddiaya
-dayanır; iddiası doğrulanmayan cümle yayınlanmaz (``Narration.published``).
+It is the LLM narrator's fallback. Every concrete statement in the text rests on a
+claim; a sentence whose claim does not verify is never published (``Narration.published``).
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def require_language(language: str | None) -> str:
 
 @dataclass(frozen=True)
 class Sentence:
-    text: dict[str, str]  # dil → metin
+    text: dict[str, str]  # language → text
     claims: tuple[Claim, ...]
 
 
@@ -46,7 +46,7 @@ class Narration:
     moment_id: str
     moment_type: str
     sentences: tuple[Sentence, ...]
-    results: tuple[tuple[VerificationResult, ...], ...]  # cümle başına iddia sonuçları
+    results: tuple[tuple[VerificationResult, ...], ...]  # claim results per sentence
 
     def sentence_ok(self, i: int) -> bool:
         return all(r.ok for r in self.results[i])
@@ -56,7 +56,7 @@ class Narration:
         return all(self.sentence_ok(i) for i in range(len(self.sentences)))
 
     def published(self, lang: str) -> str:
-        """Sadece tüm iddiaları doğrulanan cümleler."""
+        """Only the sentences whose claims all verify."""
         return " ".join(
             s.text[lang] for i, s in enumerate(self.sentences) if self.sentence_ok(i)
         )
@@ -102,7 +102,7 @@ class _Context:
         return f"{self.match_id}#{seq}"
 
     def count(self, metric: str, subject: Subject, start: MatchTime) -> Claim:
-        """Değeri ve dayanakları olaylardan ölçülen count iddiası."""
+        """A count claim whose value and evidence are measured from the events."""
         m = measure(metric, subject, start, self.t, self.events)
         return Claim(
             "count", subject, metric, "eq", m.value, start, self.t,
@@ -132,7 +132,7 @@ class _Context:
         )
 
 
-# --- moment tipi başına cümleler ------------------------------------------------
+# --- sentences per moment type ------------------------------------------------
 
 
 def _goal(c: _Context) -> list[Sentence]:
@@ -223,7 +223,7 @@ def _score_change(c: _Context) -> list[Sentence]:
                 (c.state("min_score_margin", side, "eq", -deficit, conceded),),
             )
         )
-    # Skor cümlesi aynı olayın gol momentinde var; burada tekrarlanmaz.
+    # The score sentence is already in the goal moment of the same event; it is not repeated here.
     return sentences
 
 
@@ -270,7 +270,7 @@ def _dominance(c: _Context) -> list[Sentence]:
         c.state("score_margin", side, "lte", 0, anchor),
     )
     s, o = shots.value, opp_shots.value
-    # Possession ve şutlar aynı pencereden; pencere iki değerden önce yazılır ki ikisine de bağlansın.
+    # Possession and shots share one window; the window is written before both values so it binds to both.
     return [
         Sentence(
             {

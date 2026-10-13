@@ -1,7 +1,7 @@
-"""Demo fixture'larını yeniden üretir: python -m app.generator.freeze
+"""Regenerates the demo fixtures: python -m app.generator.freeze
 
-Sadece üretici bilerek değiştiyse çalıştırılmalı. tests/test_demo_fixtures.py
-repodaki dosyaların üretici çıktısıyla bayt bayt aynı olduğunu doğrular.
+Run it only when the generator changed on purpose. tests/test_demo_fixtures.py
+checks that the files in the repo are byte-identical to the generator output.
 """
 
 from __future__ import annotations
@@ -29,12 +29,12 @@ def demo_paths(out_dir: Path = DEMO_DIR) -> list[tuple[str | None, int, Path]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Demo fixture'larını yeniden üret")
+    parser = argparse.ArgumentParser(description="Regenerate the demo fixtures")
     parser.add_argument("--out-dir", type=Path, default=DEMO_DIR)
     args = parser.parse_args(argv)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    print("| Dosya | Senaryo | Seed | Skor (home-away) | Olay | SHA-256 |")
+    print("| File | Scenario | Seed | Score (home-away) | Events | SHA-256 |")
     print("|---|---|---|---|---|---|")
     for scenario, seed, path in demo_paths(args.out_dir):
         events = generate_match(seed, scenario)

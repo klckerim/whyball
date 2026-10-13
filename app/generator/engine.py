@@ -1,11 +1,11 @@
-"""Seed'li, deterministik sentetik maç üreticisi.
+"""Seeded, deterministic synthetic match generator.
 
-Tüm rastgelelik tek bir ``random.Random(seed)`` örneğinden gelir. Global
-``random``, saat, ``uuid`` veya hash/set sırasına bağlı hiçbir şey kullanılmaz;
-böylece aynı seed her süreçte bayt bayt aynı olay akışını üretir.
+All randomness comes from a single ``random.Random(seed)`` instance. Nothing depends on the
+global ``random``, the clock, ``uuid`` or hash/set order, so the same seed yields a
+byte-identical event stream in every process.
 
-Basitleştirmeler: home takımı iki devrede de x=105 yönüne hücum eder,
-duran toplar (serbest vuruş, aut) ayrı olay olarak üretilmez.
+Simplifications: the home team attacks towards x=105 in both halves; set pieces
+(free kicks, throw-ins) are not emitted as separate events.
 """
 
 from __future__ import annotations
@@ -24,16 +24,16 @@ PERIOD_SECONDS = 45 * 60
 LINEUP_SIZE = 11
 BENCH_SIZE = 5
 MAX_SUBS = 3
-MIN_PLAYERS = 7  # altına düşülürse kart verilmez
+MIN_PLAYERS = 7  # no more cards once a side would drop below this
 SIDES = ("home", "away")
 
 PASS_SUCCESS = 0.82
 DRIBBLE_SUCCESS = 0.6
-TURNOVER_PER_MISSING = 0.06  # sahadaki her eksik oyuncu için ek top kaybı olasılığı
-STRAIGHT_RED_PROB = 0.002  # faul başına
-YELLOW_PROB = 0.15  # faul başına
-BOOKED_CAUTION = 0.15  # sarısı olan oyuncunun tekrar sarı görme çarpanı
-BOX_PROGRESS = 0.83  # bunun ötesi ceza sahası
+TURNOVER_PER_MISSING = 0.06  # extra turnover probability per missing player on the pitch
+STRAIGHT_RED_PROB = 0.002  # per foul
+YELLOW_PROB = 0.15  # per foul
+BOOKED_CAUTION = 0.15  # multiplier for an already booked player getting another yellow
+BOX_PROGRESS = 0.83  # beyond this is the penalty area
 PENALTY_FROM_BOX_FOUL = 0.065
 PENALTY_SPOT = 1.0 - 11.0 / PITCH_LENGTH
 
@@ -51,7 +51,7 @@ class _Team:
     name: str
     lineup: list[str]
     bench: list[str]
-    on_pitch: list[str] = field(default_factory=list)  # index 0 kaleci
+    on_pitch: list[str] = field(default_factory=list)  # index 0 is the goalkeeper
     booked: list[str] = field(default_factory=list)
 
     def outfield(self) -> list[str]:
@@ -67,27 +67,27 @@ class _Match:
         self.rng = random.Random(seed)
         self.scenario = scenario
         self.match_id = f"m-{seed}" if scenario is None else f"m-{seed}-{scenario.name}"
-        # Senaryo modunda skor yalnızca zorunlu olaylardan gelir.
+        # In scenario mode the score comes only from forced events.
         self.natural_goals = scenario is None
         overrides = (scenario.turnover_factor if scenario else None) or {}
         self.turnover_factor = {s: overrides.get(s, 1.0) for s in SIDES}
         tempo = (scenario.tempo if scenario else None) or {}
         self.tempo = {s: tempo.get(s, 1.0) for s in SIDES}
-        # sorted kararlıdır: aynı dakikadaki olaylar tanım sırasını korur.
+        # sorted is stable: events in the same minute keep their definition order.
         self.forced: list[ForcedEvent] = (
             sorted(scenario.forced, key=lambda f: f.minute) if scenario else []
         )
         self.events: list[Event] = []
         self.score = {"home": 0, "away": 0}
         self.period = 1
-        self.clock = 0  # maç başından itibaren saniye
+        self.clock = 0  # seconds since kickoff
         self.period_end = 0
         self.possession = "home"
-        self.progress = 0.5  # topa sahip takım açısından: 0 kendi kalesi, 1 rakip kale
+        self.progress = 0.5  # from the side in possession: 0 own goal, 1 opponent's goal
         self.y = PITCH_WIDTH / 2
         self.teams = self._build_teams()
 
-    # --- kurulum ---------------------------------------------------------
+    # --- setup ---------------------------------------------------------
 
     def _build_teams(self) -> dict[str, _Team]:
         cities = self.rng.sample(TEAM_CITIES, 2)
@@ -106,7 +106,7 @@ class _Match:
             teams[side] = team
         return teams
 
-    # --- olay yayma ------------------------------------------------------
+    # --- event emission ------------------------------------------------------
 
     def _emit(
         self,
@@ -141,7 +141,7 @@ class _Match:
         )
 
     def _turnover(self) -> None:
-        # Top aynı fiziksel noktada kalır, yalnızca bakış açısı döner.
+        # The ball stays at the same physical spot; only the point of view flips.
         self.possession = _other(self.possession)
         self.progress = 1.0 - self.progress
 
@@ -153,7 +153,7 @@ class _Match:
     def _walk_y(self) -> None:
         self.y = _clamp(self.y + self.rng.uniform(-12.0, 12.0), 1.0, PITCH_WIDTH - 1.0)
 
-    # --- maç akışı -------------------------------------------------------
+    # --- match flow -------------------------------------------------------
 
     def run(self) -> list[Event]:
         self._emit(
@@ -164,7 +164,7 @@ class _Match:
                 "seed": self.seed,
                 "scenario": self.scenario.name if self.scenario else None,
                 "teams": {
-                    # Kopya: bench maç içinde değişiklikle küçülür, meta değişmemeli.
+                    # Copy: the bench shrinks with substitutions during the match, meta must not change.
                     side: {"name": t.name, "lineup": list(t.lineup), "bench": list(t.bench)}
                     for side, t in self.teams.items()
                 },
@@ -187,7 +187,7 @@ class _Match:
             step = self.rng.randint(2, 20)
             due = self._next_forced_at()
             if due is not None and due <= self.clock + step:
-                # Zorunlu olay tam dakikasında; saat zaten geçtiyse (gol kutlaması) hemen.
+                # A forced event at its exact minute; right away if the clock is already past it (goal celebration).
                 self.clock = max(self.clock, due)
                 self._run_due_subs(subs)
                 self._run_forced(self.forced.pop(0))
@@ -303,11 +303,11 @@ class _Match:
         if r < goal_prob and self.natural_goals:
             self._emit(EventType.SHOT, side, player, outcome="goal")
             self._score_goal(side, player)
-        elif r < goal_prob + 0.30:  # doğal goller kapalıysa gol şutu kurtarışa döner
+        elif r < goal_prob + 0.30:  # with natural goals off, a goal-bound shot turns into a save
             self._emit(EventType.SHOT, side, player, outcome="saved")
             self._give_ball(defending, 0.03, PITCH_WIDTH / 2)
             self._emit(EventType.SAVE, defending, self.teams[defending].goalkeeper())
-            if self.rng.random() < 0.45:  # kaleci kornere çeler
+            if self.rng.random() < 0.45:  # goalkeeper turns it behind for a corner
                 self._corner(side)
         elif r < goal_prob + 0.55:
             self._emit(EventType.SHOT, side, player, outcome="blocked")
@@ -320,7 +320,7 @@ class _Match:
             self._give_ball(defending, 0.05, PITCH_WIDTH / 2)
 
     def _score_goal(self, side: str, player: str) -> None:
-        # Çağıran topu `side` takımına vermiş olmalı (gol koordinatı için).
+        # The caller must have given the ball to `side` (for the goal coordinate).
         self.score[side] += 1
         self.progress, self.y = 1.0, PITCH_WIDTH / 2
         self._emit(EventType.GOAL, side, player)
@@ -329,7 +329,7 @@ class _Match:
             self._kickoff(_other(side))
 
     def _penalty(self, side: str, outcome: str | None = None) -> None:
-        """`side` penaltıyı kullanır. outcome verilmezse doğal sonuç çekilir."""
+        """`side` takes the penalty. Without an outcome, a natural outcome is drawn."""
         defending = _other(side)
         self._give_ball(side, PENALTY_SPOT, PITCH_WIDTH / 2)
         taker = self._attacker()
@@ -362,7 +362,7 @@ class _Match:
             self._maybe_card(defending, offender)
         if self.progress > BOX_PROGRESS and self.rng.random() < PENALTY_FROM_BOX_FOUL:
             self._penalty(attacking)
-        # Aksi halde top hücum eden takımda kalır (serbest vuruş).
+        # Otherwise the ball stays with the attacking side (free kick).
 
     def _maybe_card(self, side: str, offender: str) -> None:
         team = self.teams[side]
@@ -388,10 +388,10 @@ class _Match:
 
 
 def generate_match(seed: int, scenario: str | Scenario | None = None) -> list[Event]:
-    """Verilen seed (ve isteğe bağlı senaryo) için tam bir maçın olay akışını üretir."""
+    """Generates the full event stream of a match for the given seed (and optional scenario)."""
     if isinstance(scenario, str):
         if scenario not in SCENARIOS:
             choices = ", ".join(sorted(SCENARIOS))
-            raise ValueError(f"Bilinmeyen senaryo: {scenario!r} (seçenekler: {choices})")
+            raise ValueError(f"Unknown scenario: {scenario!r} (options: {choices})")
         scenario = SCENARIOS[scenario]
     return _Match(seed, scenario).run()

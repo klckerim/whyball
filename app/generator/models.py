@@ -1,4 +1,4 @@
-"""Olay şeması ve JSONL serileştirme."""
+"""Event schema and JSONL serialization."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class Event:
     type: EventType
     team: str | None = None  # "home" | "away"
     player: str | None = None
-    x: float | None = None  # 0..105, home takımı x=105 yönüne hücum eder
+    x: float | None = None  # 0..105, the home team attacks towards x=105
     y: float | None = None  # 0..68
     outcome: str | None = None
     score: dict[str, int] = field(default_factory=lambda: {"home": 0, "away": 0})

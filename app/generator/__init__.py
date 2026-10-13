@@ -1,4 +1,4 @@
-"""Seed'li sentetik maç üreticisi."""
+"""Seeded synthetic match generator."""
 
 from .engine import generate_match
 from .models import SCHEMA_VERSION, Event, EventType, read_jsonl, to_jsonl, write_jsonl

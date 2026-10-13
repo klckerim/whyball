@@ -36,7 +36,7 @@ def _assert_published(narration, must_contain):
             assert needle in text, (lang, needle, text)
 
 
-# --- moment tipi başına -------------------------------------------------------------
+# --- per moment type -------------------------------------------------------------
 
 
 def test_goal():
@@ -93,7 +93,7 @@ def test_dominance_without_reward():
 
 
 def test_dominance_possession_and_shots_share_one_stated_window():
-    # M003 (dominant_loss/7): "58% of possession and 4–0 shots since 25'" pencereyi yalnızca şutlara bağlıyordu.
+    # M003 (dominant_loss/7): "58% of possession and 4–0 shots since 25'" tied the window to the shots only.
     _, m, n = _find(7, "dominant_loss", lambda m: m.type == "dominance_without_reward")
     (sentence,) = n.sentences
     poss, shots, opp = sentence.claims[:3]
@@ -105,7 +105,7 @@ def test_dominance_possession_and_shots_share_one_stated_window():
     assert window < en.index(pct) < en.index(f"{shots.value:g}–{opp.value:g}")
 
 
-# --- toplu ----------------------------------------------------------------------------
+# --- bulk ----------------------------------------------------------------------------
 
 
 def _all_matches():
@@ -134,7 +134,7 @@ def test_every_moment_in_many_matches_fully_verifies():
 
 
 def test_every_windowed_claim_states_its_window():
-    """Başlangıcı maç başı ya da olay anı olmayan her count/ratio iddiasının penceresi cümlede yazılı."""
+    """Every count/ratio claim whose start is neither kickoff nor the event moment states its window in the sentence."""
     for events in _all_matches():
         for m in detect_moments(events):
             for s in narrate(m, events).sentences:
@@ -144,7 +144,7 @@ def test_every_windowed_claim_states_its_window():
                     assert f"since {c.start.minute}'" in s.text["en"], (m.id, c.describe())
 
 
-# --- yayın filtresi, determinizm, ileriye bakma ---------------------------------------
+# --- publication filter, determinism, lookahead ---------------------------------------
 
 
 def test_sentence_with_failing_claim_is_not_published():
@@ -165,7 +165,7 @@ def test_narration_is_deterministic():
 
 
 def test_narration_ignores_events_after_moment():
-    # Momentten sonraki olaylar bozulur (zaman aynı, takım/tip değişir); anlatı değişmemeli.
+    # Events after the moment are corrupted (same time, team/type changed); the narration must not change.
     events = generate_match(42, "red_card_swing")
     flip = {"home": "away", "away": "home"}
     for m in detect_moments(events):

@@ -1,1 +1,1 @@
-"""Değerlendirme betikleri (uygulama paketinin parçası değil)."""
+"""Evaluation scripts (not part of the application package)."""

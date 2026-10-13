@@ -1,7 +1,7 @@
-"""Moment detector: akışı olay olay işler, anlatılmaya değer anları üretir.
+"""Moment detector: processes the stream event by event and emits moments worth narrating.
 
-Her moment yalnızca o ana kadar görülen olaylara dayanır (``at_seq``); dayanak
-olaylar (``event_ids``) her zaman ``at_seq``'ten küçük ya da eşittir.
+Each moment relies only on events seen up to that point (``at_seq``); its evidence
+events (``event_ids``) are always less than or equal to ``at_seq``.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class Moment:
     period: int
     minute: int
     second: int
-    at_seq: int  # momenti tetikleyen olay
+    at_seq: int  # event that triggered the moment
     importance: float
     event_ids: tuple[int, ...]
     team: str | None
@@ -62,13 +62,13 @@ class MomentDetector:
         self._prev_seq: int | None = None
         self._last_foul: dict[str, int] = {}
         self._max_deficit = {"home": 0, "away": 0}
-        self._pressure_side: str | None = None  # histerezis durumu
+        self._pressure_side: str | None = None  # hysteresis state
         self._last_shift_side: str | None = None
         self._last_shift_at: int | None = None
         self._neutral_since: int | None = None
         self._last_dominance_at: dict[str, int | None] = {"home": None, "away": None}
 
-    # --- yardımcılar -----------------------------------------------------
+    # --- helpers -----------------------------------------------------
 
     def _importance(self, mtype: str, e: Event, from_behind: bool = False) -> float:
         c = self.config
@@ -106,10 +106,10 @@ class MomentDetector:
         self.moments.append(m)
         return m
 
-    # --- ana döngü --------------------------------------------------------
+    # --- main loop --------------------------------------------------------
 
     def process(self, e: Event) -> list[Moment]:
-        """Olayı işler, bu olayla ortaya çıkan momentleri döndürür."""
+        """Processes an event and returns the moments it produces."""
         if not self._match_id:
             self._match_id = e.match_id
         prev_score = dict(self.tracker.score)
@@ -135,7 +135,7 @@ class MomentDetector:
         elif t is EventType.GOAL:
             self._on_goal(e, prev_score)
 
-        if t is EventType.SHOT and e.outcome != "goal":  # gol olan şut 'sonuçsuz' değildir
+        if t is EventType.SHOT and e.outcome != "goal":  # a shot that scored is not 'without reward'
             self._check_dominance(e)
         self._check_pressure_shift(e)
 
@@ -143,7 +143,7 @@ class MomentDetector:
         return self.moments[start:]
 
     def _on_goal(self, e: Event, prev_score: dict[str, int]) -> None:
-        # Gol olayı her zaman şut(goal) ya da penaltı(scored) olayından hemen sonra gelir.
+        # A goal event always comes right after a shot(goal) or penalty(scored) event.
         ids = [s for s in (self._prev_seq,) if s is not None]
         self._make(
             "goal", e, e.team, [*ids, e.seq],
@@ -193,7 +193,7 @@ class MomentDetector:
             if self._neutral_since is None:
                 self._neutral_since = tr.played
             elif tr.played - self._neutral_since >= c.shift_rearm_min * 60:
-                self._last_shift_side = None  # baskı söndü
+                self._last_shift_side = None  # pressure faded
             return
         self._neutral_since = None
         if side == self._last_shift_side:
@@ -203,7 +203,7 @@ class MomentDetector:
             and tr.played - self._last_shift_at < c.shift_cooldown_min * 60
         ):
             return
-        # Son üçte birdeki şut hem giriş hem şut kaydı üretebilir; seq tekilleştirilir.
+        # A shot in the final third can produce both an entry and a shot record; seq is deduplicated.
         evidence = list(dict.fromkeys(
             r.seq for r in tr.window(c.pressure_window_min)
             if r.team == side and r.kind in (SHOT, ENTRY, CORNER)

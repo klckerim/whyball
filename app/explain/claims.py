@@ -1,8 +1,8 @@
-"""Tipli iddia şeması ve deterministik doğrulayıcı.
+"""Typed claim schema and the deterministic verifier.
 
-Bir iddia, belirli bir zaman aralığında bir özne (takım ve/veya oyuncu) için
-bir metriğin değeri hakkındadır ve dayanak olaylara işaret eder. Doğrulayıcı
-iddianın ``end`` anından sonraki hiçbir olayı kullanmaz.
+A claim is about the value of a metric for a subject (team and/or player) over a
+given time range and points to its evidence events. The verifier never uses an
+event after the claim's ``end``.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def event_ref(e: Event) -> str:
 def parse_ref(ref: str) -> tuple[str, int]:
     match_id, sep, seq = ref.rpartition("#")
     if not sep or not match_id or not seq.isdigit():
-        raise ValueError(f"Geçersiz event id: {ref!r}")
+        raise ValueError(f"Invalid event id: {ref!r}")
     return match_id, int(seq)
 
 
@@ -69,8 +69,8 @@ class Claim:
     metric: str
     comparison: str  # eq | gte | lte | gt | lt | approx
     value: float
-    start: MatchTime  # dahil
-    end: MatchTime  # dahil; iddianın "şimdi"si
+    start: MatchTime  # inclusive
+    end: MatchTime  # inclusive; the claim's "now"
     event_ids: tuple[str, ...]  # "m-42-red_card_swing#213"
 
     def to_dict(self) -> dict[str, Any]:
@@ -109,17 +109,17 @@ class Claim:
 @dataclass(frozen=True)
 class VerificationResult:
     ok: bool
-    reason: str  # "ok" ya da ret nedeni
+    reason: str  # "ok" or the rejection reason
     actual: float | None = None
 
 
 @dataclass(frozen=True)
 class Measurement:
     value: float
-    counted: tuple[int, ...] = ()  # count türünde sayılan olayların seq'leri
+    counted: tuple[int, ...] = ()  # seqs of the events counted, for count claims
 
 
-# --- metrik kayıt defteri -----------------------------------------------------
+# --- metric registry -----------------------------------------------------
 
 
 def _type_is(t: EventType) -> Callable[[Event], bool]:
@@ -153,7 +153,7 @@ METRIC_KINDS: dict[str, str] = {
 
 
 def _visible(events: Sequence[Event], end: MatchTime) -> list[Event]:
-    """`end` anına kadarki olaylar; kesmeyi geçen ilk olayda durulur."""
+    """Events up to `end`; stops at the first event past the cut-off."""
     out = []
     for e in events:
         if MatchTime.of(e) > end:
@@ -182,7 +182,7 @@ def measure(
     events: Sequence[Event],
     analytics_config: AnalyticsConfig = DEFAULT_CONFIG,
 ) -> Measurement:
-    """Metriği yalnızca `end` anına kadarki olaylardan hesaplar."""
+    """Computes the metric only from events up to `end`."""
     visible = _visible(events, end)
     in_range = [e for e in visible if MatchTime.of(e) >= start]
     kind = METRIC_KINDS[metric]
@@ -220,7 +220,7 @@ def measure(
     if metric == "pressure_balance":
         balance = tracker.pressure_balance()
         return Measurement(balance if team == "home" else -balance)
-    # field_tilt: aralıktaki son üçte bir girişlerinin payı
+    # field_tilt: share of final-third entries in the range
     first = in_range[0].seq if in_range else None
     entries = Counter(
         r.team for r in tracker.records

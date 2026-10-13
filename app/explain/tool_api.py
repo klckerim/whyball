@@ -1,11 +1,11 @@
-"""JSON girdi / JSON çıktı araç arayüzü (ileride MCP sunucusu bunları sarmalayacak).
+"""JSON-in / JSON-out tool interface (an MCP server will wrap these later).
 
-Her araç bir dict alır, bir dict döner ve hata fırlatmaz:
-  başarı: {"ok": true, "result": {...}}
-  hata:   {"ok": false, "error": {"code": ..., "message": ...}}
+Each tool takes a dict, returns a dict and never raises:
+  success: {"ok": true, "result": {...}}
+  error:   {"ok": false, "error": {"code": ..., "message": ...}}
 
-Maç bağlamı "events" (olay dict listesi) ya da "match_path" (yalnızca repo
-data/ altı) ile verilir.
+The match context is given as "events" (a list of event dicts) or "match_path" (only under
+the repo's data/).
 """
 
 from __future__ import annotations
@@ -54,11 +54,11 @@ def _events(payload: Payload) -> list[Event]:
         path = Path(payload["match_path"])
         path = (path if path.is_absolute() else REPO_ROOT / path).resolve()
         if not path.is_relative_to(DATA_DIR.resolve()):
-            raise ToolError("forbidden_path", "match_path data/ altında olmalı")
+            raise ToolError("forbidden_path", "match_path must be under data/")
         if not path.is_file():
-            raise ToolError("not_found", f"{payload['match_path']} bulunamadı")
+            raise ToolError("not_found", f"{payload['match_path']} not found")
         return read_jsonl(path)
-    raise ToolError("missing_match", "'events' ya da 'match_path' gerekli")
+    raise ToolError("missing_match", "'events' or 'match_path' is required")
 
 
 @_tool
@@ -72,10 +72,10 @@ def measure_tool(payload: Payload) -> Payload:
     metric = payload["metric"]
     kind = METRIC_KINDS.get(metric)
     if kind is None:
-        raise ToolError("unknown_metric", f"Bilinmeyen metrik: {metric!r}")
+        raise ToolError("unknown_metric", f"Unknown metric: {metric!r}")
     subject = Subject(**payload.get("subject", {}))
     if kind != "count" and subject.team not in ("home", "away"):
-        raise ToolError("invalid_subject", f"{metric} için subject.team gerekli")
+        raise ToolError("invalid_subject", f"subject.team is required for {metric}")
     events = _events(payload)
     m = measure(metric, subject, MatchTime(*payload["start"]), MatchTime(*payload["end"]), events)
     match_id = events[0].match_id

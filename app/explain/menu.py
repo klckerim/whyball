@@ -1,19 +1,19 @@
-"""Claim menüsü (foundry-v5): iddiaları kod kurar ve doğrular, model yalnızca seçer.
+"""Claim menu (foundry-v5): code builds and verifies the claims, the model only picks.
 
-Her moment için aday iddialar deterministik olarak üretilir ve `verify_claim`'den geçer;
-count iddialarında kanıt listesi doğrulayıcının saydığı olayların tamamıdır (maç başından
-sayımlar dahil). Model iddia kurmaz, olay bağlamaz: şablonda yalnızca menüdeki id'leri
-yer tutucularla kullanır (`{value:<id>}`, `{minute:<id>}`, `{start:<id>}`, `{label:<id>}`,
-`{clause:<id>}`, menü kanıtı olan `{event:<id>}`, `{score}`). Menüde olmayan id reddedilir.
+For each moment, candidate claims are generated deterministically and pass `verify_claim`;
+for count claims the evidence list is every event the verifier counted (counts since
+kickoff included). The model builds no claims and links no events: in its template it only
+uses menu ids through placeholders (`{value:<id>}`, `{minute:<id>}`, `{start:<id>}`, `{label:<id>}`,
+`{clause:<id>}`, `{event:<id>}` for menu evidence, `{score}`). An id not on the menu is rejected.
 
-Yan cümleler (`{clause:<id>}`): her iddia için kodun yazdığı doğal dil parçası ("{home} have
-had {value:possession} of the ball since kickoff"); model aynen kullanır ya da bağlaçla
-birleştirir. Yan cümle şablonları lint'ten geçmez (kod yazar), render sonrası metin
-text_lint'ten geçer (tests/test_menu.py).
+Clauses (`{clause:<id>}`): a natural-language fragment written by code for each claim ("{home} have
+had {value:possession} of the ball since kickoff"); the model uses it as is or joins clauses with a
+conjunction. Clause templates do not go through lint (code writes them); the rendered text goes
+through text_lint (tests/test_menu.py).
 
-Menüye girmeyen metrik: field_tilt ("territorial share"). Possession ile aynı biçimde
-(yüzde) ve aynı "top/alan" çağrışımıyla gelir; okur ikisini karıştırır, hiçbir moment tipinin
-ana iddiası değildir. Doğrulayıcıda metrik olarak kalır.
+Metric left off the menu: field_tilt ("territorial share"). It comes in the same form as possession
+(a percentage) with the same "ball/territory" connotation; readers confuse the two, and it is the
+primary claim of no moment type. It stays a metric in the verifier.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ from .template_narrator import _Context, _since, fmt_minute
 from .text_lint import LintIssue
 
 CLAIM_SLOTS = ("value", "minute", "start", "label")
-# Bir cümleyi bir menü iddiasına dayandıran yer tutucular ({label:} tek başına değer taşımaz).
+# Placeholders that ground a sentence in a menu claim ({label:} alone carries no value).
 GROUNDING = ("value", "minute", "start", "clause", "event", "score", "score_named")
 
 
@@ -55,7 +55,7 @@ class MenuClaim:
     def window(self) -> str:
         c = self.claim
         if c.metric == "pressure_balance":
-            return "rolling"  # son oynanmış dakikalar (etikette yazılı)
+            return "rolling"  # last minutes played (stated in the label)
         if c.start == c.end:
             return "event"
         return "since_kickoff" if c.start == KICKOFF else "window"
@@ -65,7 +65,7 @@ class MenuClaim:
 class MenuClause:
     id: str
     claim_ids: tuple[str, ...]
-    text: dict[str, str]  # dil → yer tutuculu şablon ({home}/{away}, menü id'leri)
+    text: dict[str, str]  # language → placeholder template ({home}/{away}, menu ids)
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class ClaimMenu:
     moment_id: str
     claims: tuple[MenuClaim, ...]
     clauses: tuple[MenuClause, ...]
-    # Moment tipinin ana iddiaları: her gruptan en az bir iddia cümlede kullanılmalı.
+    # The moment type's primary claims: at least one claim from each group must be used in a sentence.
     primary: tuple[frozenset[str], ...] = ()
 
     @property
@@ -88,11 +88,11 @@ class ClaimMenu:
         return {c.id: c.text.get(language, c.text["en"]) for c in self.clauses}
 
     def evidence_owner(self, ref: str) -> str | None:
-        """Olayı kanıt sayan ilk menü iddiası."""
+        """The first menu claim that counts the event as evidence."""
         return next((c.id for c in self.claims if ref in c.claim.event_ids), None)
 
 
-# --- menü kurulumu ------------------------------------------------------------------------------
+# --- menu building ------------------------------------------------------------------------------
 
 
 class _Builder:
@@ -227,7 +227,7 @@ def _dominance(b: _Builder) -> None:
     start = _since(b.c.t, b.c.config.dominance_context_minutes)
     b.possession(start)
     _shots(b, start, lead_form=True)
-    # İki ana iddia aynı pencereden: pencere bir kez yazılır (iki yan cümle yan yana dakikayı tekrarlar).
+    # Both primary claims share one window: it is written once (two clauses side by side repeat the minute).
     shots, opp = (next(c.claim.value for c in b.claims if c.id == i) for i in ("shots_for", "shots_against"))
     balance = "a {v}–{o} lead" if shots > opp else ("a {v}–{o} deficit" if shots < opp else "level at {v}–{o}")
     balance = balance.format(v="{value:shots_for}", o="{value:shots_against}")
@@ -256,7 +256,7 @@ PRIMARY: dict[str, tuple[frozenset[str], ...]] = {
 def build_menu(
     moment: Moment, events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> ClaimMenu:
-    """Momentin doğrulanmış aday iddiaları ve yan cümleleri. Doğrulanmayan iddia menüye girmez."""
+    """Verified candidate claims and clauses for the moment. A claim that does not verify stays off the menu."""
     b = _Builder(moment, events, config)
     BUILDERS[moment.type](b)
     ok = {c.id for c in b.claims if verify_claim(c.claim, events, config).ok}
@@ -266,11 +266,11 @@ def build_menu(
     return ClaimMenu(moment.id, claims, clauses, primary)
 
 
-# --- model kaydı için okunur biçim ---------------------------------------------------------------
+# --- readable form for the model record ---------------------------------------------------------------
 
 
 def preview(menu: ClaimMenu, ctx: SlotContext) -> dict[str, str]:
-    """Yan cümlelerin render edilmiş hali (modele örnek)."""
+    """Rendered clauses (an example for the model)."""
     ids = tuple(c.id for c in menu.claims)
     claims = tuple(c.claim for c in menu.claims)
     verdicts = tuple(VerificationResult(True, "ok", c.value) for c in claims)
@@ -303,17 +303,17 @@ def menu_record(menu: ClaimMenu, ctx: SlotContext) -> dict[str, list[dict]]:
 
 
 def evidence_events(menu: ClaimMenu, events: Sequence[Event]) -> list[Event]:
-    """Menü iddialarının kanıt olayları (sıralı, tekrarsız)."""
+    """Evidence events of the menu claims (ordered, deduplicated)."""
     by_seq = {e.seq: e for e in events}
     seqs = sorted({parse_ref(r)[1] for c in menu.claims for r in c.claim.event_ids})
     return [by_seq[s] for s in seqs if s in by_seq]
 
 
-# --- menü taslağı: bağlama ve v5 kuralları ---------------------------------------------------------
+# --- menu draft: binding and v5 rules ---------------------------------------------------------
 
 
 def _minutes(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[str] = frozenset()) -> list[str]:
-    """Şablonun render edildiğinde yazacağı dakikalar (yan cümleler dahil)."""
+    """Minutes the template writes when rendered (clauses included)."""
     by_id, clauses = menu.by_id, menu.clause_templates(ctx.language)
     out: list[str] = []
     for ph in parse_placeholders(template)[0]:
@@ -332,7 +332,7 @@ def _minutes(template: str, menu: ClaimMenu, ctx: SlotContext, seen: frozenset[s
 def bind_menu(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> tuple[tuple[Claim, ...], tuple[str, ...], list[LintIssue]]:
-    """Yer tutucuları menüye bağlar; (bağlanan iddialar, id'ler, sorunlar)."""
+    """Binds placeholders to the menu; (bound claims, ids, issues)."""
     placeholders, issues = parse_placeholders(template)
     by_id, clauses = menu.by_id, menu.clause_by_id
     subjects = {c.claim.subject.player for c in menu.claims if c.claim.subject.player}
@@ -375,7 +375,7 @@ def bind_menu(
 
 
 def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
-    """Yer tutucuların başvurduğu menü iddiaları (yan cümleler ve olay sahipleri dahil)."""
+    """Menu claims the placeholders refer to (clauses and event owners included)."""
     clauses = menu.clause_by_id
     out: set[str] = set()
     for ph in placeholders:
@@ -395,7 +395,7 @@ def _referenced(placeholders, menu: ClaimMenu) -> set[str]:
 def menu_rule_issues(
     template: str, menu: ClaimMenu, ctx: SlotContext, config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG
 ) -> list[LintIssue]:
-    """Her cümle bir menü iddiasına dayanır; ana iddia kullanılır; bir cümlede aynı dakika bir kez."""
+    """Each sentence rests on a menu claim; the primary claim is used; a minute appears once per sentence."""
     placeholders = parse_placeholders(template)[0]
     issues: list[LintIssue] = []
     for start, end in template_sentences(template):

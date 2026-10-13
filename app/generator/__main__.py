@@ -9,10 +9,10 @@ from . import SCENARIOS, generate_match, write_jsonl
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Seed'li sentetik maç olay akışı (JSONL)")
+    parser = argparse.ArgumentParser(description="Seeded synthetic match event stream (JSONL)")
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--scenario", choices=sorted(SCENARIOS))
-    parser.add_argument("--out", help="Çıktı dosyası (verilmezse stdout)")
+    parser.add_argument("--out", help="Output file (stdout if omitted)")
     args = parser.parse_args(argv)
 
     events = generate_match(args.seed, args.scenario)

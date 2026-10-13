@@ -29,7 +29,7 @@ def _assert_publishable(record):
     assert record.lint_issues == ()
 
 
-# --- ilk denemede geçen --------------------------------------------------------------
+# --- passes on the first attempt --------------------------------------------------------------
 
 
 @pytest.mark.parametrize("lang", LANGS)
@@ -50,7 +50,7 @@ def test_template_narrator_is_labelled_template():
     _assert_publishable(record)
 
 
-# --- retry ile düzelen ------------------------------------------------------------------
+# --- fixed by a retry ------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("lang", LANGS)
@@ -70,7 +70,7 @@ def test_fixes_after_feedback_succeeds_on_retry(mtype, lang):
     _assert_publishable(record)
 
 
-# --- yedeğe düşen ------------------------------------------------------------------------
+# --- falls back ------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("lang", LANGS)
@@ -93,7 +93,7 @@ def test_failing_modes_fall_back_to_labelled_template(mode, mtype, lang):
     _assert_publishable(record)
 
 
-# --- ölçüm modu: deneme kaydı ---------------------------------------------------------------
+# --- measurement mode: attempt log ---------------------------------------------------------------
 
 
 def test_on_attempt_sees_every_draft_but_record_and_cache_do_not(tmp_path):
@@ -109,7 +109,7 @@ def test_on_attempt_sees_every_draft_but_record_and_cache_do_not(tmp_path):
     assert all("value_mismatch" in [i.code for i in log.items] for log in logs)
     assert all(len(log.claims) == len(log.verification) for log in logs)
     stored = json.dumps(record.to_dict()) + "".join(p.read_text() for p in tmp_path.rglob("*") if p.is_file())
-    assert logs[0].draft.text not in stored  # reddedilen taslak yayına ve önbelleğe girmez
+    assert logs[0].draft.text not in stored  # a rejected draft never reaches the output or the cache
 
 
 def test_on_attempt_reports_accepted_and_narrator_errors():
@@ -127,7 +127,7 @@ def test_on_attempt_reports_accepted_and_narrator_errors():
     assert len(logs) == 3 and all(log.error is not None and log.draft is None for log in logs)
 
 
-# --- kayıt ve maç düzeyi ------------------------------------------------------------------
+# --- record and match level ------------------------------------------------------------------
 
 
 def test_record_round_trips_through_json():
