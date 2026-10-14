@@ -18,13 +18,13 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md).
 - Repo hygiene: README skeleton, CI workflow (pytest, Vitest + build, gitleaks), this file.
 
 ## In progress
-- Nothing open. `master` is 3 commits ahead of origin (P0 hygiene), not pushed yet.
+- CI fix committed (openai in the dev extra), not pushed yet; needs a green python job.
 - Branches: `master` only, no stash. Tag `llm-baseline-v2` is on origin.
 
 ## Next
 - Real Agent trace: the store carries no trace yet, so that tab shows its empty state.
 - Verifier gaps listed in EVAL (below). Decide before the freeze: fix or document.
-- Push master and check the first CI run (Python 3.12 job, gitleaks over full history).
+- Push the CI fix and confirm the python job is green on 3.12.
 - Deploy (see Deploy state).
 
 ## Decisions (with reason)
@@ -46,7 +46,8 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md).
 - Card-text value marking can miss a claim; it is then still listed in the evidence panel.
 - Tests: pytest 584 passed, Vitest 105 passed (2026-10-14); `npm run smoke` 3 passed (2026-10-13).
 - Two of the three demo matches share one run id and one prompt version.
-- CI has not run yet. Python 3.12 is untested locally (3.14 here); gitleaks may flag old history.
+- First CI run (2026-10-14): web and gitleaks green, python failed at collection (openai only
+  in the llm extra). Fixed; a clean dev-only venv passes, but on 3.14: 3.12 not checked locally.
 - `.env.example` is tracked on purpose and matches the `\.env` hygiene grep; not opened (deny rule).
 
 ## Deploy state
@@ -65,15 +66,13 @@ Full list in [CLAUDE.md](CLAUDE.md). Daily ones:
 
 ## Mentor summary
 - Goal: football narrator where every published sentence passes a deterministic claim verifier.
-- Last task: P0 repo hygiene, no code behaviour change. Four commits, none pushed.
-- STATUS.md is now tracked; CLAUDE.md asks every task to update it and this summary.
-- CI added: Python 3.12 pytest, web Vitest + build on Node 24, gitleaks full-history scan.
-- Actions pinned to commit SHAs; newest setup-node (6 days old) skipped for the older v7.0.0.
-- gitleaks license: needed only for organization repos (verified in its README); this repo is personal.
-- README skeleton: one-line claim, summary, setup, test, Status: WIP. No agents, MCP or deploy claims.
-- Checks: no node_modules or web/dist tracked; `.env.example` is the only `.env` match, on purpose.
-- Tag `llm-baseline-v2` is on origin; only `master` exists, no stale branches.
-- Tests: pytest 584 passed, Vitest 105 passed, web build OK before every commit.
-- Risk: CI never ran; Python 3.12 and the gitleaks history scan are verified only after a push.
+- Last task: first CI run failed; fixed the python job. P0 hygiene (4 commits) is pushed.
+- P0 delivered: tracked STATUS.md, README skeleton, CI with SHA-pinned actions.
+- Repo checks clean: no build output tracked, `.env.example` tracked on purpose, tag on origin.
+- CI run 1: gitleaks found no secrets in the full history; web job green.
+- python job failed: two test modules import openai, which only the llm extra installed.
+- Fix: openai added to the dev extra; no app code or test change; tests not skipped.
+- Proof: clean venv with only .[dev] passes 584 tests (Python 3.14; 3.12 not available here).
+- Risk: the 3.12 job may hit a new issue past collection; known only after the push.
 - Main product risk unchanged: three verifier gap types in EVAL.
-- Ask for the mentor: push now and fix CI findings, or close verifier gaps first?
+- Ask for the mentor: once CI is green, close verifier gaps or document them before the freeze?
