@@ -1,6 +1,6 @@
 # Deploying WhyBall to Azure Container Apps
 
-Written 2026-10-14. One container (API + built UI), region Sweden Central, its **own resource group**
+Written 2026-10-14, main path reworked the same day. One container (API + built UI), region Sweden Central, its **own resource group**
 (separate from the Foundry resource group, so deleting the app never touches Foundry).
 
 How to read this file
@@ -22,7 +22,11 @@ export FOUNDRY_RG="<resource group that holds the Foundry account>"      # only 
 export FOUNDRY_ACCOUNT="<name of the Foundry (AIServices) account>"
 export APP_RG="<NEW resource group, used only by WhyBall>"
 export APP_NAME="whyball"                  # lowercase letters, digits, '-'; under 32 chars
-export IMAGE_TAG="p1-$(date +%Y%m%d-%H%M)" # only used by Plan B
+export APP_ENV="whyball-env"               # Container Apps environment name
+export ACR_NAME="<globally unique, 5-50 lowercase letters and digits>"
+export IDENTITY_NAME="whyball-pull"        # user-assigned identity that pulls the image
+export IMAGE_TAG="p1-$(date +%Y%m%d-%H%M)" # a new tag for every build; never reuse or use 'latest'
+
 ```
 
 ## 1. Prerequisites (once per subscription)
@@ -38,6 +42,17 @@ Source: <https://learn.microsoft.com/azure/container-apps/containerapp-up#set-up
 
 Expected: a browser sign-in, then no output (or the subscription JSON). **If not:** `az account show -o table`
 to see which subscription is active.
+
+**If a later command fails with `AADSTS50158: External security challenge not satisfied`:** Learn's note for
+`az containerapp up` is to sign in again with the Graph scope and rerun the command:
+```bash
+az login --scope https://graph.microsoft.com//.default
+```
+Source: <https://learn.microsoft.com/azure/container-apps/quickstart-code-to-cloud#build-and-deploy-the-container-app>
+(Note under the `up` command). The error means your tenant asks for an extra sign-in challenge (for example an
+external MFA provider, via Conditional Access); if it persists, the Entra sign-in log names the policy
+(<https://learn.microsoft.com/troubleshoot/azure/azure-container-registry/acr-authentication-errors> is the ACR troubleshooting page).
+The same note appears again where `az acr login` is used (3.3).
 
 ### 1.2 Container Apps CLI extension ✎
 
@@ -102,62 +117,149 @@ Source: <https://learn.microsoft.com/cli/azure/group#az-group-create>
 Expected: JSON with `"provisioningState": "Succeeded"`. **If not:** the name is taken or the location is
 invalid: `az account list-locations -o table`.
 
-## 3. Build and deploy 💲
+## 3. Main path: local amd64 build, push to ACR, create the app with a user-assigned identity
 
+Why this path: the image is built on your machine (`--platform linux/amd64`, required because Container Apps runs
+`linux/amd64` and Apple silicon builds arm64 by default: <https://learn.microsoft.com/azure/container-apps/containers>),
+so it does not depend on ACR Tasks (which can be refused on new or trial subscriptions: Learn says task runs are
+"temporarily paused from Azure free credits", <https://learn.microsoft.com/azure/container-registry/container-registry-tasks-overview>).
+The app pulls with a **user-assigned identity** that you create first and that only has `AcrPull`; no registry
+password exists. Learn recommends a user-assigned identity for image pulls
+(<https://learn.microsoft.com/azure/container-apps/managed-identity-image-pull>).
 Run from the repository root (where the `Dockerfile` is).
 
+### 3.1 Registry ✎ 💲
+
 ```bash
-az containerapp up \
-  --name "$APP_NAME" \
-  --resource-group "$APP_RG" \
-  --location "$LOCATION" \
-  --source . \
-  --ingress external \
-  --target-port 8000
+az acr create --resource-group "$APP_RG" --name "$ACR_NAME" --sku Basic
+export ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
+export ACR_ID=$(az acr show --name "$ACR_NAME" --query id -o tsv)
+az acr config authentication-as-arm show -r "$ACR_NAME"
 ```
-Source: <https://learn.microsoft.com/azure/container-apps/containerapp-up#deploy-from-local-source-code>;
-parameters: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-up>.
-It creates the Container Apps environment and Log Analytics workspace (if none exists in the group), creates
-an Azure Container Registry, builds the image **in Azure** from the `Dockerfile`, pushes it, and creates the
-app. `.dockerignore` keeps `.env*`, `notes/`, `.git` out of the upload.
+Source: `az acr create --resource-group --name --sku`: <https://learn.microsoft.com/azure/container-registry/container-registry-get-started-azure-cli#create-a-container-registry>
+(that page uses `--sku Standard`; Basic is the cheaper tier, priced in section 9: `--sku Basic` is TODO(verify)).
+`--query loginServer` and `--query id` are TODO(verify) (the page's sample output has both fields). The ARM-token check is
+from the managed-identity image pull page ("Your Azure Container Registry must allow ARM audience tokens"):
+<https://learn.microsoft.com/azure/container-apps/managed-identity-image-pull#prerequisites>.
 
-Expected: several minutes of build output, then a line with the app URL (`https://<name>.<hash>.swedencentral.azurecontainerapps.io`).
-**If not:**
-- "waiting for the Cloud Build agent" and then nothing: run the same command again (Learn names a transient
-  error); add `--debug` for detail (same page).
-- The cloud build is refused (ACR Tasks can be restricted on new or trial subscriptions; Learn says ACR task
-  runs are "temporarily paused from Azure free credits": <https://learn.microsoft.com/azure/container-registry/container-registry-tasks-overview>):
-  use **Plan B** (section 11).
-- Provider errors: go back to 1.3.
+Expected: registry JSON with `"provisioningState": "Succeeded"`; the last command shows the ARM-token status as enabled.
+If it shows disabled, enable it:
+```bash
+az acr config authentication-as-arm update -r "$ACR_NAME" --status enabled
+```
+**If not:** the name is taken (5-50 lowercase letters and digits, unique in Azure): choose another and reset `ACR_NAME`.
+`MissingSubscriptionRegistration` means section 1.3 is incomplete.
 
-### 3.1 Image contents check 👁 (optional, local)
+### 3.2 User-assigned identity and the pull role ✎
 
 ```bash
-docker build -t whyball:check .
-docker run --rm --user root --entrypoint sh whyball:check -c \
+az identity create --name "$IDENTITY_NAME" --resource-group "$APP_RG"
+export IDENTITY_ID=$(az identity show --name "$IDENTITY_NAME" --resource-group "$APP_RG" --query id -o tsv)
+export IDENTITY_PRINCIPAL_ID=$(az identity show --name "$IDENTITY_NAME" --resource-group "$APP_RG" --query principalId -o tsv)
+az role assignment create \
+  --assignee-object-id "$IDENTITY_PRINCIPAL_ID" --assignee-principal-type ServicePrincipal \
+  --role "7f951dda-4ed3-4680-a7ca-43fe172d538d" --scope "$ACR_ID"
+```
+Source: `az identity create`, `az identity show --query id`: <https://learn.microsoft.com/azure/container-apps/managed-identity-image-pull#create-a-user-assigned-managed-identity>.
+The `AcrPull` role id `7f951dda-4ed3-4680-a7ca-43fe172d538d` is the one in that page's Bicep example; the role-assignment
+form is the same as in <https://learn.microsoft.com/azure/foundry/concepts/rbac-foundry#manage-role-assignments>
+(`--assignee-object-id`, `--assignee-principal-type`, `--role <id>`, `--scope`). `--query principalId` on `az identity show`: TODO(verify).
+Learn says the CLI creates this `acrpull` assignment itself when the app is created with `--registry-identity`; the explicit
+command makes it visible and deterministic. If it reports the assignment already exists, that is fine.
+
+Expected: JSON with `"roleDefinitionId"` ending in the AcrPull id and your registry as `scope`. **If not:**
+`AuthorizationFailed`: you need Owner or User Access Administrator on the app resource group.
+
+### 3.3 Build, tag, push ✎ 💲
+
+```bash
+az acr login --name "$ACR_NAME"
+docker build --platform linux/amd64 -t "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" .
+docker push "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG"
+```
+Source: `az acr login --name`, tag and `docker push <login-server>/<repo>:<tag>`:
+<https://learn.microsoft.com/azure/container-registry/container-registry-get-started-azure-cli#log-in-to-registry>;
+`--platform linux/amd64`: <https://learn.microsoft.com/azure/container-apps/containers> (Linux `amd64` only).
+Check the image first if you wish (3.6).
+
+Expected: `Login Succeeded`; the build ends with the image id; the push ends with a `digest: sha256:...` line.
+**If not:**
+- **`AADSTS50158: External security challenge not satisfied`** while logging in: run
+  `az login --scope https://graph.microsoft.com//.default` and repeat `az acr login` (source: the Learn note quoted in 1.1,
+  which is written for `az containerapp up`; whether it also cures `az acr login` is TODO(verify)). If the Docker daemon
+  is the problem or the login keeps failing, get a registry token and log Docker in with it:
+  ```bash
+  TOKEN=$(az acr login --name "$ACR_NAME" --expose-token --output tsv --query accessToken)
+  docker login "$ACR_LOGIN_SERVER" --username 00000000-0000-0000-0000-000000000000 --password-stdin <<< "$TOKEN"
+  ```
+  Source: <https://learn.microsoft.com/azure/container-registry/container-registry-authentication#use-az-acr-login-without-docker-daemon>
+  (the all-zero user name is required there). That token still needs a successful `az login`; if the challenge repeats,
+  the Entra sign-in log shows which policy asks for it.
+- `unauthorized` on push: the token lasts about 3 hours; rerun `az acr login`.
+- `exec format error` later in the console log: the image is arm64; rebuild with `--platform linux/amd64`.
+- Docker Hub timeouts while pulling base images (`node`, `python`): rerun; they are transient DNS errors.
+
+### 3.4 Container Apps environment ✎ 💲
+
+```bash
+az containerapp env create --name "$APP_ENV" --resource-group "$APP_RG" --location "$LOCATION"
+```
+Source: <https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image#create-an-environment>
+
+Expected: JSON of the environment (it also creates a Log Analytics workspace). **If not:** provider errors: section 1.3.
+
+### 3.5 Create the app 💲
+
+```bash
+az containerapp create \
+  --name "$APP_NAME" --resource-group "$APP_RG" --environment "$APP_ENV" \
+  --image "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" \
+  --user-assigned "$IDENTITY_ID" \
+  --registry-server "$ACR_LOGIN_SERVER" --registry-identity "$IDENTITY_ID" \
+  --ingress external --target-port 8000 \
+  --cpu 0.5 --memory 1.0Gi --min-replicas 1 --max-replicas 2 \
+  --query properties.configuration.ingress.fqdn -o tsv
+```
+Source: `--user-assigned`, `--registry-identity`, `--registry-server`, `--image`:
+<https://learn.microsoft.com/azure/container-apps/managed-identity-image-pull#create-a-container-app> (the same call
+without the ingress and sizing flags); `--ingress external --target-port`, `--cpu`, `--memory`, `--min-replicas`,
+`--max-replicas`: the `az containerapp create` reference and its example
+(`--cpu 0.5 --memory 1.0Gi --min-replicas 4 --max-replicas 8`): <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-create>;
+`--query properties.configuration.ingress.fqdn` on `create`: <https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image#create-a-container-app>.
+0.5 vCPU with 1.0 Gi is a valid Consumption pair: <https://learn.microsoft.com/azure/container-apps/containers#vcpu-and-memory-allocation-requirements>.
+Replica limits (min default 0, max default 10): <https://learn.microsoft.com/azure/container-apps/scale-app#scale-definition>.
+
+Expected: after a minute or two, one line with the host name (`<name>.<hash>.swedencentral.azurecontainerapps.io`).
+The first revision can take a while to become ready: go on to section 6 and use `--wait 120`. **If not:**
+- `ImagePullBackOff`/`unauthorized` in the system log (`az containerapp logs show … --type system --tail 50`,
+  <https://learn.microsoft.com/azure/container-apps/log-streaming>): the identity has no `AcrPull` on the registry (3.2)
+  or ARM tokens are disabled (3.1). Role assignments can take a few minutes to take effect.
+- `Invalid cpu/memory`: the pair is off the table in section 4; `--memory` must end in `Gi`.
+- Why min 1: the first visit has no cold start. Use `--min-replicas 0` to spend almost nothing while nobody is looking
+  (no usage charges at zero replicas; the first request then waits for a start).
+
+### 3.6 Optional: check what is inside the image 👁
+
+```bash
+docker run --rm --user root --entrypoint sh "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" -c \
   'find / -xdev \( -name ".env" -o -name ".env.*" -o -name notes -o -name .git \) -not -path "/proc/*" -not -path "*/site-packages/*"'
 ```
 Expected: no output. CI runs the same check on every push (`docker` job in `.github/workflows/ci.yml`).
 
-## 4. Size and replicas ✎ 💲
+## 4. Change size or replicas later ✎ 💲
+
+Section 3.5 already set 0.5 vCPU / 1.0 Gi and 1 to 2 replicas. To change them:
 
 ```bash
-az containerapp update \
-  --name "$APP_NAME" \
-  --resource-group "$APP_RG" \
-  --cpu 0.5 --memory 1.0Gi \
-  --min-replicas 1 --max-replicas 2
+az containerapp update --name "$APP_NAME" --resource-group "$APP_RG" \
+  --cpu 0.5 --memory 1.0Gi --min-replicas 1 --max-replicas 2
 ```
-Source: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-update> (the page's own example is
-`--cpu 0.5 --memory 1.0Gi --min-replicas 4 --max-replicas 8`). 0.5 vCPU with 1.0 Gi is a valid Consumption
-combination: <https://learn.microsoft.com/azure/container-apps/containers#vcpu-and-memory-allocation-requirements>.
-Replica limits (min default 0, max default 10): <https://learn.microsoft.com/azure/container-apps/scale-app#scale-definition>.
+Source: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-update> (its own example is
+`--cpu 0.5 --memory 1.0Gi --min-replicas 4 --max-replicas 8`).
 
-Expected: JSON of the updated app; a new revision is created. **If not:** `Invalid cpu/memory` means the pair
-is off the table above; `--memory` must end in `Gi`.
-
-Why min 1: the first visit is not delayed by a cold start. To spend almost nothing when nobody is looking,
-set `--min-replicas 0` instead (Learn: no usage charges at zero replicas; the first request then waits for a start).
+Expected: JSON of the updated app; a new revision. **If not:** `Invalid cpu/memory` means the pair is off the
+Consumption table: <https://learn.microsoft.com/azure/container-apps/containers#vcpu-and-memory-allocation-requirements>
+(0.25/0.5Gi, 0.5/1.0Gi, 0.75/1.5Gi, 1.0/2.0Gi, …).
 
 ## 5. Get the URL 👁
 
@@ -167,7 +269,7 @@ export APP_FQDN=$(az containerapp show --name "$APP_NAME" --resource-group "$APP
 echo "https://$APP_FQDN"
 ```
 Source: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-show> (`show -n -g`); the
-`--query` path is TODO(verify) (ARM property path, also named in the Learn "connect-apps" FQDN page).
+`--query` path is the one Learn uses on `create`: <https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image#create-a-container-app>.
 
 Expected: a host name. **If not:** `az containerapp show -n "$APP_NAME" -g "$APP_RG" -o json` and read `ingress`.
 
@@ -206,111 +308,71 @@ ALL PASSED
   `startup check failed: the publication store is out of date` means `python -m app.publish --check` failed:
   the checkout is inconsistent (see `docs/DEMO_NARRATION.md`); fix it in git and redeploy.
 
-## 7. Managed identity and the Foundry role (optional for this build)
+## 7. Managed identity and the Foundry role: **skip in this version**
 
-**The current image never calls a model** (see the security note, section 10). The role below is only needed
-if a future change makes the container call Foundry. Skipping it is the least-privilege choice. If you
-want it in place now:
+**Skip this whole section.** The current image never calls a model (section 10), so the app needs no Foundry role.
+The only identity in this deployment is the user-assigned pull identity from 3.2, and it holds `AcrPull` on the
+registry only. Do **not** assign Foundry User to anything now: least privilege, and no path to spend on Foundry.
 
-### 7.1 System-assigned identity ✎
+Kept for a future version that adds a request-time model call (not allowed without authentication and a rate limit,
+section 10). Then, in this order:
 
-```bash
-az containerapp identity assign --name "$APP_NAME" --resource-group "$APP_RG" --system-assigned
-```
-Source: <https://learn.microsoft.com/cli/azure/containerapp/identity#az-containerapp-identity-assign>
+1. Give the app a system-assigned identity ✎: `az containerapp identity assign --name "$APP_NAME" --resource-group "$APP_RG" --system-assigned`
+   (Source: <https://learn.microsoft.com/cli/azure/containerapp/identity#az-containerapp-identity-assign>). Its `principalId`:
+   `az containerapp identity show --name "$APP_NAME" --resource-group "$APP_RG" --query principalId -o tsv` (field name TODO(verify)).
+2. Find the Foundry account id 👁: `az cognitiveservices account show --name "$FOUNDRY_ACCOUNT" --resource-group "$FOUNDRY_RG" --query id -o tsv`
+   (Source: <https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-show>; `--query id` TODO(verify)).
+3. Assign **Foundry User** by role id (the name is being renamed; Learn says to use the id) ✎:
+   ```bash
+   az role assignment create --assignee-object-id "<principalId>" --assignee-principal-type ServicePrincipal \
+     --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" --scope "<Foundry account id>"
+   ```
+   Source: <https://learn.microsoft.com/azure/foundry/concepts/rbac-foundry#manage-role-assignments>.
+4. Verify 👁: `az role assignment list --assignee "<principalId>" --all --query "[].{role:roleDefinitionName, scope:scope}" -o table`
+   (Source: <https://learn.microsoft.com/azure/role-based-access-control/role-assignments-list-cli#list-role-assignments-for-a-managed-identity>).
 
-Expected: JSON with `"type": "SystemAssigned"` and a `principalId`. **If not:** `identity show` (below).
-
-```bash
-export APP_PRINCIPAL_ID=$(az containerapp identity show --name "$APP_NAME" --resource-group "$APP_RG" \
-  --query principalId -o tsv)
-```
-Source: `identity show`: <https://learn.microsoft.com/cli/azure/containerapp/identity#az-containerapp-identity-show>;
-the `principalId` field in its output is TODO(verify).
-
-### 7.2 Find the Foundry account's resource id 👁
-
-```bash
-export FOUNDRY_ACCOUNT_ID=$(az cognitiveservices account show \
-  --name "$FOUNDRY_ACCOUNT" --resource-group "$FOUNDRY_RG" --query id -o tsv)
-```
-Source: <https://learn.microsoft.com/cli/azure/cognitiveservices/account#az-cognitiveservices-account-show>
-(`--name`, `--resource-group`); `--query id` is TODO(verify) (ARM resource id).
-
-Expected: `/subscriptions/.../providers/Microsoft.CognitiveServices/accounts/<name>`. **If not:** the account
-may be listed under a different group: `az cognitiveservices account list -o table`.
-
-### 7.3 Assign **Foundry User** by role id ✎
-
-The role is *Foundry User* (formerly *Azure AI User*). Microsoft says to use the id, not the name, because
-the rename is still rolling out: id `53ca6127-db72-4b80-b1b0-d745d6d5456d`.
-
-```bash
-az role assignment create \
-  --assignee-object-id "$APP_PRINCIPAL_ID" \
-  --assignee-principal-type ServicePrincipal \
-  --role "53ca6127-db72-4b80-b1b0-d745d6d5456d" \
-  --scope "$FOUNDRY_ACCOUNT_ID"
-```
-Source: <https://learn.microsoft.com/azure/foundry/concepts/rbac-foundry#manage-role-assignments>
-(the Azure CLI tab: role id list and the `--assignee-object-id` / `--assignee-principal-type` form);
-account-scope guidance for inference: same site, "Authentication and Authorization in Foundry".
-Creating a role assignment needs Owner or User Access Administrator on that scope.
-
-Expected: JSON with `"roleDefinitionId"` ending in the id and your `scope`. **If not:**
-`AuthorizationFailed` means you lack permission to assign roles on the Foundry account: ask its owner.
-
-### 7.4 Verify 👁
-
-```bash
-az role assignment list --assignee "$APP_PRINCIPAL_ID" --all \
-  --query "[].{role:roleDefinitionName, scope:scope}" -o table
-```
-Source: <https://learn.microsoft.com/azure/role-based-access-control/role-assignments-list-cli#list-role-assignments-for-a-managed-identity>
-
-Expected: one row, role `Foundry User` (or `Azure AI User` while the rename rolls out), scope = the Foundry
-account id. **If not:** wait a few minutes (assignments propagate) and rerun.
-
-Credentials in code: the Foundry narrator uses `DefaultAzureCredential` (`app/explain/credential.py`). Locally
-it finds your `az login`; on Container Apps it finds this managed identity. To pin it in production set
-`AZURE_TOKEN_CREDENTIALS=ManagedIdentityCredential` (Source:
-<https://learn.microsoft.com/azure/developer/python/sdk/authentication/credential-chains#use-a-specific-credential>;
-needs azure-identity 1.24 or later). No key or secret is in the image or the repo.
+The Foundry narrator already uses `DefaultAzureCredential` (`app/explain/credential.py`): locally your `az login`, on
+Container Apps a managed identity. With several identities on an app, `DefaultAzureCredential` needs the client id of the
+one to use (`managed_identity_client_id`, <https://learn.microsoft.com/azure/developer/python/sdk/authentication/credential-chains#exclude-an-individual-credential>)
+or `AZURE_TOKEN_CREDENTIALS=ManagedIdentityCredential` (azure-identity 1.24 or later).
 
 ## 8. Redeploy, roll back, delete
 
 ### 8.1 Redeploy a new version 💲
 
-From the repository root, after the gate (`pytest`, `npm test`, `npm run build`) is green and the change is committed:
+After the gate (`pytest`, `npm test`, `npm run build`) is green and the change is committed, from the repository root:
 
 ```bash
-export APP_ENV_ID=$(az containerapp show --name "$APP_NAME" --resource-group "$APP_RG" \
-  --query properties.environmentId -o tsv)      # TODO(verify) query path
-az containerapp up \
-  --name "$APP_NAME" \
-  --resource-group "$APP_RG" \
-  --environment "$APP_ENV_ID" \
-  --source .
+export IMAGE_TAG="p1-$(date +%Y%m%d-%H%M)"
+az acr login --name "$ACR_NAME"
+docker build --platform linux/amd64 -t "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" .
+docker push "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG"
+az containerapp update --name "$APP_NAME" --resource-group "$APP_RG" \
+  --image "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG"
+python3 scripts/smoke_remote.py "https://$APP_FQDN" --wait 120
 ```
-Source: <https://learn.microsoft.com/azure/container-apps/containerapp-up#deploy-from-local-source-code>
-(redeploy needs `--resource-group` and `--environment`; `--environment` accepts a name or resource id:
-<https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-up>).
-`up` does not change the CPU/replica settings, but check with section 4 after a redeploy (`az containerapp show … --query properties.template.scale`, TODO(verify)).
-Then run section 6 again.
+Source: build and push as in 3.3; `az containerapp update --image`:
+<https://learn.microsoft.com/azure/container-apps/revisions-manage#updating-your-container-app>. A new image tag
+every time (Learn: "Avoid using static tags like `latest`": <https://learn.microsoft.com/azure/container-apps/containers>).
+The size and replica settings carry over from the previous revision.
+
+(If you lost the shell variables: `ACR_NAME` from `az acr list --resource-group "$APP_RG" --query "[0].name" -o tsv` (TODO(verify)),
+`ACR_LOGIN_SERVER` as in 3.1.)
+
+Expected: a new revision becomes active and the smoke test passes. **If not:** read the console and system log
+(section 6), then roll back (8.2).
 
 ### 8.2 Roll back 💲
 
-Option A (always works): redeploy a previous image tag.
+Option A (simplest): update to the previous tag. The tags are in the registry:
 ```bash
-export ACR_NAME=$(az acr list --resource-group "$APP_RG" --query "[0].name" -o tsv)   # TODO(verify)
 az acr repository show-tags --name "$ACR_NAME" --repository "$APP_NAME" --output table
 az containerapp update --name "$APP_NAME" --resource-group "$APP_RG" \
-  --image "$ACR_NAME.azurecr.io/$APP_NAME:<PREVIOUS_TAG>"
+  --image "$ACR_LOGIN_SERVER/$APP_NAME:<PREVIOUS_TAG>"
 ```
 Source: `show-tags`: <https://learn.microsoft.com/azure/container-registry/container-registry-get-started-azure-cli#list-container-images>;
 `update --image`: <https://learn.microsoft.com/azure/container-apps/revisions-manage#updating-your-container-app>.
-The repository name that `up --source` uses is TODO(verify); `az acr repository list --name "$ACR_NAME"` shows it.
-If the registry has a DNL hash the login server differs (`az acr show --query loginServer`, TODO(verify)).
+The previous tag stays in the registry, so this is exact.
 
 Option B: route traffic to an older revision (needs multiple-revision mode).
 ```bash
@@ -321,10 +383,10 @@ az containerapp ingress traffic set --name "$APP_NAME" --resource-group "$APP_RG
 ```
 Source: <https://learn.microsoft.com/azure/container-apps/revisions-manage> (list, set-mode, activate);
 <https://learn.microsoft.com/cli/azure/containerapp/ingress/traffic#az-containerapp-ingress-traffic-set>
-(`--revision-weight name=weight`). Return to single mode afterwards
-(`--mode single`) and deactivate the bad revision (`az containerapp revision deactivate --revision … --resource-group …`).
+(`--revision-weight name=weight`). Afterwards `--mode single` again and deactivate the bad revision
+(`az containerapp revision deactivate --revision <BAD_REVISION> --resource-group "$APP_RG"`).
 
-Expected after either option: section 6 passes. **If not:** read the console log (section 6) before trying again.
+Expected after either option: section 6 passes. **If not:** read the console log before trying again.
 
 ### 8.3 Delete everything this guide created ✎
 
@@ -336,8 +398,8 @@ az group delete --name "$APP_RG"     # asks for confirmation
 ```
 Source: <https://learn.microsoft.com/cli/azure/group#az-group-delete> (`--yes` skips the prompt; `--no-wait` returns at once).
 
-Expected: after confirmation, the group (app, environment, workspace, registry) is deleted within minutes. The
-role assignment on the Foundry account (7.3) is removed with the identity; verify with 7.4 (no rows).
+Expected: after confirmation, the group (app, environment, workspace, registry, pull identity, the AcrPull assignment)
+is deleted within minutes. Nothing in the Foundry group is touched, because no role was assigned there in this version.
 **If not:** `az group exists --name "$APP_RG"` (Source: same page).
 
 ## 9. Cost
@@ -389,46 +451,38 @@ This is enforced by tests:
 If a later feature needs a request-time model call: put authentication and a rate limit in front of it first,
 then change the frozen list on purpose. Do not assign the managed identity a Foundry role before that.
 
-## 11. Plan B: build locally, push to the registry
+## 11. Appendix A: `az containerapp up --source` (cloud build)
 
-Use this when the cloud build in section 3 is refused. It needs Docker on your machine.
+An alternative to section 3, **not the main path**: one command that creates the environment, a registry and the app and
+builds the image in Azure with ACR Tasks. Use it only if ACR Tasks works on your subscription; it falls over on subscriptions
+where task runs are paused (see section 3). It also uses a system-assigned identity for the registry pull, not the user-assigned
+one from 3.2, and it names resources itself, so do not mix it with section 3 in the same resource group.
 
-```bash
-export ACR_NAME="<globally unique, 5-50 lowercase letters and digits>"
-az acr create --resource-group "$APP_RG" --name "$ACR_NAME" --sku Basic        # 💲 ~0.17/day
-az acr login --name "$ACR_NAME"
-export ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)   # TODO(verify)
-docker build --platform linux/amd64 -t "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" .
-docker push "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG"
-```
-Source: `az acr create`, `az acr login`, tag and push:
-<https://learn.microsoft.com/azure/container-registry/container-registry-get-started-azure-cli>
-(that page shows `--sku Standard`; Basic is the cheaper tier and fits, see the price list above; its `--sku` value
-is TODO(verify)). Container Apps needs `linux/amd64` images:
-<https://learn.microsoft.com/azure/container-apps/containers> (a Mac with Apple silicon builds arm64 by default,
-so `--platform linux/amd64` is required).
-
-Create the app from the pushed image with the app's own identity pulling from the registry:
 ```bash
 az containerapp up \
   --name "$APP_NAME" --resource-group "$APP_RG" --location "$LOCATION" \
-  --image "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG" \
-  --registry-server "$ACR_LOGIN_SERVER" --registry-identity system \
-  --ingress external --target-port 8000
+  --source . --ingress external --target-port 8000
+az containerapp update --name "$APP_NAME" --resource-group "$APP_RG" \
+  --cpu 0.5 --memory 1.0Gi --min-replicas 1 --max-replicas 2
 ```
-Source: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-up> (`--image`, `--registry-server`,
-`--registry-identity system`: "If possible, an 'acrpull' role assignment will be created for the identity
-automatically"). Whether this works in one step for a brand-new app: TODO(verify). If the pull fails, assign
-`AcrPull` on the registry to the app identity (7.1 for the id, then `az role assignment create --role AcrPull
---assignee-object-id … --assignee-principal-type ServicePrincipal --scope <registry id>`), which Learn requires
-for managed-identity pulls: <https://learn.microsoft.com/azure/container-apps/containers#managed-identity-with-azure-container-registry>.
+Source: <https://learn.microsoft.com/azure/container-apps/containerapp-up#deploy-from-local-source-code>
+(creates resource group, environment and Log Analytics workspace, a registry, builds with the Dockerfile, pushes, deploys; uses `EXPOSE`
+for the port); parameters: <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-up>; resources and scale after `up` with
+`update`: <https://learn.microsoft.com/azure/container-apps/containerapp-up#configure-container-app-settings>.
+`.dockerignore` keeps `.env*`, `notes/` and `.git` out of the uploaded source.
 
-Then continue at section 4. To redeploy in Plan B: build with a new `IMAGE_TAG`, push, and run
-`az containerapp update --name "$APP_NAME" --resource-group "$APP_RG" --image "$ACR_LOGIN_SERVER/$APP_NAME:$IMAGE_TAG"`.
+Redeploy with the same command plus `--environment` (a name or resource id of the existing environment):
+```bash
+az containerapp up --name "$APP_NAME" --resource-group "$APP_RG" --environment "<environment name>" --source .
+```
+Source: <https://learn.microsoft.com/azure/container-apps/containerapp-up#deploy-from-local-source-code> (redeploy needs
+`--resource-group` and `--environment`). The environment name: `az containerapp env list --resource-group "$APP_RG" -o table`
+(TODO(verify)). Rollback in this variant: the registry tag list is not under your control of names; use Option B in 8.2.
 
-Expected: `docker push` ends with a digest line; the app URL answers section 6. **If not:**
-`unauthorized` on push: rerun `az acr login`; `exec format error` in the console log: the image was built for
-arm64, rebuild with `--platform linux/amd64`.
+Expected: several minutes of build output, then the app URL. **If not:**
+- "waiting for the Cloud Build agent" and then nothing: rerun (Learn names a transient error); add `--debug`.
+- `AADSTS50158`: see 1.1.
+- The cloud build is refused: use the main path (section 3).
 
 ## 12. Server-sent events and the ingress timeout
 
@@ -444,7 +498,10 @@ streaming response that keeps sending events is TODO(verify); plan as if it does
 - When a connection drops, the client reconnects with `from_t=<t of the last event it received>`; the
   endpoint restarts from that second (events at exactly `from_t` repeat, so de-duplicate on `seq`).
 
-## 13. Optional: Application Insights request traces
+## 13. Optional: Application Insights request traces: **skip in this version**
+
+**Skip this whole section.** It is optional; the app is deployed and verified without it, and the image runs without a
+connection string (the code does nothing in that case). It is kept for later.
 
 Lowest priority; the app works without it. `app/telemetry.py` does **nothing** (no import, no exporter, no
 network) unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set. When it is set, the Microsoft OpenTelemetry

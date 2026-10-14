@@ -20,7 +20,7 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - U1 (7 commits): new UI is the shipped one: shell, routes, On Air stage, transport, timeline, pressure
   band, dwell; card `checks` recorded at publish; old UI at `/legacy` until U2. Screens reviewed (3 shots).
 - P1 (8 commits): image, start-up guard, DefaultAzureCredential, frozen API surface, remote smoke test,
-  CI docker job, [DEPLOY](docs/DEPLOY.md), optional App Insights. Nothing is deployed yet (the user runs `az`).
+  CI docker job (+ `--wait` fix), [DEPLOY](docs/DEPLOY.md) (main path: local amd64 build, ACR push, user-assigned identity), optional App Insights. Nothing is deployed yet (the user runs `az`).
 
 ## In progress
 - 7 U1 + 8 P1 commits on `master` only, not pushed; U0 and tag `llm-baseline-v2` are on origin. CI not checked here.
