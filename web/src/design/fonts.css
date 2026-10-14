@@ -1,0 +1,11 @@
+/* Self-hosted fonts for UI v2 (docs/DESIGN.md D12): bundled from @fontsource, no CDN; licences in
+ * web/licenses/. Latin subset only. Barlow Condensed for display and numbers, Inter for UI text. */
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-700.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-600.css";
+
+:root {
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}

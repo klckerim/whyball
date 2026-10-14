@@ -74,3 +74,11 @@ Newest entries at the bottom.
 - Light `--accent` is a fill only (1.33:1 on the light background); text on it uses `--accent-fg`.
 - The test also fails when a colour token is not in any checked pair (except `--border` and the
   `--accent` fill), so a new token cannot skip the check.
+
+## D12. Self-hosted fonts [design; licence checked]
+- Barlow Condensed (display, numbers: 600/700) and Inter (UI text: 400/600), latin subset only, from
+  `@fontsource/barlow-condensed` 5.3.0 and `@fontsource/inter` 5.3.0 (exact pins), bundled by Vite: no CDN,
+  no viewer data to a third party, works offline. Entry: `web/src/design/fonts.css`.
+- Licence: both packages declare `OFL-1.1` and ship the full SIL Open Font License 1.1 text with the
+  upstream copyright (Inter: "Copyright 2016 The Inter Project Authors"; Barlow: "Copyright 2017 The
+  Barlow Project Authors"). Copied unchanged to `web/licenses/` (checked 2026-10-14).
