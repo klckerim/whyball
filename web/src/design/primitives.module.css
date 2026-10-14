@@ -1,0 +1,44 @@
+/* Seal, SourceBadge and TypeGlyph. Colours come from tokens only; inside the program stage the stage
+ * remaps these tokens to its --stage-* values. */
+.glyph {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.125em;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.55em;
+  border: 2px solid var(--muted);
+  border-radius: 0.3em;
+  font: 600 0.8em / 1.3 var(--font-body);
+  color: var(--text);
+  white-space: nowrap;
+}
+.badge[data-source="llm"] {
+  border-color: var(--src-llm);
+  background: var(--src-llm);
+  color: var(--src-llm-fg);
+}
+.badge[data-source="template_fallback"] {
+  border-style: dashed;
+  border-color: var(--src-fallback);
+}
+
+.seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font: 700 0.85em / 1.2 var(--font-body);
+  color: var(--verified);
+  white-space: nowrap;
+}
+.seal svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+.seal[data-verified="false"] {
+  color: var(--muted);
+}

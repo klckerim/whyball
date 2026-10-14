@@ -25,6 +25,7 @@
   --verified: #0b7a57;
   --reject: #b3261e;
   --src-llm: #2457c5;
+  --src-llm-fg: #ffffff; /* text on the --src-llm fill */
   --src-fallback: #9a4f00;
 
   /* teams: never told apart by colour alone (DESIGN D5) */
@@ -41,6 +42,9 @@
   --stage-accent-fg: #0b0f14;
   --stage-verified: #3dd6a0;
   --stage-reject: #ff6b6b;
+  --stage-src-llm: #8ab4ff;
+  --stage-src-llm-fg: #0b0f14;
+  --stage-src-fallback: #ffa94d;
   --stage-home: #4da3ff;
   --stage-away: #ff8a5b;
 }
@@ -62,6 +66,7 @@
     --verified: #3dd6a0;
     --reject: #ff6b6b;
     --src-llm: #8ab4ff;
+    --src-llm-fg: #0b0f14;
     --src-fallback: #ffa94d;
     --home: #4da3ff;
     --away: #ff8a5b;
@@ -84,6 +89,7 @@
   --verified: #3dd6a0;
   --reject: #ff6b6b;
   --src-llm: #8ab4ff;
+  --src-llm-fg: #0b0f14;
   --src-fallback: #ffa94d;
   --home: #4da3ff;
   --away: #ff8a5b;

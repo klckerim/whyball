@@ -52,9 +52,26 @@ describe("T2: Fact carries an id from the payload and the exact value", () => {
     expect(container.textContent).toBe(goal.player);
   });
 
+  it("renders the score of an event from its own score field", () => {
+    for (const { detail, events } of matchFixtures) {
+      for (const e of events.filter((x) => x.type === "goal")) {
+        const ev = { ...e, id: eventId(detail.event_match_id, e.seq) };
+        for (const [field, side] of [["score_home", "home"], ["score_away", "away"]] as const) {
+          const { container, unmount } = render(<Fact event={ev} field={field} />);
+          expect(container.querySelector("[data-event-id]")!.getAttribute("data-event-id")).toBe(ev.id);
+          expect(container.textContent).toBe(String(e.score[side]));
+          unmount();
+        }
+      }
+    }
+  });
+
   it("never shows a missing value as zero", () => {
     const { container } = render(<Fact event={{ id: "e#1", player: null }} field="player" missing="no player" />);
     expect(container.textContent).toBe("no player");
+    cleanup();
+    const score = render(<Fact event={{ id: "e#1" }} field="score_home" />);
+    expect(score.container.textContent).toBe(NO_DATA);
   });
 });
 

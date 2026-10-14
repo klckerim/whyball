@@ -39,15 +39,17 @@ const on = (fgs: string[], bgs: string[]): [string, string][] => fgs.flatMap((fg
 const TEXT = [
   ...on(["text", "muted", "accent-ink", "verified", "reject", "src-llm", "src-fallback", "home", "away"], SURFACES),
   ["accent-fg", "accent"] as [string, string],
+  ["src-llm-fg", "src-llm"] as [string, string],
 ];
 const GRAPHIC = on(["control-border", "focus"], SURFACES);
 // Not checked against a background: --border (decorative), --accent (a fill; text on it is accent-fg).
 const UNPAIRED = ["border", "accent"];
 
 const STAGE_TEXT = [
-  ...on(["stage-text", "stage-muted", "stage-accent", "stage-verified", "stage-reject", "stage-home", "stage-away"],
-    ["stage-bg", "stage-surface", "stage-surface-2"]),
+  ...on(["stage-text", "stage-muted", "stage-accent", "stage-verified", "stage-reject", "stage-home", "stage-away",
+    "stage-src-llm", "stage-src-fallback"], ["stage-bg", "stage-surface", "stage-surface-2"]),
   ["stage-accent-fg", "stage-accent"] as [string, string],
+  ["stage-src-llm-fg", "stage-src-llm"] as [string, string],
 ];
 
 describe.each([
