@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { eventId } from "../design/Fact";
+import { PITCH_MARGIN } from "../design/PitchSurface";
 import { SAFE_AREA } from "../design/safeArea";
 import { eventAt, positioned } from "../state/match";
 import { matchFixtures } from "../test/fixtures";
@@ -156,5 +157,17 @@ describe("On Air layout", () => {
     render(<OnAir {...props} t={p.t + 1} shownId={null} />);
     const ball = screen.getByTestId("ball");
     expect([Number(ball.getAttribute("cx")), Number(ball.getAttribute("cy"))]).toEqual([p.x, PITCH.h - p.y]);
+  });
+});
+
+describe("stage pitch bounds", () => {
+  it("shares the viewBox with room around the markings, so a ball on a line is not cut", () => {
+    const { container } = render(<Pitch ball={{ x: PITCH.w, y: 0, seq: 1 }} trail={[]} />);
+    const vb = container.querySelector("svg")!.getAttribute("viewBox")!.split(" ").map(Number) as [number, number, number, number];
+    expect(vb).toEqual([-PITCH_MARGIN, -PITCH_MARGIN, PITCH.w + 2 * PITCH_MARGIN, PITCH.h + 2 * PITCH_MARGIN]);
+    const ball = container.querySelector('[data-testid="ball"]')!;
+    const r = Number(ball.getAttribute("r"));
+    expect(Number(ball.getAttribute("cx")) + r).toBeLessThanOrEqual(vb[0] + vb[2]);
+    expect(Number(ball.getAttribute("cy")) + r).toBeLessThanOrEqual(vb[1] + vb[3]);
   });
 });

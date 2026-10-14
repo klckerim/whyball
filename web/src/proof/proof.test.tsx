@@ -3,6 +3,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Moment } from "../api/types";
+import { PITCH, PITCH_MARGIN, toSvg } from "../design/PitchSurface";
 import { CHECKED_BY } from "../design/checker";
 import { matchFixtures, metricsFixture, type MatchFixture } from "../test/fixtures";
 import { nextIndex } from "./MomentRail";
@@ -281,5 +282,49 @@ describe("evidence rows", () => {
   it("lists a shared event once", () => {
     const ev = red.moments[0]!.claims.flatMap((c) => c.evidence)[0]!;
     expect(rowsOf([ev, ev], new Map()).length).toBe(1);
+  });
+});
+
+describe("pitch bounds", () => {
+  const box = () => {
+    render(<Harness fx={red} />);
+    const [x, y, w, h] = screen.getByRole("img", { name: /Evidence events on the pitch/ }).getAttribute("viewBox")!.split(" ").map(Number) as [number, number, number, number];
+    return { x0: x, y0: y, x1: x + w, y1: y + h };
+  };
+
+  it("keeps the pitch markings at 0..105 × 0..68 and adds room around them", () => {
+    const b = box();
+    expect(b).toEqual({ x0: -PITCH_MARGIN, y0: -PITCH_MARGIN, x1: PITCH.w + PITCH_MARGIN, y1: PITCH.h + PITCH_MARGIN });
+  });
+
+  it("a mark on the goal line or a corner lies fully inside the viewBox, selected halo included", () => {
+    const b = box();
+    const reach = 2 * 1.9; // selected mark: scale 2, halo radius 1.9
+    for (const p of [{ x: PITCH.w, y: 0 }, { x: PITCH.w, y: PITCH.h }, { x: 0, y: 0 }, { x: 0, y: PITCH.h }, { x: PITCH.w, y: PITCH.h / 2 }]) {
+      const { cx, cy } = toSvg(p);
+      expect(cx - reach).toBeGreaterThanOrEqual(b.x0 - 0.2); // stroke width of the halo
+      expect(cx + reach).toBeLessThanOrEqual(b.x1 + 0.2);
+      expect(cy - reach).toBeGreaterThanOrEqual(b.y0 - 0.2);
+      expect(cy + reach).toBeLessThanOrEqual(b.y1 + 0.2);
+    }
+    expect(PITCH_MARGIN).toBeGreaterThanOrEqual(reach);
+  });
+
+  it("every located evidence mark of every fixture card is inside", () => {
+    const b = box();
+    for (const fx of matchFixtures) {
+      for (const m of fx.moments) {
+        for (const c of m.claims) {
+          for (const e of c.evidence) {
+            if (e.x == null || e.y == null) continue;
+            const { cx, cy } = toSvg({ x: e.x, y: e.y });
+            expect(cx - PITCH_MARGIN).toBeGreaterThanOrEqual(b.x0);
+            expect(cx + PITCH_MARGIN).toBeLessThanOrEqual(b.x1);
+            expect(cy - PITCH_MARGIN).toBeGreaterThanOrEqual(b.y0);
+            expect(cy + PITCH_MARGIN).toBeLessThanOrEqual(b.y1);
+          }
+        }
+      }
+    }
   });
 });

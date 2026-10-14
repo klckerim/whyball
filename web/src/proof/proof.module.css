@@ -191,7 +191,6 @@
 .pitch {
   width: 100%;
   height: auto;
-  overflow: visible; /* a mark on the touchline or goal line is not clipped */
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 4px;

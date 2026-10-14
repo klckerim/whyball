@@ -4,6 +4,13 @@ import type { ReactNode } from "react";
 
 export const PITCH = { w: 105, h: 68 } as const;
 
+/** Room around the pitch inside the viewBox so a mark on a line is not cut (the largest evidence mark reaches
+ * about 4 units: scale 2 with its halo). The markings stay at 0..105 / 0..68. */
+export const PITCH_MARGIN = 4;
+
+/** The SVG viewBox string: the pitch plus the margin on every side. */
+export const PITCH_VIEWBOX = `${-PITCH_MARGIN} ${-PITCH_MARGIN} ${PITCH.w + 2 * PITCH_MARGIN} ${PITCH.h + 2 * PITCH_MARGIN}`;
+
 /** Event coordinates → SVG: y flipped so y=0 is the bottom touchline. */
 export function toSvg(p: { x: number; y: number }): { cx: number; cy: number } {
   return { cx: p.x, cy: PITCH.h - p.y };
@@ -20,7 +27,7 @@ export function PitchSurface({ label, svgClassName, linesClassName, children }: 
   return (
     <svg
       className={svgClassName}
-      viewBox={`0 0 ${PITCH.w} ${PITCH.h}`}
+      viewBox={PITCH_VIEWBOX}
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={label}
