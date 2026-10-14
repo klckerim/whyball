@@ -9,7 +9,7 @@ import { matchFixtures, metricsFixture, type MatchFixture } from "../test/fixtur
 import { nextIndex } from "./MomentRail";
 import { ProofView } from "./ProofView";
 import type { MetricsState } from "./Receipt";
-import { joinEvidence, rowsOf } from "./evidence";
+import { isAggregate, joinEvidence, rowsOf } from "./evidence";
 import { windowKind } from "./window";
 
 afterEach(cleanup);
@@ -60,7 +60,7 @@ describe("T2 over every fixture card and claim", () => {
           const list = screen.queryByRole("list", { name: "Evidence events" });
           const ids = list ? [...list.querySelectorAll("[data-event-id]")].map((el) => el.getAttribute("data-event-id")) : [];
           for (const ev of claim.evidence) expect(ids).toContain(ev.id);
-          if (claim.evidence.length === 0) expect(screen.getByText("This claim counts no events in its window.")).toBeTruthy();
+          if (claim.evidence.length === 0) expect(screen.getByText("This card cites no events for this claim.")).toBeTruthy();
         }
         unmount();
       }
@@ -326,5 +326,54 @@ describe("pitch bounds", () => {
         }
       }
     }
+  });
+});
+
+describe("events cited by this card", () => {
+  const open = (metric: string) => {
+    for (const fx of matchFixtures) {
+      for (const moment of fx.moments) {
+        const c = moment.claims.find((x) => x.metric === metric && moment.segments.some((s) => s.claim_id === x.id));
+        if (!c) continue;
+        render(<Harness fx={fx} start={moment.id} />);
+        fireEvent.click(within(receipt()).getAllByRole("button").find((b) => b.querySelector(`[data-claim-id="${c.id}"]`))!);
+        return c;
+      }
+    }
+    throw new Error(`no fixture claim for ${metric}`);
+  };
+  const NOTE = "This value aggregates all events in its window; the list shows only the events this card cites.";
+
+  it("titles the list as the events the card cites", () => {
+    open("score");
+    expect(screen.getByRole("heading", { name: "Events cited by this card" })).toBeTruthy();
+  });
+
+  it.each(["possession", "pressure_balance"])("%s aggregates its window: the sentence says the list is only the cited events", (metric) => {
+    open(metric);
+    expect(screen.getByTestId("aggregate-note").textContent).toBe(NOTE);
+  });
+
+  it.each(["score", "goals", "red_cards", "players_on_pitch"])("%s is not an aggregate: no sentence", (metric) => {
+    try {
+      open(metric);
+    } catch {
+      return; // no fixture card states this metric in its sentence; the other metrics cover the rule
+    }
+    expect(screen.queryByTestId("aggregate-note")).toBeNull();
+  });
+
+  it("states nothing while the metric registry is not loaded", () => {
+    render(<Harness fx={red} metrics={{ status: "loading", retry: () => {} }} />);
+    expect(screen.queryByTestId("aggregate-note")).toBeNull();
+  });
+
+  it("the sentence follows the registry: kind ratio or a rolling window, nothing else", () => {
+    const info = (kind: string, type: "rolling" | "claim_range" | "cumulative") => ({ id: "x", kind, label: "l", definition: "d", window: { type, minutes: null } });
+    expect(isAggregate(info("ratio", "claim_range"))).toBe(true);
+    expect(isAggregate(info("state", "rolling"))).toBe(true);
+    expect(isAggregate(info("count", "claim_range"))).toBe(false);
+    expect(isAggregate(info("state", "claim_range"))).toBe(false);
+    expect(isAggregate(undefined)).toBe(false);
   });
 });

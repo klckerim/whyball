@@ -6,6 +6,7 @@ import type { MatchDetail, Moment, TimelineEvent } from "../api/types";
 import { Empty } from "../app/states";
 import { DESKTOP, useMediaQuery } from "../design/useMediaQuery";
 import { bySeq, rowsOf } from "./evidence";
+import { isAggregate } from "./evidence";
 import { EvidenceList } from "./EvidenceList";
 import { EvidencePitch } from "./EvidencePitch";
 import { MomentRail } from "./MomentRail";
@@ -41,6 +42,7 @@ function MomentProof({ moment, detail, events, metrics }: { moment: Moment; deta
   const [eventSel, setEventSel] = useState<string | null>(null);
   const index = useMemo(() => bySeq(events), [events]);
   const claim = moment.claims.find((c) => c.id === claimId) ?? null;
+  const info = metrics.status === "ok" && claim ? metrics.data.metrics.find((m) => m.id === claim.metric) : undefined;
   const rows = useMemo(() => rowsOf(claim?.evidence ?? [], index), [claim, index]);
   const others = useMemo(
     () => rowsOf(moment.claims.filter((c) => c.id !== claimId).flatMap((c) => c.evidence), index),
@@ -60,7 +62,7 @@ function MomentProof({ moment, detail, events, metrics }: { moment: Moment; deta
       />
       <aside className={styles.evidence} aria-label="Evidence">
         <EvidencePitch marked={rows} dimmed={others} selectedEventId={eventSel} onSelect={setEventSel} />
-        <EvidenceList rows={rows} teams={detail.teams} selectedEventId={eventSel} onSelect={setEventSel} />
+        <EvidenceList rows={rows} teams={detail.teams} aggregate={isAggregate(info)} selectedEventId={eventSel} onSelect={setEventSel} />
       </aside>
     </>
   );

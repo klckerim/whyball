@@ -247,6 +247,10 @@
   fill: currentColor;
   stroke: currentColor;
 }
+.cited {
+  display: grid;
+  gap: 8px;
+}
 .events {
   list-style: none;
   margin: 0;

@@ -1,6 +1,6 @@
 // Evidence events of a card joined with the event stream (/events) by `seq`: the stream holds the
 // outcome, and a position when the evidence record has none. Pure; no UI.
-import type { Evidence, TimelineEvent } from "../api/types";
+import type { Evidence, MetricInfo, TimelineEvent } from "../api/types";
 
 export interface EvidenceRow extends Evidence {
   outcome: string | null;
@@ -23,4 +23,10 @@ export function bySeq(events: readonly TimelineEvent[]): Map<number, TimelineEve
 export function rowsOf(evidence: readonly Evidence[], index: ReadonlyMap<number, TimelineEvent>): EvidenceRow[] {
   const unique = [...new Map(evidence.map((e) => [e.id, e])).values()];
   return unique.map((e) => joinEvidence(e, index)).sort((a, b) => a.seq - b.seq);
+}
+
+/** A claim whose value summarises a window of events (a ratio, or a rolling window) rather than counting the cited
+ * ones. From the metric registry only (/api/metrics); the UI counts nothing. Unknown metric: not stated. */
+export function isAggregate(info: MetricInfo | undefined): boolean {
+  return !!info && (info.kind === "ratio" || info.window.type === "rolling");
 }
