@@ -220,7 +220,7 @@ Newest entries at the bottom.
 - At most 3 attempts (Narrator + Guard + Verifier) per card, enforced by the edge conditions (`state.can_retry`); `max_iterations` (60) is only an
   emergency cap and a test shows three rejections end in the fallback without `WorkflowConvergenceException`.
 - Timeouts per call (`asyncio.wait_for` inside each agent): Narrator 60 s, Analyst 30 s, Verifier 30 s; at most 3 cards in flight (semaphore; a
-  workflow instance cannot run twice at once, so one per card); one call budget for all agents of a run (150). The trace is written by our executors
+  workflow instance cannot run twice at once, so one per card); one call budget for all agents of a run (200; worst case 25 cards x 7 calls = 175). The trace is written by our executors
   (`perf_counter`), not by framework events or OpenTelemetry.
 
 ## D34. Analyst [design]

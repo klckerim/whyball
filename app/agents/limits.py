@@ -15,7 +15,7 @@ class AgentsConfig:
     verifier_max_tokens: int = 1500
     verifier_timeout_s: float = 30.0
     max_concurrent_cards: int = 3  # cards in flight at once (one workflow instance per card)
-    max_calls_per_run: int = 150  # model calls of all agents together; 15 cards x up to 9 calls = 135 worst case
+    max_calls_per_run: int = 200  # model calls of all agents together; worst case 25 cards x (1 + 3 + 3) = 175
     max_attempts: int = 3  # Narrator + Guard + Verifier rounds per card (state.MAX_ATTEMPTS)
 
 
