@@ -22,7 +22,7 @@ type Props = { className?: string } & (
     }
 );
 
-/** Event id in the store's format ("m-42-red_card_swing#127"), for timeline events that carry only `seq`. */
+/** Event id in the store's format ("<event_match_id>#<seq>"), for timeline events that carry only `seq`. */
 export function eventId(eventMatchId: string, seq: number): string {
   return `${eventMatchId}#${seq}`;
 }

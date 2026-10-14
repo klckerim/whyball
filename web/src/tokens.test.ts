@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import tokens from "./tokens.css?raw";
 
-const sources = import.meta.glob<string>(["./**/*.{ts,tsx,css}", "!./**/*.test.*", "!./tokens.css"], {
+const sources = import.meta.glob<string>(["./**/*.{ts,tsx,css}", "!./**/*.test.*", "!./tokens.css", "!./design/tokens.css"], {
   query: "?raw",
   import: "default",
   eager: true,

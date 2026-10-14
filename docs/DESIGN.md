@@ -63,3 +63,14 @@ Newest entries at the bottom.
 - The generator lives in `web/tools/openapi-gen/` with its own lockfile (openapi-typescript 7.13.0,
   typescript 5.9.3). The app keeps TS 7. Drift is checked on both sides: pytest compares
   `web/openapi.json` with the app, `npm run check:api` compares the generated TS with the JSON.
+
+## D11. Token values [design, checked against D3]
+- `web/src/design/tokens.css` uses the UI_SPEC §6 starting values unchanged: every pair passed in both
+  themes (lowest text pair: light `--away` on `--surface-2` 4.67; lowest mark: dark `--control-border` on
+  `--surface-2` 3.44).
+- Added beyond the spec table: `--border` (decorative, light `#d5dce6`, dark `#263241`, not contrast-checked),
+  `--focus` (light = `--accent-ink`, dark = `--accent`), dark `--accent-ink` = `--accent` (yellow is
+  readable as text on dark), `--stage-*` = the dark palette, defined once on `:root`.
+- Light `--accent` is a fill only (1.33:1 on the light background); text on it uses `--accent-fg`.
+- The test also fails when a colour token is not in any checked pair (except `--border` and the
+  `--accent` fill), so a new token cannot skip the check.

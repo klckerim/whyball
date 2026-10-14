@@ -1,0 +1,90 @@
+/* UI v2 design tokens (docs/UI_SPEC.md §6, docs/DESIGN.md D3–D5). Every colour of the new UI lives here.
+ * Light values sit on :root; dark values apply under the system preference unless the viewer chose light,
+ * or when the viewer chose dark. --stage-* (the program stage) are defined once and stay dark in both
+ * themes. design/tokens.test.ts checks every pair below in both themes. */
+
+:root {
+  color-scheme: light;
+
+  /* neutrals */
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #e9eef5;
+  --text: #0f1720;
+  --muted: #4a5565;
+  --border: #d5dce6; /* decorative only; controls use --control-border */
+  --control-border: #6b7787;
+
+  /* the accent: broadcast yellow as a fill; text and links use --accent-ink */
+  --accent: #ffd23f;
+  --accent-fg: #0b0f14;
+  --accent-ink: #7a5a00;
+  --focus: #7a5a00;
+
+  /* semantic: verification state and narration source */
+  --verified: #0b7a57;
+  --reject: #b3261e;
+  --src-llm: #2457c5;
+  --src-fallback: #9a4f00;
+
+  /* teams: never told apart by colour alone (DESIGN D5) */
+  --home: #1f63c2;
+  --away: #b8431a;
+
+  /* program stage: dark in both themes */
+  --stage-bg: #0b0f14;
+  --stage-surface: #131a23;
+  --stage-surface-2: #1b2430;
+  --stage-text: #edf1f6;
+  --stage-muted: #a3afbf;
+  --stage-accent: #ffd23f;
+  --stage-accent-fg: #0b0f14;
+  --stage-verified: #3dd6a0;
+  --stage-reject: #ff6b6b;
+  --stage-home: #4da3ff;
+  --stage-away: #ff8a5b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b0f14;
+    --surface: #131a23;
+    --surface-2: #1b2430;
+    --text: #edf1f6;
+    --muted: #a3afbf;
+    --border: #263241;
+    --control-border: #6b7787;
+    --accent: #ffd23f;
+    --accent-fg: #0b0f14;
+    --accent-ink: #ffd23f;
+    --focus: #ffd23f;
+    --verified: #3dd6a0;
+    --reject: #ff6b6b;
+    --src-llm: #8ab4ff;
+    --src-fallback: #ffa94d;
+    --home: #4da3ff;
+    --away: #ff8a5b;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0f14;
+  --surface: #131a23;
+  --surface-2: #1b2430;
+  --text: #edf1f6;
+  --muted: #a3afbf;
+  --border: #263241;
+  --control-border: #6b7787;
+  --accent: #ffd23f;
+  --accent-fg: #0b0f14;
+  --accent-ink: #ffd23f;
+  --focus: #ffd23f;
+  --verified: #3dd6a0;
+  --reject: #ff6b6b;
+  --src-llm: #8ab4ff;
+  --src-fallback: #ffa94d;
+  --home: #4da3ff;
+  --away: #ff8a5b;
+}
