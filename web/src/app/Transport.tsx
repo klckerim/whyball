@@ -4,6 +4,7 @@ import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import type { Moment, Period, Series } from "../api/types";
 import { SPEEDS, wallSeconds } from "../state/clock";
 import styles from "./app.module.css";
+import type { BandTeams } from "./PressureBand";
 import { Timeline } from "./Timeline";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   periods: Period[];
   moments: Moment[];
   series: Series | null;
+  bandTeams?: BandTeams | null;
   minuteLabel: string;
   shownId: string | null;
   canPrev: boolean;
@@ -70,6 +72,7 @@ export function Transport(p: Props) {
         periods={p.periods}
         moments={p.moments}
         series={p.series}
+        bandTeams={p.bandTeams}
         minuteLabel={p.minuteLabel}
         shownId={p.shownId}
         onSeek={p.onSeek}

@@ -258,6 +258,38 @@
   color: var(--muted);
 }
 
+.bandKey {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bandLabel {
+  margin-right: auto;
+}
+.bandSide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 600;
+}
+.bandMark {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.bandMark[data-mark="dot"] {
+  background: var(--home);
+}
+.bandMark[data-mark="ring"] {
+  border: 3px solid var(--away);
+}
+
 /* --- states --------------------------------------------------------------------------------- */
 .state {
   display: grid;

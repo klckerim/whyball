@@ -1,6 +1,7 @@
 // Thin pressure_balance band behind the timeline (B2 series): home above the centre line, away below.
 // No values are written; a null point is a gap, never a zero. Name and definition come from the API.
-import type { Series } from "../api/types";
+import type { MatchDetail, Series } from "../api/types";
+import { Fact } from "../design/Fact";
 import styles from "./app.module.css";
 
 const W = 1000; // viewBox units across the match
@@ -50,5 +51,33 @@ export function PressureBand({ series, duration }: { series: Series; duration: n
         </g>
       ))}
     </svg>
+  );
+}
+
+export interface BandTeams {
+  metaId: string; // the match_meta event the team names come from
+  teams: MatchDetail["teams"];
+}
+
+/** What the band is: the metric's own label (it names its window) and which side is which. The band
+ * writes no value. Marks match the score bug (home: filled circle, away: ring) next to each team name,
+ * plus an arrow, so the side never rests on colour. */
+export function BandKey({ series, teams }: { series: Series; teams: BandTeams | null }) {
+  return (
+    <p className={styles.bandKey} data-testid="band-key">
+      <span className={styles.bandLabel} title={series.definition}>
+        {series.label}
+      </span>
+      {teams
+        ? (["home", "away"] as const).map((side) => (
+            <span key={side} className={styles.bandSide} data-side={side}>
+              <span className={styles.bandMark} data-mark={side === "home" ? "dot" : "ring"} aria-hidden="true" />
+              <Fact event={{ id: teams.metaId, team: side }} field="team" teams={teams.teams} />
+              <span aria-hidden="true">{side === "home" ? "↑" : "↓"}</span>
+              <span className={styles.visuallyHidden}>{side === "home" ? "above the line" : "below the line"}</span>
+            </span>
+          ))
+        : null}
+    </p>
   );
 }

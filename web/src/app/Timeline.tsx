@@ -6,7 +6,7 @@ import { useRef } from "react";
 import type { Moment, Period, Series } from "../api/types";
 import { TypeGlyph, typeLabel } from "../design/TypeGlyph";
 import styles from "./app.module.css";
-import { PressureBand } from "./PressureBand";
+import { type BandTeams, BandKey, PressureBand } from "./PressureBand";
 
 /** Keyboard seek steps in match seconds (design parameters, DESIGN D19). */
 export const SEEK = { step: 30, page: 300 } as const;
@@ -24,13 +24,14 @@ interface Props {
   periods: Period[];
   moments: Moment[];
   series: Series | null;
+  bandTeams?: BandTeams | null;
   minuteLabel: string; // of the event in effect, for the slider's spoken value
   shownId: string | null;
   onSeek: (t: number) => void;
   onMoment: (id: string) => void;
 }
 
-export function Timeline({ t, duration, periods, moments, series, minuteLabel, shownId, onSeek, onMoment }: Props) {
+export function Timeline({ t, duration, periods, moments, series, bandTeams = null, minuteLabel, shownId, onSeek, onMoment }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const seekTo = (clientX: number) => {
     const rect = track.current?.getBoundingClientRect();
@@ -100,6 +101,7 @@ export function Timeline({ t, duration, periods, moments, series, minuteLabel, s
         <span>Kick-off</span>
         <span>Full time</span>
       </div>
+      {series ? <BandKey series={series} teams={bandTeams} /> : null}
     </div>
   );
 }

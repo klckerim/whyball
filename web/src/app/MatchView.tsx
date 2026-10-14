@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 
 import { api, NotFoundError } from "../api/client";
 import type { MatchDetail, Moment, Series, TimelineEvent } from "../api/types";
+import { eventId } from "../design/Fact";
 import { REDUCED_MOTION, useMediaQuery } from "../design/useMediaQuery";
 import { SPEEDS } from "../state/clock";
 import { eventAt, stepMoment } from "../state/match";
@@ -86,6 +87,8 @@ function MatchPlayer({ data }: { data: MatchData }) {
   const reduced = useMediaQuery(REDUCED_MOTION);
   const { shown: face, phase } = useFlip(mode, reduced);
   const noMoments = moments.length === 0;
+  const meta = useMemo(() => events.find((e) => e.type === "match_meta") ?? null, [events]);
+  const bandTeams = meta ? { metaId: eventId(detail.event_match_id, meta.seq), teams: detail.teams } : null;
   const prev = stepMoment(moments, t, shownId, -1);
   const next = stepMoment(moments, t, shownId, 1);
 
@@ -144,6 +147,7 @@ function MatchPlayer({ data }: { data: MatchData }) {
               periods={detail.periods}
               moments={moments}
               series={series}
+              bandTeams={bandTeams}
               minuteLabel={eventAt(events, t)?.minute_label ?? "no data"}
               shownId={shownId}
               canPrev={!!prev}

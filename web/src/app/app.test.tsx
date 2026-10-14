@@ -353,3 +353,25 @@ describe("Flip between On Air and Proof", () => {
     expect(shortcutFor("p", document.body, { ctrl: true })).toBeNull();
   });
 });
+
+describe("pressure band caption", () => {
+  it("names the metric and its window from the API and tells home from away by mark, arrow and name", async () => {
+    stubMedia();
+    serve();
+    renderAt(`/match/${red.summary.id}`);
+    const key = await screen.findByTestId("band-key");
+    expect(key.textContent).toContain(red.series.label);
+    expect(red.series.label).toMatch(/last .* minutes/); // the window is in the label the API sends
+    expect(key.querySelector("span[title]")!.getAttribute("title")).toBe(red.series.definition);
+    const home = key.querySelector('[data-side="home"]')!;
+    const away = key.querySelector('[data-side="away"]')!;
+    expect(home.textContent).toContain(red.detail.teams.home);
+    expect(away.textContent).toContain(red.detail.teams.away);
+    expect(home.textContent).toContain("↑");
+    expect(away.textContent).toContain("↓");
+    expect(home.querySelector("[data-event-id]")!.getAttribute("data-event-id")).toMatch(/#0$/);
+    expect(home.querySelector('[data-mark="dot"]')).toBeTruthy();
+    expect(away.querySelector('[data-mark="ring"]')).toBeTruthy();
+    expect(key.textContent).not.toMatch(/[+-]?\d\.\d\d/); // the band still writes no value
+  });
+});
