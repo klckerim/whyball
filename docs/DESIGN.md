@@ -92,3 +92,28 @@ Newest entries at the bottom.
   (0BSD, permissive).
 - `web/src/design/radix.smoke.test.tsx` checks each primitive under our React version (jsdom needs a
   ResizeObserver stub for the popper-based Tooltip and Popover).
+
+## D14. Replay clock model [design]
+- The On Air stage plays the fetched events (`GET /api/matches/{id}/events`) with a client clock
+  (`web/src/state/clock.ts`, `playback.ts`), not the SSE replay: seek and scrub are exact, and tests run
+  with fake timers. The SSE replay stays the machine-readable feed for `/overlay` and outside consumers (U5).
+- One 100 ms timer moves the clock by wall-clock dt × speed and drives the dwell countdown.
+
+## D15. Replay speeds [design]
+- Speed = match seconds per wall-clock second, the same unit as the replay API `speed`.
+  `1×` = 60 (one match minute per second, a 90-minute match in 90 s), `Fast` = 120 (45 s),
+  `Faster` = 300 (18 s). The UI shows the wall time computed from the match's own duration, not a
+  rounded "90 minutes".
+
+## D16. Lower-third dwell [design parameter, not a standard]
+- A card stays on screen for `max(4 s, characters / 15 per second)` (UI_SPEC B6; `READING_CPS` = 15 in
+  `web/src/state/dwell.ts`). Counted in wall-clock time while playing; pausing stops it. Several cards:
+  FIFO. Seeking clears the queue; previous/next shows that card at once.
+
+## D17. Ball marker and trail [design parameters]
+- Position only from events that carry `x, y`; a null position is never drawn (not at 0,0). Before the
+  first positioned event: "no location".
+- Between two positioned events the marker moves in a straight line (visual only, labelled "synthetic
+  feed visualization"), unless they are more than 8 s apart (`BALL.gapS`) or the next one is a kickoff:
+  then it holds at the last position. `prefers-reduced-motion`: no interpolation, the marker jumps.
+- Trail: positioned events of the last 12 match seconds, at most 6, cut at a gap and at a kickoff.
