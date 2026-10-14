@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "smoke": "npm run build && cd .. && WHYBALL_SMOKE_DIST=web/dist .venv/bin/pytest -q tests/test_smoke_e2e.py"
+    "smoke": "npm run build && cd .. && WHYBALL_SMOKE_DIST=web/dist .venv/bin/pytest -q tests/test_smoke_e2e.py",
+    "gen:api": "node tools/openapi-gen/gen.mjs",
+    "check:api": "node tools/openapi-gen/gen.mjs --check"
   },
   "dependencies": {
     "react": "^19.3.0",

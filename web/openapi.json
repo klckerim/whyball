@@ -1,0 +1,1001 @@
+{
+  "components": {
+    "schemas": {
+      "ClaimOut": {
+        "additionalProperties": false,
+        "properties": {
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "display": {
+            "title": "Display",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceOut"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "player": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "metric",
+          "label",
+          "team",
+          "player",
+          "comparison",
+          "value",
+          "display",
+          "start",
+          "end",
+          "evidence"
+        ],
+        "title": "ClaimOut",
+        "type": "object"
+      },
+      "EvidenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "minute": {
+            "title": "Minute",
+            "type": "integer"
+          },
+          "minute_label": {
+            "title": "Minute Label",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "integer"
+          },
+          "player": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player"
+          },
+          "second": {
+            "title": "Second",
+            "type": "integer"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "type",
+          "team",
+          "player",
+          "period",
+          "minute",
+          "second",
+          "minute_label"
+        ],
+        "title": "EvidenceOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "matches": {
+            "title": "Matches",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "matches"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "MatchDetail": {
+        "properties": {
+          "duration_t": {
+            "title": "Duration T",
+            "type": "integer"
+          },
+          "event_match_id": {
+            "title": "Event Match Id",
+            "type": "string"
+          },
+          "final_score": {
+            "$ref": "#/components/schemas/Score"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/Period"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "squads": {
+            "$ref": "#/components/schemas/Squads"
+          },
+          "teams": {
+            "$ref": "#/components/schemas/Teams"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "title": "Timeline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "event_match_id",
+          "teams",
+          "final_score",
+          "duration_t",
+          "periods",
+          "timeline",
+          "run_id",
+          "prompt_version",
+          "squads"
+        ],
+        "title": "MatchDetail",
+        "type": "object"
+      },
+      "MatchSummary": {
+        "properties": {
+          "final_score": {
+            "$ref": "#/components/schemas/Score"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "moments": {
+            "title": "Moments",
+            "type": "integer"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "teams": {
+            "$ref": "#/components/schemas/Teams"
+          }
+        },
+        "required": [
+          "id",
+          "teams",
+          "final_score",
+          "moments",
+          "sources"
+        ],
+        "title": "MatchSummary",
+        "type": "object"
+      },
+      "MetricInfo": {
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "window": {
+            "$ref": "#/components/schemas/MetricWindow"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "definition",
+          "window"
+        ],
+        "title": "MetricInfo",
+        "type": "object"
+      },
+      "MetricWindow": {
+        "properties": {
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "type": {
+            "enum": [
+              "rolling",
+              "claim_range"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "MetricWindow",
+        "type": "object"
+      },
+      "MetricsOut": {
+        "properties": {
+          "comparisons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricInfo"
+            },
+            "title": "Metrics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "metrics",
+          "kinds",
+          "comparisons"
+        ],
+        "title": "MetricsOut",
+        "type": "object"
+      },
+      "MomentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "at_seq": {
+            "title": "At Seq",
+            "type": "integer"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimOut"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "importance": {
+            "title": "Importance",
+            "type": "number"
+          },
+          "minute": {
+            "title": "Minute",
+            "type": "integer"
+          },
+          "minute_label": {
+            "title": "Minute Label",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "integer"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "second": {
+            "title": "Second",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "llm",
+              "template",
+              "template_fallback"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "t": {
+            "title": "T",
+            "type": "integer"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "trace": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Trace",
+            "type": "array"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "period",
+          "minute",
+          "second",
+          "minute_label",
+          "at_seq",
+          "type",
+          "team",
+          "importance",
+          "text",
+          "source",
+          "prompt_version",
+          "run_id",
+          "claims",
+          "trace",
+          "t"
+        ],
+        "title": "MomentOut",
+        "type": "object"
+      },
+      "Period": {
+        "properties": {
+          "end_t": {
+            "title": "End T",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "integer"
+          },
+          "start_t": {
+            "title": "Start T",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "start_t",
+          "end_t"
+        ],
+        "title": "Period",
+        "type": "object"
+      },
+      "Score": {
+        "additionalProperties": false,
+        "properties": {
+          "away": {
+            "title": "Away",
+            "type": "integer"
+          },
+          "home": {
+            "title": "Home",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "home",
+          "away"
+        ],
+        "title": "Score",
+        "type": "object"
+      },
+      "Squad": {
+        "properties": {
+          "bench": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bench",
+            "type": "array"
+          },
+          "lineup": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lineup",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "lineup",
+          "bench"
+        ],
+        "title": "Squad",
+        "type": "object"
+      },
+      "Squads": {
+        "properties": {
+          "away": {
+            "$ref": "#/components/schemas/Squad"
+          },
+          "home": {
+            "$ref": "#/components/schemas/Squad"
+          }
+        },
+        "required": [
+          "home",
+          "away"
+        ],
+        "title": "Squads",
+        "type": "object"
+      },
+      "Teams": {
+        "additionalProperties": false,
+        "properties": {
+          "away": {
+            "title": "Away",
+            "type": "string"
+          },
+          "home": {
+            "title": "Home",
+            "type": "string"
+          }
+        },
+        "required": [
+          "home",
+          "away"
+        ],
+        "title": "Teams",
+        "type": "object"
+      },
+      "TimelineEvent": {
+        "properties": {
+          "minute": {
+            "title": "Minute",
+            "type": "integer"
+          },
+          "minute_label": {
+            "title": "Minute Label",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "period": {
+            "title": "Period",
+            "type": "integer"
+          },
+          "player": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player"
+          },
+          "score": {
+            "$ref": "#/components/schemas/Score"
+          },
+          "second": {
+            "title": "Second",
+            "type": "integer"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "t": {
+            "title": "T",
+            "type": "integer"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "required": [
+          "seq",
+          "t",
+          "period",
+          "minute",
+          "second",
+          "minute_label",
+          "type",
+          "team",
+          "player",
+          "outcome",
+          "score",
+          "x",
+          "y"
+        ],
+        "title": "TimelineEvent",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "WhyBall",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Health Api Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/matches": {
+      "get": {
+        "operationId": "matches_api_matches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MatchSummary"
+                  },
+                  "title": "Response Matches Api Matches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Matches"
+      }
+    },
+    "/api/matches/{match_id}": {
+      "get": {
+        "operationId": "match_detail_api_matches__match_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Detail"
+      }
+    },
+    "/api/matches/{match_id}/moments": {
+      "get": {
+        "operationId": "moments_api_matches__match_id__moments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MomentOut"
+                  },
+                  "title": "Response Moments Api Matches  Match Id  Moments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Moments"
+      }
+    },
+    "/api/matches/{match_id}/replay": {
+      "get": {
+        "operationId": "match_replay_api_matches__match_id__replay_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "match seconds per second; 0 = no wait",
+            "in": "query",
+            "name": "speed",
+            "required": false,
+            "schema": {
+              "default": 60.0,
+              "description": "match seconds per second; 0 = no wait",
+              "maximum": 3600.0,
+              "minimum": 0,
+              "title": "Speed",
+              "type": "number"
+            }
+          },
+          {
+            "description": "start at this many seconds since kickoff",
+            "in": "query",
+            "name": "from_t",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "start at this many seconds since kickoff",
+              "minimum": 0,
+              "title": "From T",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Replay"
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "operationId": "metrics_api_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metrics"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz"
+      }
+    }
+  }
+}

@@ -25,6 +25,7 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Publication store (no model call; replays the last run's drafts through the current pipeline): .venv/bin/python -m app.publish [--check] → data/demo_narration/{match_id}.json + docs/DEMO_NARRATION.md (diff report); rerun after any change to the explain stage, the analytics or docs/LLM_RUN.json
 - API + built UI (one process): .venv/bin/uvicorn app.api.main:app --reload → /api/matches, /api/matches/{id}, /moments, /replay?speed=60&from_t=0 (SSE); WHYBALL_DATA_DIR, WHYBALL_STATIC_DIR (default web/dist)
 - Web UI (Vite + React + TS, web/): cd web && npm ci; npm run dev (proxies /api to :8000) | npm run build (→ web/dist, served by the API) | npm test (Vitest) | npm run smoke (build + tests/test_smoke_e2e.py against the real build)
+- API types (after an API model change): .venv/bin/python -m app.api.openapi (→ web/openapi.json; --check in pytest), then cd web && npm ci --prefix tools/openapi-gen && npm run gen:api (→ web/src/api/schema.gen.ts; npm run check:api in CI)
 - Foundry connection test: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
 At the end of every task, update STATUS.md (replace stale lines, keep it under 80 lines) and rewrite its Mentor summary section.

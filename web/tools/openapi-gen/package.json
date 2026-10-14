@@ -1,0 +1,10 @@
+{
+  "name": "whyball-openapi-gen",
+  "private": true,
+  "description": "Isolated openapi-typescript install: it needs the TypeScript 5 JS API, the web app uses TypeScript 7 (docs/DESIGN.md D10).",
+  "type": "module",
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

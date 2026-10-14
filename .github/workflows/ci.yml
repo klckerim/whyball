@@ -40,6 +40,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      # API types: src/api/schema.gen.ts must match openapi.json (the python job checks openapi.json
+      # against the app). The generator has its own install (docs/DESIGN.md D10).
+      - run: npm ci --prefix tools/openapi-gen
+      - run: npm run check:api
       - run: npm test -- --run
       - run: npm run build
 
