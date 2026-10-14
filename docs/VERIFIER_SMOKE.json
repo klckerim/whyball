@@ -1,0 +1,377 @@
+{
+  "meta": {
+    "verifier_version": "verifier-v1",
+    "model": "gpt-5-mini",
+    "n": 4
+  },
+  "rows": [
+    {
+      "kind": "wrong_slot_binding",
+      "moment": "m-42-red_card_swing-M001",
+      "moment_type": "pressure_shift",
+      "tag": null,
+      "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play 1 in their favour. Shots since 3': Brannoch FC +0.75, Morvane Athletic 0.",
+      "verdict": "reject",
+      "codes": [
+        "wrong_slot_binding"
+      ],
+      "issues": [
+        {
+          "code": "wrong_slot_binding",
+          "reason": "The numeric shot count is attached to the pressure label instead of the pressure metric.",
+          "span": "pressure balance over the last 10 minutes of play 1 in their favour."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1345,
+        "out": 365,
+        "reasoning": 256
+      },
+      "duration_ms": 5974
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "moment": "m-7-dominant_loss-M003",
+      "moment_type": "dominance_without_reward",
+      "tag": null,
+      "text": "45+1' — Vellorin FC dominate without reward: since 25' they have had 59% of the ball and a 0–4 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",
+      "verdict": "reject",
+      "codes": [
+        "wrong_slot_binding"
+      ],
+      "issues": [
+        {
+          "code": "wrong_slot_binding",
+          "reason": "the shot tally is presented in the wrong order, suggesting Vellorin have zero shots instead of four",
+          "span": "a 0–4 lead in shots"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1546,
+        "out": 601,
+        "reasoning": 512
+      },
+      "duration_ms": 6770
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "moment": "m-42-red_card_swing-M003",
+      "moment_type": "pressure_shift",
+      "tag": null,
+      "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play 0 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC +1.00.",
+      "verdict": "reject",
+      "codes": [
+        "wrong_slot_binding"
+      ],
+      "issues": [
+        {
+          "code": "wrong_slot_binding",
+          "reason": "The pressure value is attributed to Brannoch FC but the pressure claim applies to Morvane Athletic.",
+          "span": "Brannoch FC +1.00"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1503,
+        "out": 295,
+        "reasoning": 192
+      },
+      "duration_ms": 6864
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "moment": "m-7-dominant_loss-M007",
+      "moment_type": "dominance_without_reward",
+      "tag": null,
+      "text": "66' — Vellorin FC dominate without reward: since 46' they have had 5 of the ball and a 71%–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
+      "verdict": "reject",
+      "codes": [
+        "wrong_slot_binding"
+      ],
+      "issues": [
+        {
+          "code": "wrong_slot_binding",
+          "reason": "Numbers are attached to the wrong labels and therefore describe the wrong stats.",
+          "span": "5 of the ball and a 71%–1 lead in shots"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1674,
+        "out": 417,
+        "reasoning": 320
+      },
+      "duration_ms": 4541
+    },
+    {
+      "kind": "role_reversed",
+      "moment": "m-42-red_card_swing-M008",
+      "moment_type": "goal",
+      "tag": "kept it out at m",
+      "text": "Murek Ymberto kept it out at 84', making it Brannoch FC 1–2 Morvane Athletic. Morvane Athletic had been 1 down.",
+      "verdict": "reject",
+      "codes": [
+        "role_reversed"
+      ],
+      "issues": [
+        {
+          "code": "role_reversed",
+          "reason": "The text describes the player as preventing a goal while the claims show he scored at that minute.",
+          "span": "Murek Ymberto kept it out at 84'"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1237,
+        "out": 188,
+        "reasoning": 64
+      },
+      "duration_ms": 3504
+    },
+    {
+      "kind": "role_reversed",
+      "moment": "m-100-M001",
+      "moment_type": "red_card",
+      "tag": "was the victim of the challenge at m",
+      "text": "Iveno Gundrel was the victim of the challenge at 14'. Isteven United are down to 10 players.",
+      "verdict": "reject",
+      "codes": [
+        "unsupported_statement"
+      ],
+      "issues": [
+        {
+          "code": "unsupported_statement",
+          "reason": "The events show he was sent off but do not support that he was the victim of a challenge.",
+          "span": "Iveno Gundrel was the victim of the challenge at 14'."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 973,
+        "out": 194,
+        "reasoning": 128
+      },
+      "duration_ms": 2642
+    },
+    {
+      "kind": "role_reversed",
+      "moment": "m-3-late_comeback-M008",
+      "moment_type": "penalty",
+      "tag": "kept the kick out at m",
+      "text": "Sarvik Pelvisto kept the kick out at 83'.",
+      "verdict": "reject",
+      "codes": [
+        "role_reversed"
+      ],
+      "issues": [
+        {
+          "code": "role_reversed",
+          "reason": "The text presents the player as having saved the kick while the evidence shows he scored the penalty.",
+          "span": "Sarvik Pelvisto kept the kick out"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 885,
+        "out": 227,
+        "reasoning": 128
+      },
+      "duration_ms": 2669
+    },
+    {
+      "kind": "role_reversed",
+      "moment": "m-100-M004",
+      "moment_type": "goal",
+      "tag": "kept it out at m",
+      "text": "Hesko Ilvanto kept it out at 29', making it Tessdal Wanderers 1–0 Isteven United.",
+      "verdict": "reject",
+      "codes": [
+        "role_reversed"
+      ],
+      "issues": [
+        {
+          "code": "role_reversed",
+          "reason": "The text describes the player making a save, but the evidence shows he scored a goal.",
+          "span": "kept it out"
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1067,
+        "out": 197,
+        "reasoning": 128
+      },
+      "duration_ms": 2543
+    },
+    {
+      "kind": "event_wrong_claim",
+      "moment": "m-42-red_card_swing-M008",
+      "moment_type": "goal",
+      "tag": "goal, evidence of a claim",
+      "text": "Murek Brestani scored at 22', making it Brannoch FC 1–2 Morvane Athletic. Morvane Athletic had been 1 down.",
+      "verdict": "reject",
+      "codes": [
+        "event_wrong_claim"
+      ],
+      "issues": [
+        {
+          "code": "event_wrong_claim",
+          "reason": "The 22' goal did not produce a 1–2 scoreline according to the listed events.",
+          "span": "making it Brannoch FC 1–2 Morvane Athletic."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1168,
+        "out": 403,
+        "reasoning": 320
+      },
+      "duration_ms": 4271
+    },
+    {
+      "kind": "event_wrong_claim",
+      "moment": "m-100-M008",
+      "moment_type": "goal",
+      "tag": "goal, evidence of a claim",
+      "text": "Hesko Ilvanto scored at 29', making it Tessdal Wanderers 2–1 Isteven United.",
+      "verdict": "reject",
+      "codes": [
+        "event_wrong_claim"
+      ],
+      "issues": [
+        {
+          "code": "event_wrong_claim",
+          "reason": "The 29' goal did not make the score 2–1; the second Tessdal goal occurred at 90+1' so the 29' goal could not have produced that score.",
+          "span": "making it Tessdal Wanderers 2–1 Isteven United."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1130,
+        "out": 381,
+        "reasoning": 256
+      },
+      "duration_ms": 5123
+    },
+    {
+      "kind": "event_wrong_claim",
+      "moment": "m-0-late_comeback-M004",
+      "moment_type": "goal",
+      "tag": "goal, evidence of a claim",
+      "text": "Silvek Brestani scored at 18', making it Drunmark Rovers 0–2 Ostmere United.",
+      "verdict": "reject",
+      "codes": [
+        "event_wrong_claim"
+      ],
+      "issues": [
+        {
+          "code": "event_wrong_claim",
+          "reason": "The 18' goal alone did not produce a 0–2 score; the event does not support that scoreline.",
+          "span": "making it Drunmark Rovers 0–2 Ostmere United."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1136,
+        "out": 469,
+        "reasoning": 384
+      },
+      "duration_ms": 5497
+    },
+    {
+      "kind": "event_wrong_claim",
+      "moment": "m-0-late_comeback-M010",
+      "moment_type": "goal",
+      "tag": "goal, evidence of a claim",
+      "text": "Lenzar Marvetti scored at 83', making it Drunmark Rovers 3–2 Ostmere United. Drunmark Rovers had been 2 down.",
+      "verdict": "reject",
+      "codes": [
+        "event_wrong_claim"
+      ],
+      "issues": [
+        {
+          "code": "event_wrong_claim",
+          "reason": "The 83' goal did not create a 3–2 scoreline according to the provided events.",
+          "span": "making it Drunmark Rovers 3–2 Ostmere United."
+        }
+      ],
+      "error": null,
+      "tokens": {
+        "in": 1454,
+        "out": 530,
+        "reasoning": 448
+      },
+      "duration_ms": 6195
+    },
+    {
+      "kind": "clean",
+      "moment": "m-42-red_card_swing-M001",
+      "moment_type": "pressure_shift",
+      "tag": null,
+      "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play +0.75 in their favour. Shots since 3': Brannoch FC 1, Morvane Athletic 0.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1345,
+        "out": 301,
+        "reasoning": 256
+      },
+      "duration_ms": 6933
+    },
+    {
+      "kind": "clean",
+      "moment": "m-42-red_card_swing-M002",
+      "moment_type": "goal",
+      "tag": null,
+      "text": "Murek Brestani scored at 22', making it Brannoch FC 1–0 Morvane Athletic.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1069,
+        "out": 140,
+        "reasoning": 64
+      },
+      "duration_ms": 2194
+    },
+    {
+      "kind": "clean",
+      "moment": "m-42-red_card_swing-M004",
+      "moment_type": "red_card",
+      "tag": null,
+      "text": "Orvik Belmaro was sent off at 38'. Brannoch FC are down to 10 players.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 983,
+        "out": 90,
+        "reasoning": 64
+      },
+      "duration_ms": 1595
+    },
+    {
+      "kind": "clean",
+      "moment": "m-7-dominant_loss-M003",
+      "moment_type": "dominance_without_reward",
+      "tag": null,
+      "text": "45+1' — Vellorin FC dominate without reward: since 25' they have had 59% of the ball and a 4–0 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1546,
+        "out": 294,
+        "reasoning": 256
+      },
+      "duration_ms": 3977
+    }
+  ]
+}
