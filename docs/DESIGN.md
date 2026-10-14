@@ -160,3 +160,46 @@ Newest entries at the bottom.
 - Fixes from the first review: the stage height allowance (the page scrolled 26 px at 1440×900 and
   1920×1080), a frame border (the dark stage vanished on the dark page), px floors for stage text (at
   390 px the score bug was ~6 px tall), and an empty favicon link (the browser's `/favicon.ico` 404).
+
+## D26. Card text as segments [design]
+- `StoredMoment.segments: [{text, claim_id | null}]`; joined, the texts equal the card `text`, and every `claim_id` is
+  in the card's `claims`. A `claim_id` is set only on a piece that states a claim's value (`{value:}`, and the two
+  numbers of `{score}` / `{score_named}`). Minutes, names, labels and event phrases are plain pieces.
+- The code that writes the text knows each piece: `slots.render_parts` (placeholders, clauses, capitalisation) and
+  the template builders (`Sentence.parts`, `template_narrator.sentence`). Nothing is matched afterwards; the old
+  `markClaims` heuristic is gone. `NarrationRecord.parts` index the card's claims; `publish` maps the index to the id
+  and refuses to publish a card whose pieces do not join to its text.
+- Limit: a minute or name inside a plain piece is not a `<Fact>` (it is part of the card text, as in U1).
+  [DEMO_NARRATION](DEMO_NARRATION.md) counts the plain pieces with a digit. Claims whose value the sentence states in
+  words (a red card count of 1 as "was sent off") have no piece; the Receipt lists them as buttons ("stated in words").
+
+## D27. Flip [design parameters]
+- The seal is a button "Proof · P" (also `P`, and the tabs). Out 180 ms + in 200 ms = 380 ms, `rotateY` through
+  90° with `perspective(1600px)`, within the 400 ms cap (UI_SPEC B3); `prefers-reduced-motion`: instant.
+- Entering Proof pauses the clock and opens the card on air (else the latest moment at or before the playhead);
+  leaving it seeks to the Proof moment and shows its card. In Proof, ←/→ and Space do nothing. `?mode=proof&moment=`
+  is the deep link; the selection is kept in `?moment=` (replace).
+
+## D28. Fact sources added in U2 [design]
+- Still one id per value: a claim field (`start|end|player|team|label`, `data-claim-id`), the rolling window length of a
+  claim's metric (`data-claim-id`, `data-field="window_minutes"`, text from `/api/metrics`), the card's recorded checks
+  (`data-card-id`), and event `outcome`. `provenance.allow.ts` stays empty.
+- The seal says "Checked by code" (was "Verified"): lint and claim verification are run by code and no Verifier
+  agent exists yet. The Receipt's record says the same and claims nothing beyond the card's `checks`.
+
+## D29. Proof layout [design parameter]
+- Three columns (rail 220–280 px | Receipt | evidence 320–440 px) from 1024 px; below, one column: the rail becomes a
+  horizontal strip, then Receipt, evidence pitch and event list. No horizontal page scroll (checked at 390 px).
+- Window text: `claim_range` → "from <start> to <end>" (or "at <t>" when equal); `rolling` → "the last <N> minutes
+  played, closing at the claim's end (<end>)". Kind and N come from `/api/metrics`; the definition is always shown
+  beside the value, so possession and territorial share are never read as real ball possession.
+
+## D30. Event shapes on the evidence pitch [design]
+- Shape by event type, with the type label in the list and a legend; colour only dims or highlights: goal ●, shot ▲,
+  pass ○, dribble +, red/yellow card ▮, penalty ◆, corner ■, other ×. The selected event gets a halo and a heavier
+  mark. The position is the BALL at the event (caption "ball position at each event"), never a player's; an event
+  without a position is not drawn and its row says "no location". Outcome comes from `/events` by `seq` (no new endpoint).
+
+## D31. Pressure band caption [design]
+- Under the timeline: the API series label (it names its 10-minute window), and home ● / away ○ marks with an arrow
+  (↑ above the line, ↓ below) and the team name from the match_meta event. The band still writes no value.
