@@ -1,0 +1,256 @@
+/* Program stage. Sizes are 1080p logical pixels × --u (1/1920 of the frame width), so the frame scales as
+ * one picture (UI_SPEC B1, B5). Inside the frame the app tokens are remapped to the always-dark
+ * --stage-* values (DESIGN D4), so shared primitives (Seal, SourceBadge) follow the stage. */
+
+.onAir {
+  display: grid;
+  gap: 16px;
+}
+
+.frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  container-type: inline-size;
+  background: var(--stage-bg);
+  color: var(--stage-text);
+  border-radius: 4px;
+  --bg: var(--stage-bg);
+  --surface: var(--stage-surface);
+  --surface-2: var(--stage-surface-2);
+  --text: var(--stage-text);
+  --muted: var(--stage-muted);
+  --accent: var(--stage-accent);
+  --accent-fg: var(--stage-accent-fg);
+  --verified: var(--stage-verified);
+  --reject: var(--stage-reject);
+  --src-llm: var(--stage-src-llm);
+  --src-llm-fg: var(--stage-src-llm-fg);
+  --src-fallback: var(--stage-src-fallback);
+  --home: var(--stage-home);
+  --away: var(--stage-away);
+  --u: calc(100cqw / 1920);
+}
+
+.safe {
+  position: absolute;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: calc(24 * var(--u));
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: calc(32 * var(--u));
+}
+
+/* --- score bug ---------------------------------------------------------------------------- */
+.bug {
+  display: grid;
+  grid-template-columns: auto;
+  gap: calc(6 * var(--u));
+  padding: calc(14 * var(--u)) calc(22 * var(--u));
+  background: var(--stage-surface);
+  border-top: calc(6 * var(--u)) solid var(--stage-accent);
+  font-family: var(--font-display);
+}
+.bugRow {
+  display: grid;
+  grid-template-columns: calc(28 * var(--u)) minmax(0, 1fr) calc(70 * var(--u));
+  align-items: center;
+  gap: calc(16 * var(--u));
+}
+.teamMark {
+  width: calc(24 * var(--u));
+  height: calc(24 * var(--u));
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.teamMark[data-mark="dot"] {
+  background: var(--stage-home);
+}
+.teamMark[data-mark="ring"] {
+  border: calc(6 * var(--u)) solid var(--stage-away);
+}
+.teamName {
+  font-weight: 600;
+  font-size: calc(36 * var(--u));
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(420 * var(--u));
+}
+.score {
+  font-weight: 700;
+  font-size: calc(56 * var(--u));
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.clock {
+  display: flex;
+  gap: calc(12 * var(--u));
+  justify-content: flex-end;
+  font-weight: 600;
+  font-size: calc(32 * var(--u));
+  color: var(--stage-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ft {
+  color: var(--stage-accent);
+}
+
+.synthetic {
+  padding: calc(8 * var(--u)) calc(16 * var(--u));
+  border: calc(3 * var(--u)) solid var(--stage-accent);
+  color: var(--stage-accent);
+  font: 700 calc(28 * var(--u)) / 1 var(--font-display);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* --- pitch ---------------------------------------------------------------------------------- */
+.pitchBox {
+  position: relative;
+  min-height: 0;
+  display: grid;
+}
+.pitch {
+  width: 100%;
+  height: 100%;
+}
+.lines {
+  fill: none;
+  stroke: var(--stage-muted);
+  stroke-width: 0.35;
+  opacity: 0.45;
+}
+.trail {
+  fill: none;
+  stroke: var(--stage-accent);
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.ball {
+  fill: var(--stage-accent);
+}
+.noLocation,
+.feedNote {
+  position: absolute;
+  margin: 0;
+  font: 500 calc(24 * var(--u)) / 1.2 var(--font-body);
+  color: var(--stage-muted);
+}
+.noLocation {
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+}
+.feedNote {
+  right: 0;
+  bottom: 0;
+}
+
+/* --- lower third ---------------------------------------------------------------------------- */
+.lowerThird {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border-top: 4px solid var(--accent);
+  color: var(--text);
+}
+.lowerThird[data-placement="stage"] {
+  gap: calc(12 * var(--u));
+  padding: calc(20 * var(--u)) calc(28 * var(--u));
+  border-top-width: calc(6 * var(--u));
+  font-size: calc(32 * var(--u));
+}
+.ltHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5em 1em;
+}
+.ltType {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font: 700 1em / 1.2 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ltMinute {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ltMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+}
+.ltText {
+  margin: 0;
+  font: 500 1em / 1.35 var(--font-body);
+}
+.lowerThird[data-placement="stage"] .ltText {
+  font-size: calc(36 * var(--u));
+}
+
+.stageSeal {
+  justify-self: end;
+  font-size: calc(40 * var(--u));
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  background: var(--stage-surface);
+}
+
+.panelEmpty {
+  margin: 0;
+  padding: 16px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+/* --- safe-area guides (G) ------------------------------------------------------------------- */
+.guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.guide {
+  position: absolute;
+  border: 1px dashed var(--stage-accent);
+}
+.guide[data-kind="action"] {
+  border-color: var(--stage-reject);
+}
+.guide span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font: 500 calc(20 * var(--u)) / 1 var(--font-body);
+  color: var(--stage-text);
+}
+.guide[data-kind="action"] span {
+  top: auto;
+  bottom: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lowerThird {
+    animation: ltIn 300ms ease-out;
+  }
+}
+@keyframes ltIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
