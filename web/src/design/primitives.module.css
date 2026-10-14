@@ -43,9 +43,8 @@
   color: var(--muted);
 }
 
-/* Claim values inside a sentence: underlined; in the Receipt they are buttons. Selection is shown by a
+/* Claim values in the Receipt are underlined buttons (on air they are plain Facts, the broadcast look stays clean). Selection is shown by a
  * heavier weight and a filled background as well as the underline, so it never rests on colour. */
-.value,
 .valueButton {
   text-decoration: underline;
   text-decoration-thickness: 2px;

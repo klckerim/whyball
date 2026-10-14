@@ -20,7 +20,7 @@ export function SentenceText({ segments, claims, interactive = false, selectedId
       {segments.map((seg, i) => {
         const claim = seg.claim_id ? claims.find((c) => c.id === seg.claim_id) : undefined;
         if (!claim) return <span key={i}>{seg.text}</span>;
-        if (!interactive) return <Fact key={i} className={styles.value} claim={claim} />;
+        if (!interactive) return <Fact key={i} claim={claim} />;
         return (
           <button
             key={i}
