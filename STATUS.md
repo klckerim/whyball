@@ -15,17 +15,21 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md).
 - Publication store replays the last run ([DEMO_NARRATION](docs/DEMO_NARRATION.md)).
 - FastAPI: matches, moments, SSE replay, serves the built UI.
 - Web UI: scoreboard, timeline, cards, evidence panel with pitch, bottom sheet, token-based light/dark theme.
+- Repo hygiene: README skeleton, CI workflow (pytest, Vitest + build, gitleaks), this file.
 
 ## In progress
-- P0 repo hygiene: STATUS.md, CI workflow, README skeleton, repo checks. No code behaviour change.
-- Branches: `master` only (local and origin).
+- Nothing open. `master` is 3 commits ahead of origin (P0 hygiene), not pushed yet.
+- Branches: `master` only, no stash. Tag `llm-baseline-v2` is on origin.
 
 ## Next
 - Real Agent trace: the store carries no trace yet, so that tab shows its empty state.
 - Verifier gaps listed in EVAL (below). Decide before the freeze: fix or document.
+- Push master and check the first CI run (Python 3.12 job, gitleaks over full history).
 - Deploy (see Deploy state).
 
 ## Decisions (with reason)
+- CI pins actions to commit SHAs, Node 24 LTS: tags can move, and 24 meets the web engines range.
+- gitleaks-action without a license key: required only for organization repos; this repo is personal.
 - Claim menu (v5): the model picks menu ids, code builds the numbers, so numbers cannot drift.
 - Replays use the stored publication, no live model call: demo is deterministic and free.
 - UI opens at full time: a first view with all cards beats an empty kickoff screen.
@@ -42,10 +46,13 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md).
 - Card-text value marking can miss a claim; it is then still listed in the evidence panel.
 - Tests: pytest 584 passed, Vitest 105 passed (2026-10-14); `npm run smoke` 3 passed (2026-10-13).
 - Two of the three demo matches share one run id and one prompt version.
+- CI has not run yet. Python 3.12 is untested locally (3.14 here); gitleaks may flag old history.
+- `.env.example` is tracked on purpose and matches the `\.env` hygiene grep; not opened (deny rule).
 
 ## Deploy state
 - Target: Azure Container Apps, one container (API + built UI).
-- Not started in the repo: no Dockerfile, no infra files, no CI workflow.
+- CI workflow in `.github/workflows/ci.yml` (tests and scan only, no deploy step).
+- Not started: no Dockerfile, no infra files.
 - Needs `web/dist` built before the image; keys stay in `.env`, never committed.
 
 ## Commands
@@ -57,12 +64,16 @@ Full list in [CLAUDE.md](CLAUDE.md). Daily ones:
 - Store refresh after Explain changes: `.venv/bin/python -m app.publish`
 
 ## Mentor summary
-- Goal: multi-agent football narrator where every sentence is checked against deterministic metrics.
-- Where it stands: pipeline, eval, API and a polished replay UI are done and committed on master.
-- Last task: UI polish. Full-time opening, evidence panel with pitch, timeline markers, theme tokens.
-- Backend change: only additive `x`/`y` on evidence events, with a test.
-- Quality: all suites green; before/after screenshots at 1440, 1024 and 390 px, light and dark.
-- Main risk: three verifier gap types in EVAL; the demo does not hide them.
-- Data finding: one stored card has a sentence its claims do not cover.
-- Not done: deployment files and live agent traces.
-- Ask for the mentor: is it better to close verifier gaps or to document them before the freeze?
+- Goal: football narrator where every published sentence passes a deterministic claim verifier.
+- Last task: P0 repo hygiene, no code behaviour change. Four commits, none pushed.
+- STATUS.md is now tracked; CLAUDE.md asks every task to update it and this summary.
+- CI added: Python 3.12 pytest, web Vitest + build on Node 24, gitleaks full-history scan.
+- Actions pinned to commit SHAs; newest setup-node (6 days old) skipped for the older v7.0.0.
+- gitleaks license: needed only for organization repos (verified in its README); this repo is personal.
+- README skeleton: one-line claim, summary, setup, test, Status: WIP. No agents, MCP or deploy claims.
+- Checks: no node_modules or web/dist tracked; `.env.example` is the only `.env` match, on purpose.
+- Tag `llm-baseline-v2` is on origin; only `master` exists, no stale branches.
+- Tests: pytest 584 passed, Vitest 105 passed, web build OK before every commit.
+- Risk: CI never ran; Python 3.12 and the gitleaks history scan are verified only after a push.
+- Main product risk unchanged: three verifier gap types in EVAL.
+- Ask for the mentor: push now and fix CI findings, or close verifier gaps first?
