@@ -255,3 +255,24 @@
     transform: translateY(8px);
   }
 }
+
+/* The seal as a button into Proof: a visible bordered control (44 px high) with its own label. */
+.proofSeal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  min-height: 44px;
+  padding: 0 0.75em;
+  border: 2px solid var(--control-border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.proofSeal:hover {
+  background: var(--surface-2);
+}
+.proofLabel {
+  font: 700 0.85em / 1.2 var(--font-body);
+  color: var(--text);
+  white-space: nowrap;
+}

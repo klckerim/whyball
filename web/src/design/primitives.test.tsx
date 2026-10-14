@@ -58,7 +58,7 @@ describe("Seal", () => {
     expect(isVerified(m.checks)).toBe(true);
     render(<Seal checks={m.checks} />);
     expect(screen.getByRole("img").getAttribute("data-verified")).toBe("true");
-    expect(screen.getByRole("img").textContent).toBe("Verified");
+    expect(screen.getByRole("img").textContent).toBe("Checked by code");
   });
 
   it.each([
@@ -69,6 +69,6 @@ describe("Seal", () => {
   ])("is not verified with %s", (_, checks) => {
     expect(isVerified(checks)).toBe(false);
     render(<Seal checks={checks} />);
-    expect(screen.getByRole("img", { name: "Not verified" }).textContent).toBe("Not verified");
+    expect(screen.getByRole("img", { name: "Checks not passed or not recorded" }).textContent).toBe("Checks not passed");
   });
 });

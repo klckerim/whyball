@@ -10,6 +10,7 @@ import { shortcutFor } from "./keys";
 import { openAt } from "./MatchView";
 import { bandPaths } from "./PressureBand";
 import { SEEK, timeAtX } from "./Timeline";
+import { FLIP_MS } from "./useFlip";
 
 const red = matchFixtures.find((m) => m.summary.id === "red_card_swing_seed42")!;
 
@@ -37,9 +38,9 @@ function serve(opts: { fail?: RegExp; pending?: RegExp; override?: Partial<Match
   return fetchMock;
 }
 
-function stubMedia(wide = true) {
+function stubMedia(wide = true, reduced = false) {
   vi.stubGlobal("matchMedia", (q: string) => ({
-    matches: q === "(min-width: 768px)" ? wide : false,
+    matches: q === "(min-width: 768px)" ? wide : q === "(prefers-reduced-motion: reduce)" ? reduced : false,
     addEventListener() {},
     removeEventListener() {},
   }));
@@ -255,5 +256,100 @@ describe("pure helpers", () => {
     renderAt(`/match/${red.summary.id}`);
     const band = await screen.findByRole("img", { name: new RegExp(red.series.label) });
     expect(band.getAttribute("aria-label")).toContain(red.series.definition);
+  });
+});
+
+
+describe("Flip between On Air and Proof", () => {
+  const card = red.moments.find((m) => m.type === "red_card")!;
+  const other = red.moments.find((m) => m.id !== card.id && m.t < card.t)!;
+  const receipt = () => screen.queryByRole("region", { name: "Receipt" });
+  const press = (key: string) => fireEvent.keyDown(document.body, { key });
+  const settle = () => act(() => void vi.advanceTimersByTime(FLIP_MS.out + FLIP_MS.in + 20));
+
+  async function open(reduced: boolean, path = `/match/${red.summary.id}?moment=${card.id}`) {
+    stubMedia(true, reduced);
+    serve();
+    renderAt(path);
+    await waitFor(() => expect(screen.queryByRole("tabpanel")).toBeTruthy());
+    if (!reduced) vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }); // after loading: only the flip timers
+  }
+
+  it("the whole turn is within the 400 ms cap", () => {
+    expect(FLIP_MS.out + FLIP_MS.in).toBeLessThanOrEqual(400);
+  });
+
+  it("the seal is a visible button labelled Proof · P that opens the shown card in Proof", async () => {
+    await open(false);
+    const button = screen.getByRole("button", { name: /Proof · P/ });
+    expect(button.textContent).toContain("Proof · P");
+    expect(button.textContent).toContain("Checked by code");
+    fireEvent.click(button);
+    expect(document.querySelector('[data-face="air"]')).toBeTruthy(); // still turning
+    settle();
+    expect(receipt()!.getAttribute("data-card-id")).toBe(card.id);
+    expect(screen.getByRole("tab", { name: "Proof" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("the face swaps halfway through the turn, not at once", async () => {
+    await open(false);
+    press("p");
+    expect(receipt()).toBeNull();
+    act(() => void vi.advanceTimersByTime(FLIP_MS.out + 5));
+    expect(receipt()).toBeTruthy();
+  });
+
+  it("reduced motion: P flips at once, no timers", async () => {
+    await open(true);
+    press("P");
+    expect(receipt()!.getAttribute("data-card-id")).toBe(card.id);
+    press("P");
+    expect(receipt()).toBeNull();
+    expect(cardText()).toBe(card.text);
+  });
+
+  it("P in Proof returns to On Air at that moment's time, paused, with its card", async () => {
+    await open(true, `/match/${red.summary.id}?mode=proof&moment=${card.id}`);
+    fireEvent.click(document.querySelector(`[data-moment-id="${other.id}"]`)!);
+    press("p");
+    expect(cardText()).toBe(other.text);
+    expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
+    expect(screen.getByRole("slider", { name: "Match time" }).getAttribute("aria-valuenow")).toBe(String(other.t));
+  });
+
+  it("with no card on air, Proof opens the latest moment before the playhead", async () => {
+    await open(true, `/match/${red.summary.id}?t=${card.t + 5}`);
+    press("p");
+    expect(receipt()!.getAttribute("data-card-id")).toBe(card.id);
+  });
+
+  it("entering Proof pauses playback", async () => {
+    await open(true);
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+    press("p");
+    press("p");
+    expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
+  });
+
+  it("the Proof tab flips with the same carry-over", async () => {
+    await open(true);
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Proof" }));
+    expect(receipt()!.getAttribute("data-card-id")).toBe(card.id);
+  });
+
+  it("in Proof the arrow keys leave On Air's cards alone and P in a field does nothing", async () => {
+    await open(true, `/match/${red.summary.id}?mode=proof&moment=${card.id}`);
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    expect(receipt()!.getAttribute("data-card-id")).toBe(card.id);
+    const select = screen.getByRole("combobox");
+    fireEvent.keyDown(select, { key: "p" });
+    expect(receipt()).toBeTruthy();
+  });
+
+  it("the shortcut list names P", () => {
+    expect(shortcutFor("p", document.body)).toBe("flip");
+    expect(shortcutFor("P", document.createElement("input"))).toBeNull();
+    expect(shortcutFor("p", document.body, { ctrl: true })).toBeNull();
   });
 });

@@ -1,11 +1,11 @@
 // One match: loads detail, moments, events and the pressure series, then plays them on the stage.
 // Opens paused on the deep-linked moment, else at `?t=`, else on the first model-written card (DESIGN D23).
-import * as Tabs from "@radix-ui/react-tabs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { api, NotFoundError } from "../api/client";
 import type { MatchDetail, Moment, Series, TimelineEvent } from "../api/types";
+import { REDUCED_MOTION, useMediaQuery } from "../design/useMediaQuery";
 import { SPEEDS } from "../state/clock";
 import { eventAt, stepMoment } from "../state/match";
 import { type Card, initialPlayback, usePlayback } from "../state/playback";
@@ -14,6 +14,7 @@ import { OnAir } from "../stage/OnAir";
 import styles from "./app.module.css";
 import { HelpDialog } from "./HelpDialog";
 import { shortcutFor } from "./keys";
+import { type Mode, useFlip } from "./useFlip";
 import { Empty, Failed, Loading, NotFound } from "./states";
 import { Transport } from "./Transport";
 import { useAsync } from "./useAsync";
@@ -81,16 +82,42 @@ function MatchPlayer({ data }: { data: MatchData }) {
   const [help, setHelp] = useState(false);
   const { t, playing, speed } = state.clock;
   const shownId = state.dwell.current?.id ?? null;
+  const mode: Mode = params.get("mode") === "proof" ? "proof" : "air";
+  const reduced = useMediaQuery(REDUCED_MOTION);
+  const { shown: face, phase } = useFlip(mode, reduced);
   const noMoments = moments.length === 0;
   const prev = stepMoment(moments, t, shownId, -1);
   const next = stepMoment(moments, t, shownId, 1);
+
+  // Flip (from the seal, P or the tabs): On Air's card opens in Proof; Proof's moment comes back on air.
+  const lastMode = useRef(mode);
+  useEffect(() => {
+    if (lastMode.current === mode) return;
+    lastMode.current = mode;
+    if (mode === "proof") {
+      dispatch({ type: "pause" });
+      const at = shownId ?? [...moments].reverse().find((m) => m.t <= t)?.id ?? moments[0]?.id ?? null;
+      if (at) selectProof(at);
+    } else if (proofId) {
+      dispatch({ type: "showMoment", id: proofId });
+    }
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on a mode change only
+
+  const flip = () => {
+    const next = new URLSearchParams(params);
+    next.set("mode", mode === "proof" ? "air" : "proof");
+    setParams(next, { replace: true });
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = shortcutFor(e.key, e.target, { ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey });
       if (!s || help) return;
       e.preventDefault();
-      if (s === "toggle") dispatch({ type: "toggle" });
+      if (s === "flip") flip();
+      else if (mode === "proof") {
+        if (s === "help") setHelp(true);
+      } else if (s === "toggle") dispatch({ type: "toggle" });
       else if (s === "prev" && prev) dispatch({ type: "showMoment", id: prev.id });
       else if (s === "next" && next) dispatch({ type: "showMoment", id: next.id });
       else if (s === "guides") setGuides((g) => !g);
@@ -98,38 +125,43 @@ function MatchPlayer({ data }: { data: MatchData }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, prev, next, help]);
+  }, [dispatch, prev, next, help, mode, params]);
 
   return (
     <>
-      <Tabs.Content value="air" className={styles.air}>
-        <div className={styles.stageWrap}>
-          <OnAir detail={detail} events={events} moments={moments} t={t} shownId={shownId} guides={guides} />
-        </div>
-        {noMoments ? <Empty>No narrated moments in this match.</Empty> : null}
-        <Transport
-          t={t}
-          duration={detail.duration_t}
-          playing={playing}
-          speed={speed}
-          periods={detail.periods}
-          moments={moments}
-          series={series}
-          minuteLabel={eventAt(events, t)?.minute_label ?? "no data"}
-          shownId={shownId}
-          canPrev={!!prev}
-          canNext={!!next}
-          onToggle={() => dispatch({ type: "toggle" })}
-          onSpeed={(s) => dispatch({ type: "setSpeed", speed: s })}
-          onPrev={() => prev && dispatch({ type: "showMoment", id: prev.id })}
-          onNext={() => next && dispatch({ type: "showMoment", id: next.id })}
-          onSeek={(to) => dispatch({ type: "seek", t: to })}
-          onMoment={(mid) => dispatch({ type: "showMoment", id: mid })}
-        />
-      </Tabs.Content>
-      <Tabs.Content value="proof" className={styles.proof}>
-        <ProofView detail={detail} moments={moments} events={events} metrics={metrics} momentId={proofId} onMoment={selectProof} />
-      </Tabs.Content>
+      <div className={styles.flip} data-phase={phase} role="tabpanel" aria-label={face === "air" ? "On Air" : "Proof"} data-face={face}>
+        {face === "air" ? (
+          <div className={styles.air}>
+            <div className={styles.stageWrap}>
+              <OnAir detail={detail} events={events} moments={moments} t={t} shownId={shownId} guides={guides} onProof={flip} />
+            </div>
+            {noMoments ? <Empty>No narrated moments in this match.</Empty> : null}
+            <Transport
+              t={t}
+              duration={detail.duration_t}
+              playing={playing}
+              speed={speed}
+              periods={detail.periods}
+              moments={moments}
+              series={series}
+              minuteLabel={eventAt(events, t)?.minute_label ?? "no data"}
+              shownId={shownId}
+              canPrev={!!prev}
+              canNext={!!next}
+              onToggle={() => dispatch({ type: "toggle" })}
+              onSpeed={(s) => dispatch({ type: "setSpeed", speed: s })}
+              onPrev={() => prev && dispatch({ type: "showMoment", id: prev.id })}
+              onNext={() => next && dispatch({ type: "showMoment", id: next.id })}
+              onSeek={(to) => dispatch({ type: "seek", t: to })}
+              onMoment={(mid) => dispatch({ type: "showMoment", id: mid })}
+            />
+          </div>
+        ) : (
+          <div className={styles.proof}>
+            <ProofView detail={detail} moments={moments} events={events} metrics={metrics} momentId={proofId} onMoment={selectProof} />
+          </div>
+        )}
+      </div>
       <HelpDialog open={help} onOpenChange={setHelp} />
     </>
   );

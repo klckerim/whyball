@@ -1,6 +1,6 @@
 // Keyboard shortcuts (UI_SPEC §10): which key a target may receive. Typing in a field never triggers
 // one; Space keeps its own meaning on buttons and links; arrows keep theirs on sliders, tabs and radios.
-export type Shortcut = "toggle" | "prev" | "next" | "guides" | "help";
+export type Shortcut = "toggle" | "prev" | "next" | "guides" | "help" | "flip";
 
 const TEXT_FIELD = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 const OWNS_SPACE = `${TEXT_FIELD}, button, a[href], [role="button"], [role="slider"], [role="tab"], [role="radio"], [role="checkbox"]`;
@@ -17,6 +17,9 @@ export function shortcutFor(key: string, target: EventTarget | null, mods: { ctr
       return inside(OWNS_ARROWS) ? null : "prev";
     case "ArrowRight":
       return inside(OWNS_ARROWS) ? null : "next";
+    case "p":
+    case "P":
+      return inside(TEXT_FIELD) ? null : "flip";
     case "g":
     case "G":
       return inside(TEXT_FIELD) ? null : "guides";
@@ -30,6 +33,7 @@ export function shortcutFor(key: string, target: EventTarget | null, mods: { ctr
 export const SHORTCUTS: { keys: string; action: string }[] = [
   { keys: "Space", action: "Play or pause" },
   { keys: "← / →", action: "Previous or next moment" },
+  { keys: "P", action: "Flip between On Air and Proof" },
   { keys: "G", action: "Show or hide the safe-area guides" },
   { keys: "?", action: "This help" },
 ];

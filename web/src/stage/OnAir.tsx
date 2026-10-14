@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 
 import type { MatchDetail, Moment, TimelineEvent } from "../api/types";
-import { Seal } from "../design/Seal";
 import { REDUCED_MOTION, useMediaQuery, WIDE } from "../design/useMediaQuery";
 import { ballAt, eventAt, positioned, trail } from "../state/match";
 import { LowerThird } from "./LowerThird";
 import { Pitch } from "./Pitch";
+import { ProofSeal } from "./ProofSeal";
 import { ProgramStage } from "./ProgramStage";
 import { ScoreBug } from "./ScoreBug";
 import styles from "./stage.module.css";
@@ -20,9 +20,10 @@ interface Props {
   t: number;
   shownId: string | null;
   guides: boolean;
+  onProof?: () => void;
 }
 
-export function OnAir({ detail, events, moments, t, shownId, guides }: Props) {
+export function OnAir({ detail, events, moments, t, shownId, guides, onProof }: Props) {
   const wide = useMediaQuery(WIDE);
   const reduced = useMediaQuery(REDUCED_MOTION);
   const points = useMemo(() => positioned(events), [events]);
@@ -38,16 +39,16 @@ export function OnAir({ detail, events, moments, t, shownId, guides }: Props) {
           <SyntheticMark />
         </div>
         <Pitch ball={ball} trail={trail(points, t)} />
-        {shown && wide ? <LowerThird moment={shown} eventMatchId={detail.event_match_id} placement="stage" /> : null}
+        {shown && wide ? <LowerThird moment={shown} eventMatchId={detail.event_match_id} placement="stage" onProof={onProof} /> : null}
         {shown && !wide ? (
           <div className={styles.stageSeal}>
-            <Seal checks={shown.checks} />
+            <ProofSeal checks={shown.checks} onProof={onProof} />
           </div>
         ) : null}
       </ProgramStage>
       {!wide ? (
         shown ? (
-          <LowerThird moment={shown} eventMatchId={detail.event_match_id} placement="panel" />
+          <LowerThird moment={shown} eventMatchId={detail.event_match_id} placement="panel" onProof={onProof} />
         ) : (
           <p className={styles.panelEmpty}>No card on air</p>
         )

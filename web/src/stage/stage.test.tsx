@@ -136,7 +136,7 @@ describe("On Air layout", () => {
     expect(within(program).queryByRole("region", { name: "Narration" })).toBeNull();
     expect(within(program).getByRole("group", { name: "Score" })).toBeTruthy();
     expect(within(program).getByText("SYNTHETIC DATA")).toBeTruthy();
-    expect(within(program).getByRole("img", { name: /^Verified/ })).toBeTruthy();
+    expect(within(program).getByRole("img", { name: /^Checked by code/ })).toBeTruthy();
     const panel = screen.getByRole("region", { name: "Narration" });
     expect(program.contains(panel)).toBe(false);
   });

@@ -86,6 +86,25 @@
   min-width: min(100%, 320px);
   margin: 0 auto;
 }
+/* Flip (DESIGN D27): the old face turns edge-on, the new one turns in; 180 + 200 ms, off under reduced motion. */
+.flip[data-phase="out"] {
+  animation: flipOut 180ms ease-in forwards;
+}
+.flip[data-phase="in"] {
+  animation: flipIn 200ms ease-out;
+}
+@keyframes flipOut {
+  to {
+    transform: perspective(1600px) rotateY(90deg);
+    opacity: 0.4;
+  }
+}
+@keyframes flipIn {
+  from {
+    transform: perspective(1600px) rotateY(-90deg);
+    opacity: 0.4;
+  }
+}
 .proof {
   max-width: 1440px;
   margin: 0 auto;
