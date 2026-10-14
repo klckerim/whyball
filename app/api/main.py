@@ -12,6 +12,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Literal
 
 import httpx
@@ -19,6 +20,9 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.types import Scope
 
 from app.analytics.config import DEFAULT_CONFIG
 from app.explain.claims import COMPARISONS, KINDS, METRIC_KINDS
@@ -27,6 +31,7 @@ from app.publish.schema import SOURCES, EvidenceEvent, Score, StoredClaim, Store
 
 from .data import TIMELINE_TYPES, Match, load_matches
 from .replay import event_out, moment_out, replay
+from .series import SERIES_METRICS, series_points
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HTTP_TIMEOUT_S = 60.0
@@ -88,7 +93,8 @@ class MatchDetail(BaseModel):
 
 
 class MetricWindow(BaseModel):
-    type: Literal["rolling", "claim_range"]  # rolling: the last `minutes` played before the claim end
+    # rolling: the last `minutes` played before the claim end; cumulative: kickoff to the point (series)
+    type: Literal["rolling", "claim_range", "cumulative"]
     minutes: float | None = None
 
 
@@ -104,6 +110,21 @@ class MetricsOut(BaseModel):
     metrics: list[MetricInfo]
     kinds: list[str]
     comparisons: list[str]
+
+
+class SeriesPoint(BaseModel):
+    t: int
+    value: float | None  # None: not computable at this point (never drawn as 0)
+
+
+class Series(BaseModel):
+    metric: str
+    label: str
+    definition: str
+    window: MetricWindow
+    perspective: Literal["home"]  # values are the home side's; the away side is the mirror
+    step: int
+    points: list[SeriesPoint]
 
 
 class Health(BaseModel):
@@ -147,6 +168,20 @@ METRICS = MetricsOut(
     ],
     kinds=list(KINDS), comparisons=list(COMPARISONS),
 )
+
+
+class SPAStaticFiles(StaticFiles):
+    """The built UI; a page path with no file behind it (a deep link such as /match/<id>) gets index.html,
+    so the client router can open it. Missing files with an extension and anything under api/ stay 404."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as e:
+            p = PurePosixPath(path)
+            if e.status_code != 404 or p.suffix or (p.parts and p.parts[0] == "api"):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> FastAPI:
@@ -202,6 +237,29 @@ def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> 
         m = get_match(request, match_id)
         return [moment_out(m, i) for i in range(len(m.store.moments))]
 
+    @app.get("/api/matches/{match_id}/events", response_model=list[TimelineEvent])
+    def match_events(request: Request, match_id: str) -> list[dict]:
+        """Every event of the stream in order, match_meta (seq 0) included; the stage reads ball positions here."""
+        m = get_match(request, match_id)
+        return [event_out(e, m.t[e.seq]) for e in m.events]
+
+    @app.get("/api/matches/{match_id}/series", response_model=Series)
+    def match_series(
+        request: Request,
+        match_id: str,
+        metric: str = Query(..., description="metric id with a series: " + ", ".join(SERIES_METRICS)),
+        step: int = Query(60, ge=15, le=900, description="seconds between points on the match clock t"),
+    ) -> Series:
+        m = get_match(request, match_id)
+        if metric not in SERIES_METRICS:
+            raise HTTPException(404, f"no series for metric: {metric}")
+        info = next(i for i in METRICS.metrics if i.id == metric)
+        window = info.window if info.window.type == "rolling" else MetricWindow(type="cumulative")
+        return Series(
+            metric=metric, label=info.label, definition=info.definition, window=window, perspective="home",
+            step=step, points=[SeriesPoint(**p) for p in series_points(m, metric, step)],
+        )
+
     @app.get("/api/matches/{match_id}/replay")
     def match_replay(
         request: Request,
@@ -216,7 +274,7 @@ def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> 
         )
 
     if (static_dir / "index.html").is_file():
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="web")
+        app.mount("/", SPAStaticFiles(directory=static_dir, html=True), name="web")
     else:
         @app.get("/", include_in_schema=False)
         def ui_not_built() -> PlainTextResponse:

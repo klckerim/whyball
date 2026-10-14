@@ -3,7 +3,8 @@
     .venv/bin/python -m app.api.fixtures           # rewrite web/test-fixtures/
     .venv/bin/python -m app.api.fixtures --check   # exit 1 if the fixtures are stale
 
-One file per match ({match_id}.json: the summary, detail and moments responses), metrics.json
+One file per match ({match_id}.json: the summary, detail, moments, events and pressure_balance series
+(step SERIES_STEP) responses), metrics.json
 (GET /api/metrics) and manifest.json: the sha256 of each source store file and of each fixture file.
 Rerun after `python -m app.publish` or an API response change.
 """
@@ -23,10 +24,12 @@ from .main import REPO_ROOT, create_app
 
 FIXTURES_DIR = REPO_ROOT / "web" / "test-fixtures"
 COMMAND = ".venv/bin/python -m app.api.fixtures"
+SERIES_STEP = 60
 
 
 def _dump(data: Any) -> str:
-    return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    # compact: the event streams make indented files several times larger
+    return json.dumps(data, separators=(",", ":"), sort_keys=True, ensure_ascii=False) + "\n"
 
 
 def _sha256(text: str | bytes) -> str:
@@ -44,6 +47,9 @@ def render(data_dir: Path = REPO_ROOT / "data") -> dict[str, str]:
                 "summary": summary,
                 "detail": client.get(f"/api/matches/{match_id}").json(),
                 "moments": client.get(f"/api/matches/{match_id}/moments").json(),
+                "events": client.get(f"/api/matches/{match_id}/events").json(),
+                "series": client.get(f"/api/matches/{match_id}/series",
+                                     params={"metric": "pressure_balance", "step": SERIES_STEP}).json(),
             })
             store = data_dir / "demo_narration" / f"{match_id}.json"
             sources[f"data/demo_narration/{store.name}"] = _sha256(store.read_bytes())

@@ -225,3 +225,75 @@ def test_stale_store_is_refused(tmp_path):
     with pytest.raises(DataError, match="python -m app.publish"):
         with TestClient(create_app(data_dir=tmp_path, static_dir=tmp_path)):
             pass
+
+
+# --- events, series, deep links (UI v2 B9, B2) -------------------------------------------------------
+
+
+def test_events_endpoint_is_the_whole_stream(client):
+    body = client.get(f"/api/matches/{MATCH}/events").json()
+    m = client.app.state.matches[MATCH]
+    assert [e["seq"] for e in body] == [e.seq for e in m.events]
+    assert body[0]["type"] == "match_meta"
+    assert all((e["x"], e["y"], e["t"]) == (m.by_seq[e["seq"]].x, m.by_seq[e["seq"]].y, m.t[e["seq"]]) for e in body)
+    timeline = client.get(f"/api/matches/{MATCH}").json()["timeline"]
+    by_seq = {e["seq"]: e for e in body}
+    assert all(by_seq[e["seq"]] == e for e in timeline)
+    assert client.get("/api/matches/nope/events").status_code == 404
+
+
+@pytest.mark.parametrize("metric", ["pressure_balance", "possession", "field_tilt"])
+def test_series_matches_metrics_at(client, metric):
+    from app.analytics import metrics_at
+    from app.api.series import sample_times
+
+    url = f"/api/matches/{MATCH}/series"
+    r1 = client.get(url, params={"metric": metric, "step": 120})
+    r2 = client.get(url, params={"metric": metric, "step": 120})
+    assert r1.status_code == 200 and r1.content == r2.content  # deterministic
+    body = r1.json()
+    m = client.app.state.matches[MATCH]
+    assert [p["t"] for p in body["points"]] == sample_times(m.duration_t, 120)
+    assert body["points"][-1]["t"] == m.duration_t
+    assert body["perspective"] == "home" and body["step"] == 120
+    info = {i["id"]: i for i in client.get("/api/metrics").json()["metrics"]}[metric]
+    assert (body["label"], body["definition"]) == (info["label"], info["definition"])
+    for p in body["points"]:
+        last = max((e for e in m.events if m.t[e.seq] <= p["t"]), key=lambda e: e.seq)
+        snap = metrics_at(m.events, until_seq=last.seq)
+        expected = {"pressure_balance": snap.pressure_balance, "possession": snap.possession["home"],
+                    "field_tilt": snap.field_tilt["home"]}[metric]
+        if metric == "pressure_balance" and snap.played_seconds < DEFAULT_CONFIG.pressure_window_min * 60:
+            assert p["value"] is None  # window not full: not computable, never 0
+        else:
+            assert p["value"] == round(expected, DEFAULT_CONFIG.summary_decimals)
+
+
+def test_series_windows(client):
+    pb = client.get(f"/api/matches/{MATCH}/series", params={"metric": "pressure_balance"}).json()
+    assert pb["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min}
+    assert any(p["value"] is None for p in pb["points"]) and any(p["value"] is not None for p in pb["points"])
+    share = client.get(f"/api/matches/{MATCH}/series", params={"metric": "possession"}).json()
+    assert share["window"] == {"type": "cumulative", "minutes": None}
+    assert all(p["value"] is not None for p in share["points"])
+
+
+@pytest.mark.parametrize("params,status", [
+    ({"metric": "goals"}, 404), ({"metric": "nope"}, 404), ({}, 422),
+    ({"metric": "possession", "step": 5}, 422), ({"metric": "possession", "step": 901}, 422),
+    ({"metric": "possession", "step": "x"}, 422),
+])
+def test_series_rejects_bad_requests(client, params, status):
+    assert client.get(f"/api/matches/{MATCH}/series", params=params).status_code == status
+    assert client.get("/api/matches/nope/series", params={"metric": "possession"}).status_code == 404
+
+
+@pytest.mark.parametrize("path", ["/match/red_card_swing_seed42", "/match/nope", "/legacy", "/match/x/y"])
+def test_deep_links_get_the_ui(client, path):
+    r = client.get(path)
+    assert r.status_code == 200 and '<div id="root">' in r.text
+
+
+@pytest.mark.parametrize("path", ["/missing.js", "/assets/x.png", "/api/nope", "/api/matches/nope/x"])
+def test_missing_files_and_api_paths_stay_404(client, path):
+    assert client.get(path).status_code == 404

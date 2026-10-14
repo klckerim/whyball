@@ -351,7 +351,8 @@
           "type": {
             "enum": [
               "rolling",
-              "claim_range"
+              "claim_range",
+              "cumulative"
             ],
             "title": "Type",
             "type": "string"
@@ -554,6 +555,77 @@
           "away"
         ],
         "title": "Score",
+        "type": "object"
+      },
+      "Series": {
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "perspective": {
+            "const": "home",
+            "title": "Perspective",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "step": {
+            "title": "Step",
+            "type": "integer"
+          },
+          "window": {
+            "$ref": "#/components/schemas/MetricWindow"
+          }
+        },
+        "required": [
+          "metric",
+          "label",
+          "definition",
+          "window",
+          "perspective",
+          "step",
+          "points"
+        ],
+        "title": "Series",
+        "type": "object"
+      },
+      "SeriesPoint": {
+        "properties": {
+          "t": {
+            "title": "T",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "t",
+          "value"
+        ],
+        "title": "SeriesPoint",
         "type": "object"
       },
       "Squad": {
@@ -883,6 +955,50 @@
         "summary": "Match Detail"
       }
     },
+    "/api/matches/{match_id}/events": {
+      "get": {
+        "description": "Every event of the stream in order, match_meta (seq 0) included; the stage reads ball positions here.",
+        "operationId": "match_events_api_matches__match_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEvent"
+                  },
+                  "title": "Response Match Events Api Matches  Match Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Events"
+      }
+    },
     "/api/matches/{match_id}/moments": {
       "get": {
         "operationId": "moments_api_matches__match_id__moments_get",
@@ -988,6 +1104,70 @@
           }
         },
         "summary": "Match Replay"
+      }
+    },
+    "/api/matches/{match_id}/series": {
+      "get": {
+        "operationId": "match_series_api_matches__match_id__series_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "metric id with a series: pressure_balance, possession, field_tilt",
+            "in": "query",
+            "name": "metric",
+            "required": true,
+            "schema": {
+              "description": "metric id with a series: pressure_balance, possession, field_tilt",
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "description": "seconds between points on the match clock t",
+            "in": "query",
+            "name": "step",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "description": "seconds between points on the match clock t",
+              "maximum": 900,
+              "minimum": 15,
+              "title": "Step",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Series"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Series"
       }
     },
     "/api/metrics": {

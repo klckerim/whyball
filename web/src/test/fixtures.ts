@@ -1,6 +1,6 @@
 // Test-only access to web/test-fixtures/ (built by `python -m app.api.fixtures` from the real API over
 // the publication store). Never import this from app code: fixtures stay out of the bundle (UI_SPEC T7).
-import type { MatchDetail, MatchSummary, Metrics, Moment } from "../api/types";
+import type { MatchDetail, MatchSummary, Metrics, Moment, Series, TimelineEvent } from "../api/types";
 
 const raw = import.meta.glob<string>("../../test-fixtures/*.json", { query: "?raw", import: "default", eager: true });
 
@@ -19,6 +19,8 @@ export interface MatchFixture {
   summary: MatchSummary;
   detail: MatchDetail;
   moments: Moment[];
+  events: TimelineEvent[];
+  series: Series; // pressure_balance, step 60
 }
 
 export const manifest: Manifest = JSON.parse(fixtureFiles["manifest.json"]!);

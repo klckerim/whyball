@@ -1,14 +1,1 @@
-{
-  "files": {
-    "dominant_loss_seed7.json": "cab162a68d202661eebf4e928ec60ee2e5be0a21dd144fbe7062cde20657fbb6",
-    "metrics.json": "4e759730ce8c7770ae0ceaa29006b78a05e53461f92003cfb9fdc9a4d92bd40f",
-    "natural_seed100.json": "fbb8ab31c5c3f005ef04c8f70168a624737bb9e7dcc56610fe3b3dbf57afe70b",
-    "red_card_swing_seed42.json": "142db83cc6c1910e970c2f063ab51a899e78898968d898374ec5d31d480a36f8"
-  },
-  "generator": ".venv/bin/python -m app.api.fixtures",
-  "sources": {
-    "data/demo_narration/dominant_loss_seed7.json": "37f4864f0078c689905b9111954c0bcd2ab21321c4486ea572ed28b9c557bde9",
-    "data/demo_narration/natural_seed100.json": "9348c7b1b95b4b443a724582169ddbe372d75b43140d0f6aa7e8e2fc5a27f745",
-    "data/demo_narration/red_card_swing_seed42.json": "7d408f0048a4ae70e05eca3861805b7c105da13fed963c30df435b8dc9671661"
-  }
-}
+{"files":{"dominant_loss_seed7.json":"5ef26c0771b161244ab864ccf775df7dfbe3169edc606bc65266f2d4e976ab36","metrics.json":"06b8f3b689887a4d51b55dd114741e81360835485a7eae3776aed665ed4c02cd","natural_seed100.json":"56c7482cc736ecd7cc9c7649e993e6dd4a4639d05b64f79607618e21a36fa490","red_card_swing_seed42.json":"d5a965f39261a76e92bb9cc079fa848a5209f816aa952eb1486e96ff409874e5"},"generator":".venv/bin/python -m app.api.fixtures","sources":{"data/demo_narration/dominant_loss_seed7.json":"37f4864f0078c689905b9111954c0bcd2ab21321c4486ea572ed28b9c557bde9","data/demo_narration/natural_seed100.json":"9348c7b1b95b4b443a724582169ddbe372d75b43140d0f6aa7e8e2fc5a27f745","data/demo_narration/red_card_swing_seed42.json":"7d408f0048a4ae70e05eca3861805b7c105da13fed963c30df435b8dc9671661"}}

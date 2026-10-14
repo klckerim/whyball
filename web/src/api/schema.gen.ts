@@ -53,6 +53,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/matches/{match_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Events
+         * @description Every event of the stream in order, match_meta (seq 0) included; the stage reads ball positions here.
+         */
+        get: operations["match_events_api_matches__match_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/matches/{match_id}/moments": {
         parameters: {
             query?: never;
@@ -79,6 +99,23 @@ export interface paths {
         };
         /** Match Replay */
         get: operations["match_replay_api_matches__match_id__replay_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/matches/{match_id}/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Match Series */
+        get: operations["match_series_api_matches__match_id__series_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -242,7 +279,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "rolling" | "claim_range";
+            type: "rolling" | "claim_range" | "cumulative";
         };
         /** MetricsOut */
         MetricsOut: {
@@ -309,6 +346,32 @@ export interface components {
             away: number;
             /** Home */
             home: number;
+        };
+        /** Series */
+        Series: {
+            /** Definition */
+            definition: string;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /**
+             * Perspective
+             * @constant
+             */
+            perspective: "home";
+            /** Points */
+            points: components["schemas"]["SeriesPoint"][];
+            /** Step */
+            step: number;
+            window: components["schemas"]["MetricWindow"];
+        };
+        /** SeriesPoint */
+        SeriesPoint: {
+            /** T */
+            t: number;
+            /** Value */
+            value: number | null;
         };
         /** Squad */
         Squad: {
@@ -466,6 +529,37 @@ export interface operations {
             };
         };
     };
+    match_events_api_matches__match_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     moments_api_matches__match_id__moments_get: {
         parameters: {
             query?: never;
@@ -520,6 +614,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_series_api_matches__match_id__series_get: {
+        parameters: {
+            query: {
+                /** @description metric id with a series: pressure_balance, possession, field_tilt */
+                metric: string;
+                /** @description seconds between points on the match clock t */
+                step?: number;
+            };
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Series"];
                 };
             };
             /** @description Validation Error */
