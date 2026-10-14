@@ -45,6 +45,14 @@ class StoredClaim(_Model):
     evidence: list[EvidenceEvent]
 
 
+class StoredChecks(_Model):
+    """What the publish pipeline checked for this card (`run_moment` result at publish time)."""
+
+    lint_issues: int  # text_lint issues in the published text
+    claims_total: int  # claims the verifier checked
+    claims_verified: int  # of those, the ones verify_claim accepted
+
+
 class StoredMoment(_Model):
     id: str
     period: int
@@ -61,6 +69,7 @@ class StoredMoment(_Model):
     run_id: str | None  # the LLM run the card was replayed from (None for template cards)
     claims: list[StoredClaim]
     trace: list[dict[str, Any]]  # agent trace; empty in the replayed store
+    checks: StoredChecks
 
 
 class Teams(_Model):

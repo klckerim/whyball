@@ -257,6 +257,7 @@ export interface components {
         MomentOut: {
             /** At Seq */
             at_seq: number;
+            checks: components["schemas"]["StoredChecks"];
             /** Claims */
             claims: components["schemas"]["ClaimOut"][];
             /** Id */
@@ -322,6 +323,18 @@ export interface components {
         Squads: {
             away: components["schemas"]["Squad"];
             home: components["schemas"]["Squad"];
+        };
+        /**
+         * StoredChecks
+         * @description What the publish pipeline checked for this card (`run_moment` result at publish time).
+         */
+        StoredChecks: {
+            /** Claims Total */
+            claims_total: number;
+            /** Claims Verified */
+            claims_verified: number;
+            /** Lint Issues */
+            lint_issues: number;
         };
         /** Teams */
         Teams: {

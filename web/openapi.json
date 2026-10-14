@@ -402,6 +402,9 @@
             "title": "At Seq",
             "type": "integer"
           },
+          "checks": {
+            "$ref": "#/components/schemas/StoredChecks"
+          },
           "claims": {
             "items": {
               "$ref": "#/components/schemas/ClaimOut"
@@ -505,6 +508,7 @@
           "run_id",
           "claims",
           "trace",
+          "checks",
           "t"
         ],
         "title": "MomentOut",
@@ -595,6 +599,31 @@
           "away"
         ],
         "title": "Squads",
+        "type": "object"
+      },
+      "StoredChecks": {
+        "additionalProperties": false,
+        "description": "What the publish pipeline checked for this card (`run_moment` result at publish time).",
+        "properties": {
+          "claims_total": {
+            "title": "Claims Total",
+            "type": "integer"
+          },
+          "claims_verified": {
+            "title": "Claims Verified",
+            "type": "integer"
+          },
+          "lint_issues": {
+            "title": "Lint Issues",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lint_issues",
+          "claims_total",
+          "claims_verified"
+        ],
+        "title": "StoredChecks",
         "type": "object"
       },
       "Teams": {

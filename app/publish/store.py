@@ -35,7 +35,7 @@ from app.explain.template_narrator import fmt_minute
 from app.generator.freeze import demo_paths
 from app.generator.models import Event, read_jsonl
 
-from .schema import SOURCES, EvidenceEvent, MatchStore, StoredClaim, StoredMoment
+from .schema import SOURCES, EvidenceEvent, MatchStore, StoredChecks, StoredClaim, StoredMoment
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUN = REPO_ROOT / "docs" / "LLM_RUN.json"
@@ -271,6 +271,10 @@ def build_match(
             prompt_version=prompt_version if rec.source == "llm" else config.template_prompt_version,
             run_id=None if rec.source == "template" else run_id,
             claims=_claims(rec.claims, ids, by_seq), trace=[],
+            checks=StoredChecks(
+                lint_issues=len(rec.lint_issues), claims_total=len(rec.verification),
+                claims_verified=sum(r.ok for r in rec.verification),
+            ),
         ))
     result.unused_run_cards += sorted(set(run_by_id) - selected)
 

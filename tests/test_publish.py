@@ -65,6 +65,20 @@ def test_repo_store_matches_schema_and_events(scenario, seed, path):
                     e.type.value, e.team, e.player, e.minute, e.second)
 
 
+@pytest.mark.parametrize("scenario,seed,path", demo_paths(), ids=[p.name for _, _, p in demo_paths()])
+def test_repo_store_records_the_checks_of_each_card(scenario, seed, path):
+    store = MatchStore.model_validate_json((DEFAULT_OUT_DIR / f"{path.stem}.json").read_text(encoding="utf-8"))
+    for m in store.moments:  # build_match publishes only cards that passed; the record says so per card
+        assert m.checks.lint_issues == 0
+        assert m.checks.claims_verified == m.checks.claims_total == len(m.claims) > 0
+
+
+def test_checks_come_from_the_pipeline_result(result):
+    for store in result.stores:
+        for m in store.moments:
+            assert (m.checks.lint_issues, m.checks.claims_verified) == (0, m.checks.claims_total)
+
+
 # --- reproducibility -----------------------------------------------------------------------------
 
 

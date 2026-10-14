@@ -277,6 +277,11 @@
   "moments": [
     {
       "at_seq": 84,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -380,6 +385,11 @@
     },
     {
       "at_seq": 98,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -508,6 +518,11 @@
     },
     {
       "at_seq": 174,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -649,6 +664,11 @@
     },
     {
       "at_seq": 175,
+      "checks": {
+        "claims_total": 5,
+        "claims_verified": 5,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -808,6 +828,11 @@
     },
     {
       "at_seq": 317,
+      "checks": {
+        "claims_total": 5,
+        "claims_verified": 5,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -967,6 +992,11 @@
     },
     {
       "at_seq": 353,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -1187,6 +1217,11 @@
     },
     {
       "at_seq": 478,
+      "checks": {
+        "claims_total": 5,
+        "claims_verified": 5,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -1371,6 +1406,11 @@
     },
     {
       "at_seq": 550,
+      "checks": {
+        "claims_total": 5,
+        "claims_verified": 5,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",

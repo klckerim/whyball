@@ -1,14 +1,14 @@
 {
   "files": {
-    "dominant_loss_seed7.json": "18af9fd2c526327c1f0abfa4776de28af2f2bc0ffab5b054a65bef771ca8ce05",
+    "dominant_loss_seed7.json": "cab162a68d202661eebf4e928ec60ee2e5be0a21dd144fbe7062cde20657fbb6",
     "metrics.json": "4e759730ce8c7770ae0ceaa29006b78a05e53461f92003cfb9fdc9a4d92bd40f",
-    "natural_seed100.json": "bc3de4f2ffd79dd47214d554d250c8f56d27b5222cdc6e623adbd19bf5f77ac5",
-    "red_card_swing_seed42.json": "dda0108990a3bc8580b585e1cc591d4da0c561d4492d17a31f04e207cd858c6f"
+    "natural_seed100.json": "fbb8ab31c5c3f005ef04c8f70168a624737bb9e7dcc56610fe3b3dbf57afe70b",
+    "red_card_swing_seed42.json": "142db83cc6c1910e970c2f063ab51a899e78898968d898374ec5d31d480a36f8"
   },
   "generator": ".venv/bin/python -m app.api.fixtures",
   "sources": {
-    "data/demo_narration/dominant_loss_seed7.json": "c5c55fe53f329b85a11adf52c3a655027c5d3069de50e6be8cde379f1d1be490",
-    "data/demo_narration/natural_seed100.json": "36616eadf6b903af8995842bfcbe51bb6fd31eea4ef7e1b54d58918a7dc4fba6",
-    "data/demo_narration/red_card_swing_seed42.json": "4429791334dde4562b058f406ecb49897b897524d52720aa03a32ad5673d93f1"
+    "data/demo_narration/dominant_loss_seed7.json": "37f4864f0078c689905b9111954c0bcd2ab21321c4486ea572ed28b9c557bde9",
+    "data/demo_narration/natural_seed100.json": "9348c7b1b95b4b443a724582169ddbe372d75b43140d0f6aa7e8e2fc5a27f745",
+    "data/demo_narration/red_card_swing_seed42.json": "7d408f0048a4ae70e05eca3861805b7c105da13fed963c30df435b8dc9671661"
   }
 }

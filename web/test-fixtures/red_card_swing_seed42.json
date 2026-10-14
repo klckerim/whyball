@@ -259,6 +259,11 @@
   "moments": [
     {
       "at_seq": 87,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -387,6 +392,11 @@
     },
     {
       "at_seq": 127,
+      "checks": {
+        "claims_total": 4,
+        "claims_verified": 4,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -518,6 +528,11 @@
     },
     {
       "at_seq": 176,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -685,6 +700,11 @@
     },
     {
       "at_seq": 213,
+      "checks": {
+        "claims_total": 2,
+        "claims_verified": 2,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -760,6 +780,11 @@
     },
     {
       "at_seq": 270,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -887,6 +912,11 @@
     },
     {
       "at_seq": 359,
+      "checks": {
+        "claims_total": 4,
+        "claims_verified": 4,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -1018,6 +1048,11 @@
     },
     {
       "at_seq": 476,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
@@ -1185,6 +1220,11 @@
     },
     {
       "at_seq": 494,
+      "checks": {
+        "claims_total": 6,
+        "claims_verified": 6,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "eq",
@@ -1372,6 +1412,11 @@
     },
     {
       "at_seq": 522,
+      "checks": {
+        "claims_total": 3,
+        "claims_verified": 3,
+        "lint_issues": 0
+      },
       "claims": [
         {
           "comparison": "approx",
