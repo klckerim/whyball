@@ -59,3 +59,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: false
+
+  docker:
+    # Builds the image without pushing it, checks that no secrets or history are inside, and starts it once.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -t whyball:ci .
+      - name: Image holds no .env, notes or .git
+        run: |
+          found=$(docker run --rm --user root --entrypoint sh whyball:ci -c \
+            'find / -xdev \( -name ".env" -o -name ".env.*" -o -name notes -o -name .git \) -not -path "/proc/*" -not -path "*/site-packages/*"')
+          if [ -n "$found" ]; then echo "forbidden paths in the image:"; echo "$found"; exit 1; fi
+      - name: Image starts and answers
+        run: |
+          docker run -d --name whyball-ci -p 8000:8000 whyball:ci
+          python3 scripts/smoke_remote.py http://127.0.0.1:8000 || { docker logs whyball-ci; exit 1; }
