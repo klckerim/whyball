@@ -1,0 +1,984 @@
+{
+  "meta": {
+    "analyst_version": "analyst-v1",
+    "calls": 20,
+    "dry_run": false,
+    "finished_at": "2026-10-14T18:16:21+00:00",
+    "flags": {
+      "analyst": true,
+      "verifier": true
+    },
+    "lang": "en",
+    "max_attempts": 3,
+    "max_calls_per_run": 200,
+    "model": "gpt-5-mini",
+    "moments": "featured",
+    "prompt_version": "foundry-v5.2:gpt-5-mini",
+    "started_at": "2026-10-14T18:15:49+00:00",
+    "timeouts_s": {
+      "analyst": 30.0,
+      "narrator": 60.0,
+      "verifier": 30.0
+    },
+    "tokens": {
+      "in": 35669,
+      "out": 6483,
+      "reasoning": 5120
+    },
+    "verifier_version": "verifier-v1",
+    "wall_seconds": 31.9
+  },
+  "runs": [
+    {
+      "finished_at": "2026-10-14T18:16:21+00:00",
+      "matches": [
+        {
+          "match_id": "red_card_swing_seed42",
+          "moments": [
+            {
+              "attempts": 1,
+              "id": "m-42-red_card_swing-M002",
+              "minute": 22,
+              "ok": true,
+              "period": 1,
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#127}, and {clause:score}.",
+              "text": "Murek Brestani scored at 22', and the score is Brannoch FC 1–0 Morvane Athletic.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 4117,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "goal",
+                      "team_goals",
+                      "margin",
+                      "score_home",
+                      "score_away"
+                    ],
+                    "expanded_clause_ids": [
+                      "opener"
+                    ],
+                    "menu_claims": 6,
+                    "note": "Home side broke the deadlock with the opening goal, changing the match dynamic and giving them the lead to build on.",
+                    "selected": [
+                      "score_home",
+                      "score_away",
+                      "opener",
+                      "goal"
+                    ]
+                  },
+                  "started_ms": 8,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1704,
+                    "out": 222,
+                    "reasoning": 128
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 6576,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{event:m-42-red_card_swing#127}, and {clause:score}."
+                  },
+                  "started_ms": 4126,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2241,
+                    "out": 438,
+                    "reasoning": 384
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 2,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 10704,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 2009,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 10708,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1073,
+                    "out": 104,
+                    "reasoning": 64
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "passed"
+                  },
+                  "started_ms": 12720,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "goal",
+              "verification": {
+                "attempts": 1,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "passed"
+              }
+            },
+            {
+              "attempts": 1,
+              "id": "m-42-red_card_swing-M004",
+              "minute": 38,
+              "ok": true,
+              "period": 1,
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#213}, and {clause:players}. {clause:possession}, and {clause:score}.",
+              "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch. Brannoch FC have had 54% of the ball since kickoff, and the score is Brannoch FC 1–0 Morvane Athletic.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 4628,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "sent_off",
+                      "players",
+                      "score_home",
+                      "score_away",
+                      "possession"
+                    ],
+                    "expanded_clause_ids": [
+                      "score"
+                    ],
+                    "menu_claims": 5,
+                    "note": "A straight red leaves the home side a player short, shifting the match dynamic while they still lead and have had the bulk of possession.",
+                    "selected": [
+                      "sent_off",
+                      "players",
+                      "score",
+                      "possession"
+                    ]
+                  },
+                  "started_ms": 338,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1564,
+                    "out": 345,
+                    "reasoning": 256
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 4743,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{event:m-42-red_card_swing#213}, and {clause:players}. {clause:possession}, and {clause:score}."
+                  },
+                  "started_ms": 4970,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2192,
+                    "out": 399,
+                    "reasoning": 320
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 6,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 9715,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 2190,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 9723,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1313,
+                    "out": 146,
+                    "reasoning": 128
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "passed"
+                  },
+                  "started_ms": 11917,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "red_card",
+              "verification": {
+                "attempts": 1,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "passed"
+              }
+            },
+            {
+              "attempts": 1,
+              "id": "m-42-red_card_swing-M006",
+              "minute": 61,
+              "ok": true,
+              "period": 2,
+              "second": 0,
+              "source": "llm",
+              "template": "{event:m-42-red_card_swing#359}, and {clause:equalizer}. {clause:score}.",
+              "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC 1–1 Morvane Athletic.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 7655,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "goal",
+                      "margin",
+                      "score_home",
+                      "score_away"
+                    ],
+                    "expanded_clause_ids": [],
+                    "menu_claims": 6,
+                    "note": "A goal brought the contest back level, altering the match balance and shifting momentum toward the side that scored.",
+                    "selected": [
+                      "score_home",
+                      "score_away",
+                      "margin",
+                      "goal"
+                    ]
+                  },
+                  "started_ms": 341,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1695,
+                    "out": 345,
+                    "reasoning": 256
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 4163,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{event:m-42-red_card_swing#359}, and {clause:equalizer}. {clause:score}."
+                  },
+                  "started_ms": 7999,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2111,
+                    "out": 515,
+                    "reasoning": 448
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 2,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 12163,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 2349,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 12166,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1142,
+                    "out": 170,
+                    "reasoning": 128
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "passed"
+                  },
+                  "started_ms": 14519,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "goal",
+              "verification": {
+                "attempts": 1,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "passed"
+              }
+            },
+            {
+              "attempts": 2,
+              "id": "m-42-red_card_swing-M007",
+              "minute": 81,
+              "ok": true,
+              "period": 2,
+              "second": 14,
+              "source": "llm",
+              "template": "{clause:pressure}, and {clause:shots}.",
+              "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 4397,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "pressure",
+                      "shots_for",
+                      "shots_against"
+                    ],
+                    "expanded_clause_ids": [],
+                    "menu_claims": 5,
+                    "note": "The hosts have taken control, enjoying sustained pressure and creating the only shots in the latest phase; the visitors have just made a substitution.",
+                    "selected": [
+                      "pressure",
+                      "shots_for",
+                      "shots_against"
+                    ]
+                  },
+                  "started_ms": 11,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1987,
+                    "out": 427,
+                    "reasoning": 320
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 3114,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{clause:pressure}, and {clause:shots}."
+                  },
+                  "started_ms": 4410,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2366,
+                    "out": 268,
+                    "reasoning": 192
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 4,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 7527,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 4447,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [
+                      {
+                        "code": "unsupported_statement",
+                        "reason": "The pressure claim covers a different timeframe than this phrase states.",
+                        "span": "over the last 10 minutes of play"
+                      }
+                    ],
+                    "verdict": "reject"
+                  },
+                  "started_ms": 7534,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1496,
+                    "out": 433,
+                    "reasoning": 320
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "feedback_history",
+                  "model": null,
+                  "output": {
+                    "codes": [
+                      "unsupported_statement"
+                    ],
+                    "next_attempt": 2,
+                    "reason": "verifier"
+                  },
+                  "started_ms": 11983,
+                  "status": "ok",
+                  "step": "retry",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 2,
+                  "duration_ms": 3881,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [
+                      "unsupported_statement"
+                    ],
+                    "template": "{clause:pressure}, and {clause:shots}."
+                  },
+                  "started_ms": 11991,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2411,
+                    "out": 245,
+                    "reasoning": 192
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 2,
+                  "duration_ms": 2,
+                  "input_ref": "drafts[2]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 15874,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 2,
+                  "duration_ms": 4081,
+                  "input_ref": "drafts[2]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 15877,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1496,
+                    "out": 345,
+                    "reasoning": 320
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 2,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "retried_then_passed"
+                  },
+                  "started_ms": 19960,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "pressure_shift",
+              "verification": {
+                "attempts": 2,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "retried_then_passed"
+              }
+            },
+            {
+              "attempts": 1,
+              "id": "m-42-red_card_swing-M008",
+              "minute": 84,
+              "ok": true,
+              "period": 2,
+              "second": 0,
+              "source": "llm",
+              "template": "{clause:score}, and {clause:go_ahead}.",
+              "text": "The score is Brannoch FC 1–2 Morvane Athletic, and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 3034,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "goal",
+                      "team_goals",
+                      "margin",
+                      "deficit",
+                      "score_home",
+                      "score_away"
+                    ],
+                    "expanded_clause_ids": [
+                      "go_ahead"
+                    ],
+                    "menu_claims": 7,
+                    "note": "A late away goal put the visitors ahead after they had been behind earlier, changing the lead and swinging the match momentum in their favor.",
+                    "selected": [
+                      "score_away",
+                      "score_home",
+                      "go_ahead",
+                      "goal",
+                      "team_goals"
+                    ]
+                  },
+                  "started_ms": 9,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1950,
+                    "out": 222,
+                    "reasoning": 128
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 4454,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{clause:score}, and {clause:go_ahead}."
+                  },
+                  "started_ms": 3046,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2491,
+                    "out": 523,
+                    "reasoning": 448
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 3,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 7502,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 2680,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 7508,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1240,
+                    "out": 185,
+                    "reasoning": 128
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "passed"
+                  },
+                  "started_ms": 10191,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "goal",
+              "verification": {
+                "attempts": 1,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "passed"
+              }
+            },
+            {
+              "attempts": 1,
+              "id": "m-42-red_card_swing-M009",
+              "minute": 90,
+              "ok": true,
+              "period": 2,
+              "second": 5,
+              "source": "llm",
+              "template": "{clause:pressure}, and {clause:shots}.",
+              "text": "Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",
+              "trace": [
+                {
+                  "agent": "analyst",
+                  "attempt": 0,
+                  "duration_ms": 3772,
+                  "input_ref": "menu",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "effective": [
+                      "pressure",
+                      "shots_for",
+                      "shots_against"
+                    ],
+                    "expanded_clause_ids": [],
+                    "menu_claims": 5,
+                    "note": "Away side has seized control of the late momentum, dominating pressure and producing the only shot in the closing phase, shifting initiative and forcing the home side onto the back foot.",
+                    "selected": [
+                      "pressure",
+                      "shots_for",
+                      "shots_against"
+                    ]
+                  },
+                  "started_ms": 10,
+                  "status": "ok",
+                  "step": "analyst",
+                  "tokens": {
+                    "in": 1769,
+                    "out": 273,
+                    "reasoning": 192
+                  }
+                },
+                {
+                  "agent": "narrator",
+                  "attempt": 1,
+                  "duration_ms": 5600,
+                  "input_ref": "menu+briefing",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "feedback": [],
+                    "template": "{clause:pressure}, and {clause:shots}."
+                  },
+                  "started_ms": 3785,
+                  "status": "ok",
+                  "step": "narrate",
+                  "tokens": {
+                    "in": 2151,
+                    "out": 527,
+                    "reasoning": 448
+                  }
+                },
+                {
+                  "agent": "guard",
+                  "attempt": 1,
+                  "duration_ms": 3,
+                  "input_ref": "drafts[1]",
+                  "model": null,
+                  "output": {
+                    "codes": [],
+                    "ok": true
+                  },
+                  "started_ms": 9395,
+                  "status": "ok",
+                  "step": "guard",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                },
+                {
+                  "agent": "verifier",
+                  "attempt": 1,
+                  "duration_ms": 5138,
+                  "input_ref": "drafts[1]",
+                  "model": "gpt-5-mini",
+                  "output": {
+                    "issues": [],
+                    "verdict": "pass"
+                  },
+                  "started_ms": 9400,
+                  "status": "ok",
+                  "step": "verify",
+                  "tokens": {
+                    "in": 1277,
+                    "out": 351,
+                    "reasoning": 320
+                  }
+                },
+                {
+                  "agent": "workflow",
+                  "attempt": 1,
+                  "duration_ms": 0,
+                  "input_ref": "guard",
+                  "model": null,
+                  "output": {
+                    "label_source": "llm",
+                    "source": "llm",
+                    "verifier": "passed"
+                  },
+                  "started_ms": 14541,
+                  "status": "ok",
+                  "step": "finalize",
+                  "tokens": {
+                    "in": null,
+                    "out": null,
+                    "reasoning": null
+                  }
+                }
+              ],
+              "type": "pressure_shift",
+              "verification": {
+                "attempts": 1,
+                "guard": true,
+                "label_source": "llm",
+                "verifier": "passed"
+              }
+            }
+          ],
+          "usage": [
+            {
+              "call": 5,
+              "error": null,
+              "input_tokens": 2192,
+              "latency_ms": 4743,
+              "moment_id": "m-42-red_card_swing-M004",
+              "outcome": "ok",
+              "output_tokens": 399,
+              "reasoning_tokens": 320
+            },
+            {
+              "call": 4,
+              "error": null,
+              "input_tokens": 2241,
+              "latency_ms": 6575,
+              "moment_id": "m-42-red_card_swing-M002",
+              "outcome": "ok",
+              "output_tokens": 438,
+              "reasoning_tokens": 384
+            },
+            {
+              "call": 6,
+              "error": null,
+              "input_tokens": 2111,
+              "latency_ms": 4163,
+              "moment_id": "m-42-red_card_swing-M006",
+              "outcome": "ok",
+              "output_tokens": 515,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 14,
+              "error": null,
+              "input_tokens": 2366,
+              "latency_ms": 3114,
+              "moment_id": "m-42-red_card_swing-M007",
+              "outcome": "ok",
+              "output_tokens": 268,
+              "reasoning_tokens": 192
+            },
+            {
+              "call": 13,
+              "error": null,
+              "input_tokens": 2491,
+              "latency_ms": 4454,
+              "moment_id": "m-42-red_card_swing-M008",
+              "outcome": "ok",
+              "output_tokens": 523,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 15,
+              "error": null,
+              "input_tokens": 2151,
+              "latency_ms": 5600,
+              "moment_id": "m-42-red_card_swing-M009",
+              "outcome": "ok",
+              "output_tokens": 527,
+              "reasoning_tokens": 448
+            },
+            {
+              "call": 18,
+              "error": null,
+              "input_tokens": 2411,
+              "latency_ms": 3881,
+              "moment_id": "m-42-red_card_swing-M007",
+              "outcome": "ok",
+              "output_tokens": 245,
+              "reasoning_tokens": 192
+            }
+          ]
+        }
+      ],
+      "started_at": "2026-10-14T18:15:49+00:00"
+    }
+  ]
+}
