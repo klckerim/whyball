@@ -203,3 +203,70 @@ Newest entries at the bottom.
 ## D31. Pressure band caption [design]
 - Under the timeline: the API series label (it names its 10-minute window), and home ● / away ○ marks with an arrow
   (↑ above the line, ↓ below) and the team name from the match_meta event. The band still writes no value.
+
+## D32. Agent roles and the graph [design]
+- `app/agents/` (offline; the service never imports it, D40): **Analyst** (analyst-v1: which verified claims matter + a short note),
+  **Narrator** (foundry-v5.2 wrapped, prompt and slot language frozen), **Guard** (code: text lint, binding, menu rules,
+  `verify_claim`, render), **Verifier** (verifier-v1: meaning), on Microsoft Agent Framework's graph API (`WorkflowBuilder`,
+  `Executor` + `@handler`, `add_edge(..., condition)`).
+- Graph: `start → [analyst] → narrate → guard → verify → finalize`; a rejection at guard or verify goes back to `narrate` while
+  attempts are left, else to `fallback` (the labelled template narration). One message type (`Signal.next`) drives the conditional edges.
+- Versions: `agent-framework-core` 1.19.0, `-foundry` 1.13.1, `-openai` 1.14.4: the newest releases at least 14 days old on 2026-10-14
+  (1.20.0/1.21.0 and 1.14.x were 6-12 days old). The spike (loop, shared state, concurrency, failure behaviour) was repeated on them.
+
+## D33. State, retries and limits [design parameters]
+- One immutable `NarrationState` per card; the framework deep-copies stored state, so in-place changes are lost: every update is read-modify-write
+  (`update(ctx, fn)`), and tests catch in-place patterns (frozen types, a walk, an AST scan).
+- At most 3 attempts (Narrator + Guard + Verifier) per card, enforced by the edge conditions (`state.can_retry`); `max_iterations` (60) is only an
+  emergency cap and a test shows three rejections end in the fallback without `WorkflowConvergenceException`.
+- Timeouts per call (`asyncio.wait_for` inside each agent): Narrator 60 s, Analyst 30 s, Verifier 30 s; at most 3 cards in flight (semaphore; a
+  workflow instance cannot run twice at once, so one per card); one call budget for all agents of a run (150). The trace is written by our executors
+  (`perf_counter`), not by framework events or OpenTelemetry.
+
+## D34. Analyst [design]
+- Output `{claim_ids, context_note}` (closed schema). Ids must be on the menu, the note at most 240 characters with no digit, number word or placeholder.
+  It only changes the Narrator's INPUT: the menu shrinks to the chosen claims plus the claims of any clause that uses one of them and the primary claims;
+  the note is appended to the user message (never the system prompt). The Guard checks against the same narrowed menu.
+- Any failure (budget, client error, timeout, schema or validation violation) gives the full menu: trace `analyst` (error|timeout) + `analyst_fallback`.
+  `analyst=on/off` flag; its value is measured in P4 and it is removed if the measurement does not support it.
+
+## D35. Verifier and its closed codes [design]
+- Reads the final text, its pieces (which claim each number comes from), the claims and the evidence events; never the Narrator's reasoning, earlier drafts or the
+  template. Output `{ok, issues[{code, span, reason}]}`, `ok` only with no issues, every span a substring of the text. It can only reject: no field or
+  result carries text or numbers; a rejection is coded `Feedback` (source `verifier`, fragment `span (reason)`) to the Narrator.
+- Codes and the eval/inject classes each answers: `wrong_slot_binding` (wrong_slot_binding, player_swap, score_order_reversed), `role_reversed`
+  (role_reversed), `event_wrong_claim` (event_wrong_claim), `qualitative_unsupported` (qualitative_overstatement, unsupported_sentence_qualitative),
+  `unsupported_statement` (unsupported_sentence_number), `misleading_connector`, `other_semantic`. The three types the code check misses (EVAL, "Target
+  for the Verifier agent") are all covered. Schemas carry no length keywords (strict structured outputs); `check_verdict` checks lengths.
+- `verifier=on/off` flag.
+
+## D36. D6: the Verifier is not a single point of failure [design]
+- Verifier error, timeout, malformed or inconsistent verdict, or a spent budget: the Guard-passed draft is published with `verification.verifier =
+  "skipped_error"`, `label_source = "guard_only"`, trace `verifier_error`. `source` (the badge) keeps its meaning. Verifier off: `not_run`, `guard_only`.
+- Guarantees, each with tests: numbers/events are rendered by code; a draft the Guard rejects is never published; an Analyst or Verifier failure labels a
+  card and never blocks it; the Verifier's `ok` never changes the Guard's verdict; an exception anywhere in the workflow still yields a card (fallback, trace
+  `workflow_error`).
+
+## D37. Trace and verification fields [design]
+- `StoredMoment.trace` (existing field, now filled) holds steps `{step, agent, attempt, started_ms, duration_ms, input_ref, output, tokens{in,out,reasoning},
+  model, status}`; `step` in analyst, analyst_fallback, narrate, guard, verify, verifier_error, retry, fallback, finalize, workflow_error. `input_ref` names the
+  state field read, never a copy. Steps are validated at publish (`TraceStep` in the store schema, vocabulary kept equal to the agents' by a test).
+- New `StoredMoment.verification {guard, verifier: passed|retried_then_passed|skipped_error|not_run, attempts, label_source: llm|template|template_fallback|
+  guard_only}`. The store refuses a card whose verification claims a check its trace does not show; a run trace is dropped (and reported) when the current code
+  publishes another kind of card than the run did. Cards of runs that predate the agents say `not_run` / `guard_only`.
+- SSE: a stored trace is replayed as `event: trace` after its card's `moment` event; other events and their order are unchanged; no new route.
+
+## D38. Run files and publishing [design]
+- `python -m app.agents.run` writes a run file in the shape of LLM_RUN.json plus verification and trace; `app.publish --run` replays its accepted drafts through
+  the current Guard. Dry-run files (scripted client) are refused by publish. A live run prints a call/token estimate (from the measured LLM_RUN rows) and needs a
+  typed confirmation or `--yes`.
+
+## D39. Arms for the P4 measurement [design; wiring only]
+- A = analyst + narrator + guard + verifier; B = analyst off; C = single-agent baseline: one agent (one call: narrator instructions plus a self-check) with the
+  same Guard, retries and fallback. A and B are the `Flags` today; C is a `single_agent` executor replacing analyst/narrate/verify in `AgentWorkflow.build`
+  (same state, same trace schema), built in P4.
+
+## D40. The service never runs agents [design]
+- `tests/test_no_agents_in_service.py`: no module of `app/api`, `app/publish`, `app/serve.py` or `app/telemetry.py` imports `app.agents`, the Agent Framework or a
+  model SDK; starting the service loads none of them; the image installs no `llm`/`dev` extra; nothing outside `app/agents` imports it. With the frozen route
+  list (`tests/test_api_surface.py`) no request can run a model.

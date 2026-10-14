@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.analytics.moments import Moment
 from app.explain.claims import Claim, parse_ref
@@ -91,9 +91,10 @@ Respond only with JSON: {{"ok": <bool>, "issues": [{{"code": "...", "span": "...
 
 class IssueOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    # No length limits in the schema (strict structured outputs may not accept minLength/maxLength): `check_verdict` checks them.
     code: Code
-    span: str = Field(min_length=1)
-    reason: str = Field(max_length=REASON_MAX_CHARS)
+    span: str
+    reason: str
 
 
 class VerifierOut(BaseModel):
@@ -117,6 +118,10 @@ def check_verdict(out: VerifierOut, text: str) -> VerifierOut:
     if not out.ok and not out.issues:
         raise VerdictError("reject_without_issue", "ok=false without an issue")
     for issue in out.issues:
+        if not issue.span.strip():
+            raise VerdictError("empty_span", "an issue without a span")
+        if len(issue.reason) > REASON_MAX_CHARS:
+            raise VerdictError("reason_too_long", f"{len(issue.reason)} characters")
         if issue.span not in text:
             raise VerdictError("span_not_in_text", f"span {issue.span[:40]!r} is not in the text")
     return out

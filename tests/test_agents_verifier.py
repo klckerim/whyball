@@ -81,8 +81,7 @@ def test_the_verdict_has_no_field_for_text_or_numbers():
         VerifierOut.model_validate_json('{"ok": true, "issues": [], "text": "better text"}')
     with pytest.raises(Exception):
         IssueOut(code="made_up", span="x", reason="y")
-    with pytest.raises(Exception):
-        IssueOut(code="role_reversed", span="x", reason="y" * (REASON_MAX_CHARS + 1))
+    # length limits are checked by check_verdict, not by the schema (see below)
 
 
 def test_the_verifier_result_carries_no_text():
@@ -93,6 +92,8 @@ def test_the_verifier_result_carries_no_text():
     (VerifierOut(ok=True, issues=[IssueOut(code="role_reversed", span="a", reason="r")]), "ok_with_issues"),
     (VerifierOut(ok=False, issues=[]), "reject_without_issue"),
     (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span="not there", reason="r")]), "span_not_in_text"),
+    (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span=" ", reason="r")]), "empty_span"),
+    (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span="some", reason="r" * (REASON_MAX_CHARS + 1))]), "reason_too_long"),
 ])
 def test_an_inconsistent_verdict_is_refused(out, code):
     with pytest.raises(VerdictError) as e:
@@ -177,3 +178,15 @@ def test_the_verifiers_answer_never_changes_the_guards_result():
     a = VerifierAgent(events, ScriptedClient(VerifierOut=reject()), budget=CallBudget(5))
     run(a.verify(moment, g, ctx, attempt=1, clock=Stopwatch()))
     assert dataclasses.asdict(g) == before and g.ok and g.text
+
+
+def test_the_response_schemas_use_only_what_strict_structured_outputs_take():
+    from openai.lib._pydantic import to_strict_json_schema
+
+    from app.agents.analyst import AnalystOut
+
+    for model in (VerifierOut, AnalystOut):
+        raw = json.dumps(to_strict_json_schema(model))
+        for keyword in ("minLength", "maxLength", "pattern", "minItems", "maxItems", "minimum", "maximum"):
+            assert keyword not in raw, (model.__name__, keyword)
+    assert set(json.loads(json.dumps(to_strict_json_schema(VerifierOut)))["required"]) == {"ok", "issues"}
