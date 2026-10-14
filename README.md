@@ -2,6 +2,8 @@
 
 WhyBall narrates synthetic football matches and publishes a sentence only if its claims pass a deterministic verifier.
 
+**Live demo:** https://whyball.happyground-485eb3be.swedencentral.azurecontainerapps.io (it plays recorded, published narrations; the model was run offline).
+
 **Status: WIP.** Current state, decisions and known limits: [STATUS.md](STATUS.md).
 
 ## What it does

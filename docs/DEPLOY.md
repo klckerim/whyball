@@ -187,6 +187,11 @@ Expected: `Login Succeeded`; the push ends with a `digest: sha256:...` line. **I
 - `unauthorized` on push: the token lasts about 3 hours; rerun `az acr login`.
 - `exec format error` later in the console log: the image is arm64; rebuild with `--platform linux/amd64`.
 - Docker Hub timeouts while pulling the base images: rerun; they were transient DNS errors.
+- `lookup ... no such host` or `i/o timeout` during build or push (seen in a real run): quit Docker Desktop completely
+  and start it again. If it persists, add a `"dns"` entry (for example your router or a public resolver) to the Docker
+  Engine settings in Docker Desktop and restart; also check the network and any VPN.
+- Check that the Docker daemon is running with `docker info 2>&1 | grep "Server Version"`: the client part of
+  `docker info` prints even when the server is down, so `docker info | head -3` proves nothing.
 
 ### 3.4 Container Apps environment ✎ 💲
 
@@ -196,6 +201,12 @@ az containerapp env create --name "$APP_ENV" --resource-group "$APP_RG" --locati
 Source: <https://learn.microsoft.com/azure/container-apps/get-started-existing-container-image#create-an-environment>
 
 Expected: JSON of the environment (it also creates a Log Analytics workspace). **If not:** provider errors: section 1.3.
+- The command can fail on the local network (`OSError 22`, `Connection aborted`) although the environment is created in
+  Azure. Before running it again, look:
+  ```bash
+  az containerapp env show --name "$APP_ENV" --resource-group "$APP_RG" --query properties.provisioningState -o tsv
+  ```
+  A second `create` makes a second Log Analytics workspace. If the state is `Succeeded`, go on to 3.5.
 
 ### 3.5 Create the app with size and replicas 💲
 
@@ -238,7 +249,7 @@ section 6 and use `--wait 120`. **If not:**
 ### 3.6 Verify the pull role and the image 👁
 
 ```bash
-az role assignment list --scope "$ACR_ID" --all \
+az role assignment list --scope "$ACR_ID" \
   --query "[].{role:roleDefinitionName, principalId:principalId, scope:scope}" --output table
 az identity show --name "$IDENTITY_NAME" --resource-group "$APP_RG" --query principalId --output tsv
 ```

@@ -20,7 +20,10 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - U1 (7 commits): new UI is the shipped one: shell, routes, On Air stage, transport, timeline, pressure
   band, dwell; card `checks` recorded at publish; old UI at `/legacy` until U2. Screens reviewed (3 shots).
 - P1 (8 commits): image, start-up guard, DefaultAzureCredential, frozen API surface, remote smoke test,
-  CI docker job (+ `--wait` fix), [DEPLOY](docs/DEPLOY.md) (main path: local amd64 build, ACR push, user-assigned identity), optional App Insights. Nothing is deployed yet (the user runs `az`).
+  CI docker job (+ `--wait` fix), [DEPLOY](docs/DEPLOY.md), optional App Insights. Deployed 2026-10-14 (the user ran `az`):
+  Sweden Central, image tag p1-20261014-1822, 0.5 vCPU / 1.0 Gi, 1-2 replicas, user-assigned identity + AcrPull,
+  remote smoke test ALL PASSED. Foundry role not assigned, App Insights not enabled.
+  Public address: https://whyball.happyground-485eb3be.swedencentral.azurecontainerapps.io
 
 ## In progress
 - 7 U1 + 8 P1 commits on `master` only, not pushed; U0 and tag `llm-baseline-v2` are on origin. CI not checked here.
@@ -59,7 +62,7 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - Image: `Dockerfile` (digest-pinned bases, non-root, `deploy/constraints.txt`); entry `python -m app.serve`
   refuses to start if `app.publish --check` fails. CI `docker` job builds it, scans for `.env`/`notes`/`.git`.
 - Public and unauthenticated: no endpoint calls a model or billable resource; `tests/test_api_surface.py` locks it.
-- Local checks done: image runs, `/healthz`, 3 matches, deep link, SSE progressive. Azure side: not run yet.
+- Local checks done: image runs, `/healthz`, 3 matches, deep link, SSE progressive. Azure side: deployed, smoke ALL PASSED.
 
 ## Mentor summary
 - Commits (P1): 81081a6 Dockerfile+constraints · 65116fa serve guard · 2d522b3 DefaultAzureCredential · 6b43ac5
