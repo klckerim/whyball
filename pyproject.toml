@@ -7,7 +7,11 @@ name = "whyball"
 version = "0.1.0"
 description = "Multi-agent football match narrator; every claim is verified against deterministic metrics."
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2", "fastapi>=0.115", "uvicorn[standard]>=0.30", "httpx>=0.27"]
+# fastapi, starlette and pydantic are pinned: web/openapi.json is compared byte for byte with the app's
+# schema (tests/test_openapi.py), so CI, local runs and the Docker build must render it with the same versions.
+dependencies = [
+    "fastapi==0.143.0", "starlette==1.7.0", "pydantic==2.14.1", "uvicorn[standard]>=0.30", "httpx>=0.27",
+]
 
 [project.optional-dependencies]
 # openai: tests/test_llm_narrator.py checks the draft schema with its strict-schema helper
