@@ -54,6 +54,11 @@ class Match:
     def by_seq(self) -> dict[int, Event]:
         return {e.seq: e for e in self.events}
 
+    @cached_property
+    def meta(self) -> dict:
+        """The match_meta record's data (teams: name, lineup, bench)."""
+        return next(e.data for e in self.events if e.type is EventType.MATCH_META)
+
     @property
     def duration_t(self) -> int:
         return self.t[self.events[-1].seq]

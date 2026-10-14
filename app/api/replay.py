@@ -31,7 +31,7 @@ def event_out(e: Event, t: int) -> dict[str, Any]:
     return {
         "seq": e.seq, "t": t, "period": e.period, "minute": e.minute, "second": e.second,
         "minute_label": fmt_minute(e.period, e.minute), "type": e.type.value, "team": e.team,
-        "player": e.player, "outcome": e.outcome, "score": dict(e.score),
+        "player": e.player, "outcome": e.outcome, "score": dict(e.score), "x": e.x, "y": e.y,
     }
 
 

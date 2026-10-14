@@ -5,8 +5,11 @@ from fastapi.testclient import TestClient
 
 from app.api import replay as replay_module
 from app.api.data import match_clock
+from app.analytics.config import DEFAULT_CONFIG
 from app.api.main import create_app
-from app.generator.models import EventType
+from app.explain.claims import COMPARISONS, KINDS, METRIC_KINDS
+from app.explain.labels import METRIC_LABELS
+from app.generator.models import EventType, read_jsonl
 from app.publish.store import DEFAULT_OUT_DIR
 
 MATCH = "red_card_swing_seed42"
@@ -48,6 +51,68 @@ def test_match_detail(client):
     assert [(e["minute_label"], e["score"]) for e in goals] == [
         ("22'", {"home": 1, "away": 0}), ("61'", {"home": 1, "away": 1}), ("84'", {"home": 1, "away": 2})]
     assert [e["t"] for e in d["timeline"]] == sorted(e["t"] for e in d["timeline"])
+
+
+TIMELINE_FIELDS = {"seq", "t", "period", "minute", "second", "minute_label", "type", "team", "player",
+                   "outcome", "score"}
+
+
+def test_timeline_carries_ball_position(client):
+    timeline = client.get(f"/api/matches/{MATCH}").json()["timeline"]
+    assert all(TIMELINE_FIELDS | {"x", "y"} == set(e) for e in timeline)  # B1 adds x, y; nothing else changes
+    goals = [e for e in timeline if e["type"] == "goal"]
+    cards = [e for e in timeline if e["type"] in ("red_card", "yellow_card")]
+    assert goals and cards
+    assert all(0 <= e["x"] <= 105 and 0 <= e["y"] <= 68 for e in goals)
+    assert all(e["x"] is None and e["y"] is None for e in cards)
+
+
+def test_replay_events_carry_ball_position(client):
+    items = parse_sse(client.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)
+    events = [d for kind, d in items if kind == "match_event"]
+    by_seq = client.app.state.matches[MATCH].by_seq
+    assert all((d["x"], d["y"]) == (by_seq[d["seq"]].x, by_seq[d["seq"]].y) for d in events)
+    assert any(d["x"] is not None for d in events)
+
+
+@pytest.mark.parametrize("match_id", ["dominant_loss_seed7", "natural_seed100", "red_card_swing_seed42"])
+def test_match_detail_squads(client, match_id):
+    d = client.get(f"/api/matches/{match_id}").json()
+    store = json.loads((DEFAULT_OUT_DIR / f"{match_id}.json").read_text(encoding="utf-8"))
+    meta = read_jsonl(DEFAULT_OUT_DIR.parent.parent / store["events_file"])[0]
+    assert meta.type is EventType.MATCH_META
+    assert d["squads"] == meta.data["teams"]
+    names = {p for side in d["squads"].values() for p in side["lineup"] + side["bench"]}
+    assert {e["player"] for e in d["timeline"] if e["player"]} <= names
+
+
+def test_metrics(client):
+    body = client.get("/api/metrics").json()
+    assert [m["id"] for m in body["metrics"]] == list(METRIC_KINDS)
+    assert body["kinds"] == list(KINDS) and body["comparisons"] == list(COMPARISONS)
+    for m in body["metrics"]:
+        assert m["kind"] == METRIC_KINDS[m["id"]]
+        assert m["label"] == METRIC_LABELS["en"][m["id"]]
+        assert m["definition"].strip()
+        if m["id"] == "pressure_balance":
+            assert m["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min}
+            assert f"{DEFAULT_CONFIG.pressure_window_min:g} minutes" in m["definition"]
+        else:
+            assert m["window"] == {"type": "claim_range", "minutes": None}
+
+
+def test_metrics_matches_the_tool_api(client):
+    from app.explain.tool_api import list_metrics_tool
+
+    tool = list_metrics_tool({})["result"]
+    body = client.get("/api/metrics").json()
+    assert {m["id"]: m["kind"] for m in body["metrics"]} == tool["metrics"]
+    assert (body["kinds"], body["comparisons"]) == (tool["kinds"], tool["comparisons"])
+
+
+def test_healthz(client):
+    r = client.get("/healthz")  # outside /api, and not shadowed by the static UI mount
+    assert r.status_code == 200 and r.json() == {"ok": True, "matches": 3}
 
 
 def test_moments(client):

@@ -35,6 +35,48 @@ METRIC_LABELS: dict[str, dict[str, str]] = {
 }
 
 
+def _definitions(c: AnalyticsConfig = DEFAULT_CONFIG) -> dict[str, str]:
+    """What `claims.measure` computes, in words (served by /api/metrics; the UI writes no definitions).
+    Numbers come from the analytics config, so a config change updates the text."""
+
+    def count(what: str) -> str:
+        return f"Number of {what} in the claim range for the subject (the team, and the player if one is named)."
+
+    return {
+        "goals": count("goal events"),
+        "shots": count("shot events, any outcome"),
+        "shots_on_target": count("shot events with the outcome goal or saved"),
+        "corners": count("corner events"),
+        "fouls": count("foul events"),
+        "yellow_cards": count("yellow card events"),
+        "red_cards": count("red card events"),
+        "penalties_scored": count("penalty events with the outcome scored"),
+        "penalties_saved": count("penalty events with the outcome saved"),
+        "penalties_missed": count("penalty events with the outcome missed"),
+        "substitutions": count("substitution events"),
+        "possession": "The team's share of pass and dribble events in the claim range; 0.5 when there are none.",
+        "field_tilt": (
+            "The team's share of final-third entries in the claim range; 0.5 when there are none. An entry is an "
+            f"on-ball event at least {c.final_third_x:g} from the team's own goal line (pitch length "
+            f"{c.pitch_length:g}) after play was outside that zone."
+        ),
+        "score": "The team's goals at the end of the claim range.",
+        "score_margin": "The team's goals minus the opponent's goals at the end of the claim range.",
+        "min_score_margin": "The lowest goal margin for the team at any event in the claim range.",
+        "players_on_pitch": (
+            "Starting line-up size minus the team's red cards up to the end of the claim range."
+        ),
+        "pressure_balance": (
+            "(team pressure − opponent pressure) / (sum of both) over the last "
+            f"{c.pressure_window_min:g} minutes played; pressure = {c.w_shot:g} × shots + {c.w_entry:g} × "
+            f"final-third entries + {c.w_corner:g} × corners. 0 when the sum is below {c.min_pressure_volume:g}."
+        ),
+    }
+
+
+METRIC_DEFINITIONS: dict[str, str] = _definitions()
+
+
 # EN singular forms (when the value is 1).
 SINGULAR_EN: dict[str, str] = {
     "goals": "goal", "score": "goal", "shots": "shot", "shots_on_target": "shot on target",

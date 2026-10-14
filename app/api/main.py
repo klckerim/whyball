@@ -12,6 +12,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -19,6 +20,9 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from app.analytics.config import DEFAULT_CONFIG
+from app.explain.claims import COMPARISONS, KINDS, METRIC_KINDS
+from app.explain.labels import METRIC_DEFINITIONS, METRIC_LABELS
 from app.publish.schema import SOURCES, EvidenceEvent, Score, StoredClaim, StoredMoment, Teams
 
 from .data import TIMELINE_TYPES, Match, load_matches
@@ -49,12 +53,25 @@ class TimelineEvent(BaseModel):
     player: str | None
     outcome: str | None
     score: Score
+    x: float | None  # ball position (0..105, 0..68); null for cards, substitutions, whistles
+    y: float | None
 
 
 class Period(BaseModel):
     period: int
     start_t: int
     end_t: int
+
+
+class Squad(BaseModel):
+    name: str
+    lineup: list[str]
+    bench: list[str]
+
+
+class Squads(BaseModel):
+    home: Squad
+    away: Squad
 
 
 class MatchDetail(BaseModel):
@@ -67,6 +84,31 @@ class MatchDetail(BaseModel):
     timeline: list[TimelineEvent]
     run_id: str
     prompt_version: str
+    squads: Squads  # from the match_meta record
+
+
+class MetricWindow(BaseModel):
+    type: Literal["rolling", "claim_range"]  # rolling: the last `minutes` played before the claim end
+    minutes: float | None = None
+
+
+class MetricInfo(BaseModel):
+    id: str
+    kind: str
+    label: str
+    definition: str
+    window: MetricWindow
+
+
+class MetricsOut(BaseModel):
+    metrics: list[MetricInfo]
+    kinds: list[str]
+    comparisons: list[str]
+
+
+class Health(BaseModel):
+    ok: bool
+    matches: int
 
 
 class EvidenceOut(EvidenceEvent):
@@ -89,6 +131,22 @@ def _summary(m: Match) -> MatchSummary:
         id=s.match_id, teams=s.teams, final_score=s.final_score, moments=len(s.moments),
         sources={src: sum(c.source == src for c in s.moments) for src in SOURCES},
     )
+
+
+def _metric_window(metric: str) -> MetricWindow:
+    if metric == "pressure_balance":
+        return MetricWindow(type="rolling", minutes=DEFAULT_CONFIG.pressure_window_min)
+    return MetricWindow(type="claim_range")
+
+
+METRICS = MetricsOut(
+    metrics=[
+        MetricInfo(id=m, kind=kind, label=METRIC_LABELS["en"][m], definition=METRIC_DEFINITIONS[m],
+                   window=_metric_window(m))
+        for m, kind in METRIC_KINDS.items()
+    ],
+    kinds=list(KINDS), comparisons=list(COMPARISONS),
+)
 
 
 def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> FastAPI:
@@ -115,6 +173,14 @@ def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> 
     def health() -> dict[str, bool]:
         return {"ok": True}
 
+    @app.get("/healthz", response_model=Health)
+    def healthz(request: Request) -> Health:
+        return Health(ok=True, matches=len(request.app.state.matches))
+
+    @app.get("/api/metrics", response_model=MetricsOut)
+    def metrics() -> MetricsOut:
+        return METRICS
+
     @app.get("/api/matches", response_model=list[MatchSummary])
     def matches(request: Request) -> list[MatchSummary]:
         return [_summary(m) for m in request.app.state.matches.values()]
@@ -128,6 +194,7 @@ def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> 
             duration_t=m.duration_t, periods=m.periods(),
             timeline=[event_out(e, m.t[e.seq]) for e in m.events if e.type in TIMELINE_TYPES],
             run_id=s.run_id, prompt_version=s.prompt_version,
+            squads=Squads(**{side: Squad(**m.meta["teams"][side]) for side in ("home", "away")}),
         )
 
     @app.get("/api/matches/{match_id}/moments", response_model=list[MomentOut])
