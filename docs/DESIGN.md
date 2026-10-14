@@ -40,7 +40,9 @@ Newest entries at the bottom.
 
 ## D7. No invented data on screen [design]
 - Every number, name and time goes through `<Fact>`, which carries `data-claim-id` or `data-event-id`
-  (contract T1/T2 in UI_SPEC §7). A source scan bans digits in JSX outside an explicit allow-list.
+  (contract T1/T2 in UI_SPEC §7). A source scan bans digits in JSX outside an explicit allow-list
+  (`web/src/design/provenance.allow.ts`). It parses TSX with Vite's own `parseAst` (rolldown/oxc), so
+  `x > 1 && <b/>` is not mistaken for JSX text; old UI files are not scanned.
 - Reason: the product's only promise is that every published value is verified; the UI must not be the
   place where an unverified number appears.
 
