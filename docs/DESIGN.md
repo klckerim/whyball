@@ -82,3 +82,13 @@ Newest entries at the bottom.
 - Licence: both packages declare `OFL-1.1` and ship the full SIL Open Font License 1.1 text with the
   upstream copyright (Inter: "Copyright 2016 The Inter Project Authors"; Barlow: "Copyright 2017 The
   Barlow Project Authors"). Copied unchanged to `web/licenses/` (checked 2026-10-14).
+
+## D13. Radix UI primitives [design; licence checked]
+- Only the five primitives UI v2 needs, exact pins: `@radix-ui/react-tabs` 1.2.1, `-dialog` 1.3.1,
+  `-tooltip` 1.4.1, `-toggle-group` 1.2.1, `-popover` 1.3.1. Unstyled: keyboard, focus and ARIA come from
+  Radix, the look from our tokens, so the UI does not read as a stock kit.
+- Licence (checked 2026-10-14 in the installed packages): all 31 `@radix-ui/*` packages declare MIT and the
+  five direct ones ship an MIT LICENSE file. The 13 other transitive packages are MIT, except `tslib`
+  (0BSD, permissive).
+- `web/src/design/radix.smoke.test.tsx` checks each primitive under our React version (jsdom needs a
+  ResizeObserver stub for the popper-based Tooltip and Popover).
