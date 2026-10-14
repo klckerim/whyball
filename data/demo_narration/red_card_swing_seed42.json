@@ -124,6 +124,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 56,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_home",
+          "text": "+0.75"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 3': Brannoch FC "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": ", Morvane Athletic "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "home",
       "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play is +0.75 in their favour. Shots since 3': Brannoch FC 1, Morvane Athletic 0.",
@@ -251,6 +281,36 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 0,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Murek Brestani scored at 22', and Brannoch FC have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "55%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff. The score is Brannoch FC "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " Morvane Athletic."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff. The score is Brannoch FC 1–0 Morvane Athletic.",
@@ -406,6 +466,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 10,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_away",
+          "text": "+1.00"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 22': Morvane Athletic "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "2"
+        },
+        {
+          "claim_id": null,
+          "text": ", Brannoch FC "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "away",
       "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC 0.",
@@ -481,6 +571,20 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 0,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to "
+        },
+        {
+          "claim_id": "players",
+          "text": "10"
+        },
+        {
+          "claim_id": null,
+          "text": " players on the pitch."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
@@ -602,6 +706,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 31,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "45' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_away",
+          "text": "+0.67"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 45': Morvane Athletic "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": ", Brannoch FC "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "away",
       "text": "45' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +0.67 in their favour. Shots since 45': Morvane Athletic 0, Brannoch FC 0.",
@@ -729,6 +863,28 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 0,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " Morvane Athletic."
+        }
+      ],
       "source": "llm",
       "team": "away",
       "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC 1–1 Morvane Athletic.",
@@ -884,6 +1040,36 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 14,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at "
+        },
+        {
+          "claim_id": "pressure",
+          "text": "+0.83"
+        },
+        {
+          "claim_id": null,
+          "text": ", and Brannoch FC have had "
+        },
+        {
+          "claim_id": "shots_for",
+          "text": "2"
+        },
+        {
+          "claim_id": null,
+          "text": " shots to Morvane Athletic's "
+        },
+        {
+          "claim_id": "shots_against",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " since 71'."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
@@ -1063,6 +1249,44 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 0,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by "
+        },
+        {
+          "claim_id": "deficit",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " goal earlier in the match. The score is Brannoch FC "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "2"
+        },
+        {
+          "claim_id": null,
+          "text": " Morvane Athletic and Morvane Athletic have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "50%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff."
+        }
+      ],
       "source": "llm",
       "team": "away",
       "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match. The score is Brannoch FC 1–2 Morvane Athletic and Morvane Athletic have had 50% of the ball since kickoff.",
@@ -1174,6 +1398,36 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 5,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at "
+        },
+        {
+          "claim_id": "pressure",
+          "text": "+1.00"
+        },
+        {
+          "claim_id": null,
+          "text": ", and Morvane Athletic have had "
+        },
+        {
+          "claim_id": "shots_for",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " shot to Brannoch FC's "
+        },
+        {
+          "claim_id": "shots_against",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " since 80'."
+        }
+      ],
       "source": "llm",
       "team": "away",
       "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",

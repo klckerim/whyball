@@ -103,6 +103,28 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 10,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to "
+        },
+        {
+          "claim_id": "players",
+          "text": "10"
+        },
+        {
+          "claim_id": null,
+          "text": " players on the pitch, and Isteven United have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "51%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff."
+        }
+      ],
       "source": "llm",
       "team": "away",
       "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to 10 players on the pitch, and Isteven United have had 51% of the ball since kickoff.",
@@ -225,6 +247,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 48,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "16' — Isteven United take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_away",
+          "text": "+1.00"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 6': Isteven United "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": ", Tessdal Wanderers "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "away",
       "text": "16' — Isteven United take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 6': Isteven United 1, Tessdal Wanderers 0.",
@@ -358,6 +410,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 28,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "29' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_home",
+          "text": "+0.78"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 19': Tessdal Wanderers "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": ", Isteven United "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "home",
       "text": "29' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.78 in their favour. Shots since 19': Tessdal Wanderers 1, Isteven United 0.",
@@ -511,6 +593,28 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 28,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " Isteven United."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers 1–0 Isteven United.",
@@ -664,6 +768,36 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 23,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Quenlo Pelvisto scored at 51', and Isteven United have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "49%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff. The score is Tessdal Wanderers "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " Isteven United, and Isteven United drew level."
+        }
+      ],
       "source": "llm",
       "team": "away",
       "text": "Quenlo Pelvisto scored at 51', and Isteven United have had 49% of the ball since kickoff. The score is Tessdal Wanderers 1–1 Isteven United, and Isteven United drew level.",
@@ -864,6 +998,36 @@
       "prompt_version": "template-v1",
       "run_id": null,
       "second": 2,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "59' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is "
+        },
+        {
+          "claim_id": "pressure_balance_home",
+          "text": "+0.57"
+        },
+        {
+          "claim_id": null,
+          "text": " in their favour. Shots since 49': Tessdal Wanderers "
+        },
+        {
+          "claim_id": "shots_home",
+          "text": "4"
+        },
+        {
+          "claim_id": null,
+          "text": ", Isteven United "
+        },
+        {
+          "claim_id": "shots_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "."
+        }
+      ],
       "source": "template",
       "team": "home",
       "text": "59' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.57 in their favour. Shots since 49': Tessdal Wanderers 4, Isteven United 1.",
@@ -1038,6 +1202,52 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 1,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Since 59' Tessdal Wanderers have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "61%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball and a "
+        },
+        {
+          "claim_id": "shots_for",
+          "text": "4"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "shots_against",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " lead in shots, yet the score is Tessdal Wanderers "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " Isteven United."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots, yet the score is Tessdal Wanderers 1–1 Isteven United.",
@@ -1191,6 +1401,36 @@
       "prompt_version": "foundry-v5.2:gpt-5-mini",
       "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
       "second": 13,
+      "segments": [
+        {
+          "claim_id": null,
+          "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "52%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff, and the score is Tessdal Wanderers "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "2"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " Isteven United."
+        }
+      ],
       "source": "llm",
       "team": "home",
       "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had 52% of the ball since kickoff, and the score is Tessdal Wanderers 2–1 Isteven United.",

@@ -452,6 +452,13 @@
             "title": "Second",
             "type": "integer"
           },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
           "source": {
             "enum": [
               "llm",
@@ -504,6 +511,7 @@
           "team",
           "importance",
           "text",
+          "segments",
           "source",
           "prompt_version",
           "run_id",
@@ -555,6 +563,32 @@
           "away"
         ],
         "title": "Score",
+        "type": "object"
+      },
+      "Segment": {
+        "additionalProperties": false,
+        "description": "A piece of the card text. `claim_id` is set only on a piece that states a claim's value.",
+        "properties": {
+          "claim_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Id"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Segment",
         "type": "object"
       },
       "Series": {

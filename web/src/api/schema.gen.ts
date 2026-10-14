@@ -313,6 +313,8 @@ export interface components {
             run_id: string | null;
             /** Second */
             second: number;
+            /** Segments */
+            segments: components["schemas"]["Segment"][];
             /**
              * Source
              * @enum {string}
@@ -346,6 +348,16 @@ export interface components {
             away: number;
             /** Home */
             home: number;
+        };
+        /**
+         * Segment
+         * @description A piece of the card text. `claim_id` is set only on a piece that states a claim's value.
+         */
+        Segment: {
+            /** Claim Id */
+            claim_id?: string | null;
+            /** Text */
+            text: string;
         };
         /** Series */
         Series: {

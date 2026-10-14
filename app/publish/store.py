@@ -35,7 +35,7 @@ from app.explain.template_narrator import fmt_minute
 from app.generator.freeze import demo_paths
 from app.generator.models import Event, read_jsonl
 
-from .schema import SOURCES, EvidenceEvent, MatchStore, StoredChecks, StoredClaim, StoredMoment
+from .schema import SOURCES, EvidenceEvent, MatchStore, Segment, StoredChecks, StoredClaim, StoredMoment
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUN = REPO_ROOT / "docs" / "LLM_RUN.json"
@@ -132,6 +132,19 @@ class SameSecond:
         return bool(self.published)
 
 
+@dataclass(frozen=True)
+class SegmentStat:
+    """What the segments of one card say about its claims (report only)."""
+
+    match_id: str
+    moment_id: str
+    source: str
+    with_claim: int  # segments that carry a claim id
+    unplaced: tuple[tuple[str, str], ...]  # (claim id, metric) of claims with no value in the sentence
+    mismatched: tuple[str, ...]  # claim ids whose segment text differs from the claim's `display`
+    plain_digits: int  # plain segments that contain a digit (minutes in phrases, names with digits...)
+
+
 @dataclass
 class BuildResult:
     run_id: str
@@ -142,6 +155,7 @@ class BuildResult:
     fallbacks: list[Fallback] = field(default_factory=list)
     same_second: list[SameSecond] = field(default_factory=list)
     unused_run_cards: list[str] = field(default_factory=list)  # run cards the current selector does not pick
+    segment_stats: list[SegmentStat] = field(default_factory=list)
 
 
 # --- building ---------------------------------------------------------------------------------------
@@ -264,13 +278,16 @@ def build_match(
                 tuple(f"#{e.seq} {e.type.value}" for e in later), menu_drift, card_drift,
             ))
 
+        claims = _claims(rec.claims, ids, by_seq)
+        segments = _segments(rec, ids, claims)
+        result.segment_stats.append(_segment_stat(match_id, m.id, rec.source, segments, claims))
         cards.append(StoredMoment(
             id=m.id, period=m.period, minute=m.minute, second=m.second,
             minute_label=fmt_minute(m.period, m.minute), at_seq=m.at_seq, type=m.type, team=m.team,
-            importance=m.importance, text=rec.text, source=rec.source,
+            importance=m.importance, text=rec.text, segments=segments, source=rec.source,
             prompt_version=prompt_version if rec.source == "llm" else config.template_prompt_version,
             run_id=None if rec.source == "template" else run_id,
-            claims=_claims(rec.claims, ids, by_seq), trace=[],
+            claims=claims, trace=[],
             checks=StoredChecks(
                 lint_issues=len(rec.lint_issues), claims_total=len(rec.verification),
                 claims_verified=sum(r.ok for r in rec.verification),
@@ -284,6 +301,33 @@ def build_match(
         events_sha256=hashlib.sha256(events_path.read_bytes()).hexdigest(),
         teams={side: teams[side]["name"] for side in ("home", "away")},
         final_score=events[-1].score, run_id=run_id, prompt_version=prompt_version, moments=cards,
+    )
+
+
+def _segments(rec: NarrationRecord, ids: Sequence[str], claims: Sequence[StoredClaim]) -> list[Segment]:
+    """The card text in pieces; a piece's claim index becomes the claim id. Never published if it does not add up."""
+    if "".join(p.text for p in rec.parts) != rec.text:
+        raise PublishError(f"{rec.moment_id}: the text pieces do not join to the card text")
+    known = {c.id for c in claims}
+    out = []
+    for p in rec.parts:
+        cid = None if p.claim is None else ids[p.claim]
+        if cid is not None and cid not in known:
+            raise PublishError(f"{rec.moment_id}: a text piece names the unknown claim {cid!r}")
+        out.append(Segment(text=p.text, claim_id=cid))
+    return out
+
+
+def _segment_stat(match_id: str, moment_id: str, source: str, segments: Sequence[Segment],
+                  claims: Sequence[StoredClaim]) -> SegmentStat:
+    shown = {s.claim_id for s in segments if s.claim_id}
+    by_id = {c.id: c for c in claims}
+    return SegmentStat(
+        match_id, moment_id, source,
+        with_claim=sum(s.claim_id is not None for s in segments),
+        unplaced=tuple((c.id, c.metric) for c in claims if c.id not in shown),
+        mismatched=tuple(s.claim_id for s in segments if s.claim_id and s.text != by_id[s.claim_id].display),
+        plain_digits=sum(s.claim_id is None and any(ch.isdigit() for ch in s.text) for s in segments),
     )
 
 
@@ -378,6 +422,7 @@ def render_report(result: BuildResult) -> str:
     if result.unused_run_cards:
         lines += ["", "Run cards the current selector does not pick (not published from the run): "
                   + ", ".join(f"`{i}`" for i in result.unused_run_cards) + "."]
+    lines += _segment_report(result)
     affected = sum(s.affects_card for s in result.same_second)
     lines += [
         "",
@@ -402,6 +447,40 @@ def render_report(result: BuildResult) -> str:
             )
     lines += ["", f"Moments: {len(result.same_second)}; published cards affected: {affected}.", ""]
     return "\n".join(lines)
+
+
+def _segment_report(result: BuildResult) -> list[str]:
+    stats = result.segment_stats
+    lines = [
+        "",
+        "## Segments",
+        "",
+        "Each card's text is stored in pieces (`segments`); a piece that states a claim's value carries that claim's id. "
+        "The pieces are written by the code that writes the text (slot filling, template builders), never matched "
+        "afterwards. Joined, they equal the card text (a card where they do not is not published).",
+        "",
+        "| Source | Cards | Pieces with a claim id | Claims with no value in the sentence | Piece text ≠ claim display "
+        "| Plain pieces with a digit |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for src in SOURCES:
+        rows = [s for s in stats if s.source == src]
+        lines.append(
+            f"| {src} | {len(rows)} | {sum(s.with_claim for s in rows)} | {sum(len(s.unplaced) for s in rows)} "
+            f"| {sum(len(s.mismatched) for s in rows)} | {sum(s.plain_digits for s in rows)} |"
+        )
+    by_metric: dict[str, int] = {}
+    for s in stats:
+        for _, metric in s.unplaced:
+            by_metric[metric] = by_metric.get(metric, 0) + 1
+    lines += [
+        "",
+        "Claims with no value in the sentence are claims the sentence states in words (\"was sent off\" for a red "
+        "card count of 1, \"scored\" for a goal count of 1, \"drew level\" for a margin); they stay in `claims` "
+        "and in the Receipt, without a piece to underline: "
+        + (", ".join(f"`{m}` {n}" for m, n in sorted(by_metric.items())) or "none") + ".",
+    ]
+    return lines
 
 
 def outputs(result: BuildResult, out_dir: Path, report: Path) -> dict[Path, str]:

@@ -185,3 +185,32 @@ def test_same_second_cases(result):
         assert not s.affects_card
         assert [d.claim_id for d in s.menu] in (["score_away"], ["score_home"])
         assert any(e.endswith(" goal") for e in s.later_events)
+
+
+# --- segments ------------------------------------------------------------------------------------
+
+
+def test_every_card_has_segments_that_join_to_its_text(result):
+    for s in result.stores:
+        for card in s.moments:
+            assert card.segments
+            assert "".join(seg.text for seg in card.segments) == card.text
+            assert all(seg.text for seg in card.segments)
+            ids = {c.id for c in card.claims}
+            assert {seg.claim_id for seg in card.segments if seg.claim_id} <= ids
+
+
+def test_claim_segments_show_the_claim_display(result):
+    assert not [s for s in result.segment_stats if s.mismatched]
+    n = sum(seg.claim_id is not None for s in result.stores for c in s.moments for seg in c.segments)
+    assert n > 0
+
+
+def test_llm_and_template_cards_both_have_claim_segments(result):
+    for source in ("llm", "template"):
+        cards = [c for s in result.stores for c in s.moments if c.source == source]
+        assert cards and any(seg.claim_id for c in cards for seg in c.segments)
+
+
+def test_report_lists_the_segment_numbers(result):
+    assert "## Segments" in outputs(result, DEFAULT_OUT_DIR, DEFAULT_REPORT)[DEFAULT_REPORT]

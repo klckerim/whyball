@@ -53,6 +53,13 @@ class StoredChecks(_Model):
     claims_verified: int  # of those, the ones verify_claim accepted
 
 
+class Segment(_Model):
+    """A piece of the card text. `claim_id` is set only on a piece that states a claim's value."""
+
+    text: str
+    claim_id: str | None = None
+
+
 class StoredMoment(_Model):
     id: str
     period: int
@@ -64,6 +71,7 @@ class StoredMoment(_Model):
     team: str | None
     importance: float
     text: str
+    segments: list[Segment]  # the text in pieces: joined, they equal `text`
     source: Source
     prompt_version: str  # of the narrator that wrote the published text
     run_id: str | None  # the LLM run the card was replayed from (None for template cards)

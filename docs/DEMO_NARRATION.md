@@ -29,6 +29,18 @@ Drafts that no longer pass with the current code.
 
 None.
 
+## Segments
+
+Each card's text is stored in pieces (`segments`); a piece that states a claim's value carries that claim's id. The pieces are written by the code that writes the text (slot filling, template builders), never matched afterwards. Joined, they equal the card text (a card where they do not is not published).
+
+| Source | Cards | Pieces with a claim id | Claims with no value in the sentence | Piece text ≠ claim display | Plain pieces with a digit |
+|---|---:|---:|---:|---:|---:|
+| llm | 15 | 44 | 16 | 0 | 17 |
+| template | 10 | 30 | 0 | 0 | 20 |
+| template_fallback | 0 | 0 | 0 | 0 | 0 |
+
+Claims with no value in the sentence are claims the sentence states in words ("was sent off" for a red card count of 1, "scored" for a goal count of 1, "drew level" for a margin); they stay in `claims` and in the Receipt, without a piece to underline: `goals` 8, `penalties_saved` 1, `red_cards` 2, `score_margin` 5.
+
 ## Same-second check
 
 A claim ends at the moment's second (`MatchTime`), so `measure` also counts events of that second that come after the moment's own event (`at_seq`). Each moment's menu claims and its published claims are measured twice, with every event up to the end second and with events up to `at_seq`; listed when the value or the counted events differ.
