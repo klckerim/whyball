@@ -100,7 +100,7 @@ describe("pitch", () => {
 });
 
 describe("lower third", () => {
-  it.each(fx.moments.map((m) => [m.id, m] as const))("%s: glyph, minute, seal, source, plain text", (_, m) => {
+  it.each(fx.moments.map((m) => [m.id, m] as const))("%s: glyph, minute, seal, source, text with claim values", (_, m) => {
     const { container } = render(<LowerThird moment={m} eventMatchId={fx.detail.event_match_id} placement="stage" />);
     const minute = container.querySelector("[data-event-id]")!;
     expect(minute.getAttribute("data-event-id")).toBe(eventId(fx.detail.event_match_id, m.at_seq));
@@ -111,7 +111,9 @@ describe("lower third", () => {
     const text = container.querySelector("[data-card-id]")!;
     expect(text.getAttribute("data-card-id")).toBe(m.id);
     expect(text.textContent).toBe(m.text);
-    expect(text.children.length).toBe(0); // one plain block: the store has no value spans
+    // claim values are Facts that carry the claim id and the claim's display; the rest is plain text
+    const values = [...text.querySelectorAll("[data-claim-id]")].map((el) => [el.getAttribute("data-claim-id"), el.textContent]);
+    expect(values).toEqual(m.segments.filter((s) => s.claim_id).map((s) => [s.claim_id, s.text]));
   });
 });
 

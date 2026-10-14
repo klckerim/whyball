@@ -2,7 +2,8 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { matchFixtures } from "../test/fixtures";
+import { matchFixtures, metricsFixture } from "../test/fixtures";
+import { SentenceText } from "./SentenceText";
 import { scanJsx } from "../test/jsxScan";
 import { eventId, Fact, NO_DATA } from "./Fact";
 import { ALLOWED } from "./provenance.allow";
@@ -64,6 +65,60 @@ describe("T2: Fact carries an id from the payload and the exact value", () => {
         }
       }
     }
+  });
+
+  it("renders the other claim fields (window, subject, label) from the claim and keeps its id", () => {
+    for (const { match, claim } of claims) {
+      for (const field of ["start", "end", "player", "team", "label"] as const) {
+        const { container, unmount } = render(<Fact claim={claim} field={field} teams={match.detail.teams} />);
+        const el = container.querySelector("[data-claim-id]")!;
+        expect(el.getAttribute("data-claim-id")).toBe(claim.id);
+        const raw = claim[field];
+        const expected = raw === null ? NO_DATA : field === "team" ? match.detail.teams[raw as "home" | "away"] : raw;
+        expect(el.textContent).toBe(expected);
+        expect(el.hasAttribute("data-missing")).toBe(raw === null);
+        unmount();
+      }
+    }
+  });
+
+  it("renders every metric's rolling window length from /api/metrics", () => {
+    const claim = claims[0]!.claim;
+    for (const info of metricsFixture.metrics) {
+      const { container, unmount } = render(<Fact claim={claim} window={info.window} />);
+      expect(container.textContent).toBe(info.window.minutes == null ? NO_DATA : String(info.window.minutes));
+      expect(container.querySelector("[data-claim-id]")!.getAttribute("data-claim-id")).toBe(claim.id);
+      unmount();
+    }
+  });
+
+  it("renders the recorded checks of every card with its card id", () => {
+    for (const { moment } of cards) {
+      for (const field of ["lint_issues", "claims_total", "claims_verified"] as const) {
+        const { container, unmount } = render(<Fact checks={moment.checks} cardId={moment.id} field={field} />);
+        const el = container.querySelector("[data-card-id]")!;
+        expect(el.getAttribute("data-card-id")).toBe(moment.id);
+        expect(el.textContent).toBe(String(moment.checks[field]));
+        unmount();
+      }
+    }
+  });
+
+  it.each(cards.map((c) => [c.moment.id, c.moment] as const))("%s: the sentence is its segments, claim values are Facts", (_, moment) => {
+    for (const interactive of [false, true]) {
+      const { container, unmount } = render(<p><SentenceText segments={moment.segments} claims={moment.claims} interactive={interactive} /></p>);
+      expect(container.textContent).toBe(moment.text);
+      const shown = [...container.querySelectorAll("[data-claim-id]")].map((el) => [el.getAttribute("data-claim-id"), el.textContent]);
+      expect(shown).toEqual(moment.segments.filter((s) => s.claim_id).map((s) => [s.claim_id, s.text]));
+      for (const [id, text] of shown) expect(moment.claims.find((c) => c.id === id)!.display).toBe(text);
+      unmount();
+    }
+  });
+
+  it("draws a segment that names an unknown claim as plain text, not as a fact", () => {
+    const { container } = render(<p><SentenceText segments={[{ text: "9", claim_id: "nope" }]} claims={[]} /></p>);
+    expect(container.querySelector("[data-claim-id]")).toBeNull();
+    expect(container.textContent).toBe("9");
   });
 
   it("never shows a missing value as zero", () => {

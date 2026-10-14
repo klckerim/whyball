@@ -42,3 +42,30 @@
 .seal[data-verified="false"] {
   color: var(--muted);
 }
+
+/* Claim values inside a sentence: underlined; in the Receipt they are buttons. Selection is shown by a
+ * heavier weight and a filled background as well as the underline, so it never rests on colour. */
+.value,
+.valueButton {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--accent-ink);
+}
+.valueButton {
+  margin: 0;
+  padding: 0 0.12em;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.valueButton:hover {
+  background: var(--surface-2);
+}
+.valueButton[aria-pressed="true"] {
+  background: var(--surface-2);
+  font-weight: 700;
+  text-decoration-thickness: 4px;
+}

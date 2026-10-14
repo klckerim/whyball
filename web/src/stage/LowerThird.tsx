@@ -1,9 +1,9 @@
-// Lower third: type glyph and label, minute, seal and source badge, and the narration. The stored card
-// has no sentence or value spans, so the text is drawn as one plain block tied to its card id; values
-// inside it are not wrapped in <Fact> (U2 open item).
+// Lower third: type glyph and label, minute, seal and source badge, and the narration. The sentence is
+// drawn from the card's segments: claim values are <Fact>s, everything else is plain text.
 import type { Moment } from "../api/types";
 import { eventId, Fact } from "../design/Fact";
 import { Seal } from "../design/Seal";
+import { SentenceText } from "../design/SentenceText";
 import { SourceBadge } from "../design/SourceBadge";
 import { TypeGlyph, typeLabel } from "../design/TypeGlyph";
 import styles from "./stage.module.css";
@@ -33,7 +33,7 @@ export function LowerThird({ moment, eventMatchId, placement }: Props) {
         </span>
       </header>
       <p className={styles.ltText} data-card-id={moment.id}>
-        {moment.text}
+        <SentenceText segments={moment.segments} claims={moment.claims} />
       </p>
     </section>
   );

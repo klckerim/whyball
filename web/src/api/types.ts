@@ -12,6 +12,7 @@ export type Claim = Schemas["ClaimOut"];
 export type Evidence = Schemas["EvidenceOut"];
 export type Metrics = Schemas["MetricsOut"];
 export type MetricInfo = Schemas["MetricInfo"];
+export type Segment = Schemas["Segment"];
 export type Health = Schemas["Health"];
 export type Period = Schemas["Period"];
 export type Series = Schemas["Series"];

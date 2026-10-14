@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,6 +60,7 @@ afterEach(() => {
 });
 
 const narration = () => screen.getByRole("region", { name: "Narration" });
+const cardText = () => narration().querySelector("[data-card-id]")?.textContent;
 
 describe("routes and states", () => {
   it("/ shows the first match from the API, paused on its first model card", async () => {
@@ -68,7 +69,7 @@ describe("routes and states", () => {
     const first = matchFixtures[0]!;
     const llm = first.moments.find((m) => m.source === "llm")!;
     await waitFor(() => expect(narration()).toBeTruthy());
-    expect(within(narration()).getByText(llm.text)).toBeTruthy();
+    expect(cardText()).toBe(llm.text);
     expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
     expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe(first.summary.id);
   });
@@ -77,7 +78,7 @@ describe("routes and states", () => {
     serve();
     const card = red.moments.find((m) => m.type === "red_card")!;
     renderAt(`/match/${red.summary.id}?moment=${card.id}`);
-    await waitFor(() => expect(within(narration()).getByText(card.text)).toBeTruthy());
+    await waitFor(() => expect(cardText()).toBe(card.text));
     expect(screen.getByRole("slider", { name: "Match time" }).getAttribute("aria-valuenow")).toBe(String(card.t));
   });
 
@@ -144,7 +145,7 @@ describe("transport and keyboard", () => {
   async function ready() {
     serve();
     renderAt(`/match/${red.summary.id}?moment=${red.moments[2]!.id}`);
-    await waitFor(() => expect(within(narration()).getByText(red.moments[2]!.text)).toBeTruthy());
+    await waitFor(() => expect(cardText()).toBe(red.moments[2]!.text));
   }
 
   it("Space plays and pauses; arrows step moments; G toggles guides; ? opens help", async () => {
@@ -154,10 +155,10 @@ describe("transport and keyboard", () => {
     fireEvent.keyDown(document.body, { key: " " });
     expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
     fireEvent.keyDown(document.body, { key: "ArrowRight" });
-    expect(within(narration()).getByText(red.moments[3]!.text)).toBeTruthy();
+    expect(cardText()).toBe(red.moments[3]!.text);
     fireEvent.keyDown(document.body, { key: "ArrowLeft" });
     fireEvent.keyDown(document.body, { key: "ArrowLeft" });
-    expect(within(narration()).getByText(red.moments[1]!.text)).toBeTruthy();
+    expect(cardText()).toBe(red.moments[1]!.text);
     expect(screen.queryByTestId("guides")).toBeNull();
     fireEvent.keyDown(document.body, { key: "g" });
     expect(screen.getByTestId("guides")).toBeTruthy();
@@ -176,7 +177,7 @@ describe("transport and keyboard", () => {
     expect(screen.queryByRole("region", { name: "Narration" })).toBeNull(); // seek clears the lower third
     const target = red.moments[5]!;
     fireEvent.click(screen.getByRole("button", { name: `${typeLabel(target.type)}, ${target.minute_label}` }));
-    expect(within(narration()).getByText(target.text)).toBeTruthy();
+    expect(cardText()).toBe(target.text);
     expect(slider.getAttribute("aria-valuetext")).toBe(target.minute_label);
   });
 
