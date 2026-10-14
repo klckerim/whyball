@@ -5,6 +5,7 @@ import { eventId } from "../design/Fact";
 import { SAFE_AREA } from "../design/safeArea";
 import { eventAt, positioned } from "../state/match";
 import { matchFixtures } from "../test/fixtures";
+import { CHECKED_BY_CAPITAL } from "../design/checker";
 import { LowerThird } from "./LowerThird";
 import { OnAir } from "./OnAir";
 import { Pitch, PITCH, toSvg } from "./Pitch";
@@ -136,7 +137,7 @@ describe("On Air layout", () => {
     expect(within(program).queryByRole("region", { name: "Narration" })).toBeNull();
     expect(within(program).getByRole("group", { name: "Score" })).toBeTruthy();
     expect(within(program).getByText("SYNTHETIC DATA")).toBeTruthy();
-    expect(within(program).getByRole("img", { name: /^Checked by code/ })).toBeTruthy();
+    expect(within(program).getByRole("img", { name: new RegExp(`^${CHECKED_BY_CAPITAL}`) })).toBeTruthy();
     const panel = screen.getByRole("region", { name: "Narration" });
     expect(program.contains(panel)).toBe(false);
   });

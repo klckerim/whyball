@@ -10,6 +10,7 @@ import { shortcutFor } from "./keys";
 import { openAt } from "./MatchView";
 import { bandPaths } from "./PressureBand";
 import { SEEK, timeAtX } from "./Timeline";
+import { CHECKED_BY_CAPITAL } from "../design/checker";
 import { FLIP_MS } from "./useFlip";
 
 const red = matchFixtures.find((m) => m.summary.id === "red_card_swing_seed42")!;
@@ -283,7 +284,7 @@ describe("Flip between On Air and Proof", () => {
     await open(false);
     const button = screen.getByRole("button", { name: /Proof · P/ });
     expect(button.textContent).toContain("Proof · P");
-    expect(button.textContent).toContain("Checked by code");
+    expect(button.textContent).toContain(CHECKED_BY_CAPITAL);
     fireEvent.click(button);
     expect(document.querySelector('[data-face="air"]')).toBeTruthy(); // still turning
     settle();

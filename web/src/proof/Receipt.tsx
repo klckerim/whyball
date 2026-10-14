@@ -4,6 +4,7 @@
 import type { Claim, MatchDetail, MetricInfo, Metrics, Moment } from "../api/types";
 import { Failed } from "../app/states";
 import type { Async } from "../app/useAsync";
+import { CHECKED_BY } from "../design/checker";
 import { eventId, Fact } from "../design/Fact";
 import { SentenceText } from "../design/SentenceText";
 import { SourceBadge } from "../design/SourceBadge";
@@ -151,7 +152,7 @@ function VerificationRecord({ moment }: { moment: Moment }) {
   return (
     <section className={styles.record} aria-label="Verification record">
       <h3 className={styles.h3}>
-        Verification record <span className={styles.codeTag}>checked by code</span>
+        Verification record <span className={styles.codeTag}>{CHECKED_BY}</span>
       </h3>
       <dl className={styles.facts}>
         {rows.map(([label, field]) => (

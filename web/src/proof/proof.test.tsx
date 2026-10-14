@@ -3,6 +3,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Moment } from "../api/types";
+import { CHECKED_BY } from "../design/checker";
 import { matchFixtures, metricsFixture, type MatchFixture } from "../test/fixtures";
 import { nextIndex } from "./MomentRail";
 import { ProofView } from "./ProofView";
@@ -180,7 +181,7 @@ describe("verification record", () => {
     const moment = red.moments[0]!;
     render(<Harness fx={red} start={moment.id} />);
     const rec = screen.getByRole("region", { name: "Verification record" });
-    expect(rec.textContent).toContain("checked by code");
+    expect(rec.textContent).toContain(CHECKED_BY);
     const nums = [...rec.querySelectorAll("[data-card-id]")].map((el) => [el.getAttribute("data-field"), el.textContent]);
     expect(nums).toEqual([["lint_issues", String(moment.checks.lint_issues)], ["claims_total", String(moment.checks.claims_total)], ["claims_verified", String(moment.checks.claims_verified)]]);
   });
@@ -264,6 +265,11 @@ describe("states", () => {
 
 describe("wording", () => {
   const sources = import.meta.glob<string>(["/src/**/*.{ts,tsx}", "!/src/**/*.test.*"], { query: "?raw", import: "default", eager: true });
+  it("names who ran the checks in one constant only", () => {
+    const files = Object.entries(sources).filter(([, text]) => /checked by code/i.test(text)).map(([p]) => p);
+    expect(files).toEqual(["/src/design/checker.ts"]);
+  });
+
   it("never says an agent verified anything (no Verifier agent exists yet)", () => {
     expect(Object.keys(sources).length).toBeGreaterThan(10);
     const hits = Object.entries(sources).filter(([, text]) => /agent[- ]verif|verified by (an )?agent|verifier agent/i.test(text));

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { Source } from "../api/types";
 import { matchFixtures } from "../test/fixtures";
+import { CHECKED_BY_CAPITAL } from "./checker";
 import { isVerified, Seal } from "./Seal";
 import { SourceBadge, SOURCES } from "./SourceBadge";
 import { MOMENT_TYPES, TypeGlyph, typeLabel } from "./TypeGlyph";
@@ -58,7 +59,7 @@ describe("Seal", () => {
     expect(isVerified(m.checks)).toBe(true);
     render(<Seal checks={m.checks} />);
     expect(screen.getByRole("img").getAttribute("data-verified")).toBe("true");
-    expect(screen.getByRole("img").textContent).toBe("Checked by code");
+    expect(screen.getByRole("img").textContent).toBe(CHECKED_BY_CAPITAL);
   });
 
   it.each([

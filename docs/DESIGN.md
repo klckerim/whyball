@@ -185,7 +185,7 @@ Newest entries at the bottom.
   claim's metric (`data-claim-id`, `data-field="window_minutes"`, text from `/api/metrics`), the card's recorded checks
   (`data-card-id`), and event `outcome`. `provenance.allow.ts` stays empty.
 - The seal says "Checked by code" (was "Verified"): lint and claim verification are run by code and no Verifier
-  agent exists yet. The Receipt's record says the same and claims nothing beyond the card's `checks`.
+  agent exists yet. The wording is one constant (`web/src/design/checker.ts`, `CHECKED_BY`): change it there when the Verifier agent arrives (P2); a test keeps it the only place. The Receipt's record says the same and claims nothing beyond the card's `checks`.
 
 ## D29. Proof layout [design parameter]
 - Three columns (rail 220–280 px | Receipt | evidence 320–440 px) from 1024 px; below, one column: the rail becomes a
