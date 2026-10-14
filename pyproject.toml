@@ -10,7 +10,9 @@ requires-python = ">=3.12"
 dependencies = ["pydantic>=2", "fastapi>=0.115", "uvicorn[standard]>=0.30", "httpx>=0.27"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+# openai: tests/test_llm_narrator.py checks the draft schema with its strict-schema helper
+# (otherwise only reached through the llm extra).
+dev = ["pytest>=8", "openai>=3.29"]
 # For Foundry (FoundryNarrator, app/llm/hello.py); the core and the tests do not need it.
 llm = ["agent-framework-foundry", "azure-identity", "python-dotenv"]
 
