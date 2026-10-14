@@ -110,7 +110,7 @@ def test_the_record_holds_text_pieces_claims_and_evidence_and_nothing_of_the_nar
     assert set(rec) == {"moment", "teams", "text", "pieces", "claims", "events"}
     assert rec["text"] == g.text and "".join(p["text"] for p in rec["pieces"]) == g.text
     assert {p["claim_id"] for p in rec["pieces"] if p["claim_id"]} <= {c["id"] for c in rec["claims"]}
-    assert all(set(c) == {"id", "metric", "team", "player", "value", "from", "to", "evidence"} for c in rec["claims"])
+    assert all({"id", "metric", "definition", "window", "team", "player", "value", "to", "evidence"} <= set(c) <= {"id", "metric", "definition", "window", "team", "player", "value", "from", "to", "evidence"} for c in rec["claims"])
     raw = json.dumps(rec)
     assert "{clause" not in raw and "{value" not in raw  # no placeholder template, no draft history
 
@@ -190,3 +190,12 @@ def test_the_response_schemas_use_only_what_strict_structured_outputs_take():
         for keyword in ("minLength", "maxLength", "pattern", "minItems", "maxItems", "minimum", "maximum"):
             assert keyword not in raw, (model.__name__, keyword)
     assert set(json.loads(json.dumps(to_strict_json_schema(VerifierOut)))["required"]) == {"ok", "issues"}
+
+
+def test_the_verifier_prompt_is_still_verifier_v1():
+    import hashlib
+
+    from app.agents.verifier import VERIFIER_VERSION
+
+    assert VERIFIER_VERSION == "verifier-v1"
+    assert hashlib.sha256(VERIFIER_PROMPT.encode()).hexdigest()[:16] == "e19185ba149f1a39"

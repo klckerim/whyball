@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from app.analytics.moments import Moment
 from app.explain.claims import Claim, parse_ref
 from app.explain.config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
-from app.explain.labels import metric_label
+from app.explain.labels import METRIC_DEFINITIONS, METRICS_IGNORING_START, metric_label, metric_window
 from app.explain.llm_narrator import ChatClient, ChatResult
 from app.explain.narrator import BudgetExceeded, Feedback, FeedbackItem
 from app.explain.phrases import event_phrase
@@ -131,16 +131,25 @@ def check_verdict(out: VerifierOut, text: str) -> VerifierOut:
 
 
 def _claim_record(cid: str, claim: Claim, ctx: SlotContext) -> dict:
-    return {
+    """One claim as the Verifier reads it. `window` and `definition` are the metric's own (the ones /api/metrics serves:
+    kind and rolling minutes, and the definition from `claims.measure`'s own words). `from` is given only for metrics
+    that use the claim's start: for a state at the end (score...) or a rolling window (pressure balance) it was not
+    part of the measurement and would mislead (the canary's false alarm on "over the last 10 minutes")."""
+    kind, minutes = metric_window(claim.metric)
+    record = {
         "id": cid,
         "metric": metric_label(claim.metric, ctx.language),
+        "definition": METRIC_DEFINITIONS[claim.metric],
+        "window": {"type": kind, "minutes": minutes},
         "team": ctx.teams.get(claim.subject.team) if claim.subject.team else None,
         "player": claim.subject.player,
         "value": format_value(claim.metric, claim.value, ctx.language),
-        "from": fmt_minute(claim.start.period, claim.start.minute),
         "to": fmt_minute(claim.end.period, claim.end.minute),
         "evidence": list(claim.event_ids),
     }
+    if claim.metric not in METRICS_IGNORING_START:
+        record["from"] = fmt_minute(claim.start.period, claim.start.minute)
+    return record
 
 
 def verifier_record(moment: Moment, guard: GuardResult, events: Sequence[Event], ctx: SlotContext) -> dict:

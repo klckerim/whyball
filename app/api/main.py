@@ -26,7 +26,7 @@ from starlette.types import Scope
 
 from app.analytics.config import DEFAULT_CONFIG
 from app.explain.claims import COMPARISONS, KINDS, METRIC_KINDS
-from app.explain.labels import METRIC_DEFINITIONS, METRIC_LABELS
+from app.explain.labels import METRIC_DEFINITIONS, METRIC_LABELS, metric_window
 from app.publish.schema import SOURCES, EvidenceEvent, Score, StoredClaim, StoredMoment, Teams
 
 from .data import TIMELINE_TYPES, Match, load_matches
@@ -155,9 +155,8 @@ def _summary(m: Match) -> MatchSummary:
 
 
 def _metric_window(metric: str) -> MetricWindow:
-    if metric == "pressure_balance":
-        return MetricWindow(type="rolling", minutes=DEFAULT_CONFIG.pressure_window_min)
-    return MetricWindow(type="claim_range")
+    kind, minutes = metric_window(metric, DEFAULT_CONFIG)
+    return MetricWindow(type=kind, minutes=minutes)  # type: ignore[arg-type]
 
 
 METRICS = MetricsOut(

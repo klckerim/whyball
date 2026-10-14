@@ -84,6 +84,18 @@ def _definitions(c: AnalyticsConfig = DEFAULT_CONFIG) -> dict[str, str]:
 
 METRIC_DEFINITIONS: dict[str, str] = _definitions()
 
+# Metrics whose value does not depend on the claim's start: a state at the claim's end (score, score margin, players on
+# the pitch) or a rolling window that closes at the claim's end (pressure balance). For these the claim's "from" is not part
+# of what was measured; tests/test_metric_windows.py checks the set against `claims.measure`.
+METRICS_IGNORING_START: frozenset[str] = frozenset({"score", "score_margin", "players_on_pitch", "pressure_balance"})
+
+
+def metric_window(metric: str, c: AnalyticsConfig = DEFAULT_CONFIG) -> tuple[str, float | None]:
+    """(window type, rolling minutes) as /api/metrics serves it: rolling for the pressure balance, else claim_range."""
+    if metric == "pressure_balance":
+        return "rolling", c.pressure_window_min
+    return "claim_range", None
+
 
 # EN singular forms (when the value is 1).
 SINGULAR_EN: dict[str, str] = {

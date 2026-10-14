@@ -4,11 +4,12 @@ from eval.verifier_smoke import CLASSES, select, summary
 
 
 def test_selection_gives_guard_accepted_drafts_of_distinct_moments_per_class_and_clean_ones():
-    drafts, notes = select(2)
+    drafts, notes = select(2, n_clean=5)
     assert set(drafts) == {*CLASSES, "clean"} and notes == []
     for kind, items in drafts.items():
-        assert len(items) == 2 and all(d.guard.ok and d.guard.text for d in items)
-        assert len({(d.sample.events[0].match_id, d.sample.moment.id) for d in items}) == 2
+        assert len(items) == (5 if kind == "clean" else 2) and all(d.guard.ok and d.guard.text for d in items)
+        assert len({(d.sample.events[0].match_id, d.sample.moment.id) for d in items}) == len(items)
+    assert sum(any(c.metric == "pressure_balance" for c in d.guard.claims) for d in drafts["clean"]) >= 2
     assert all(d.tag is None for d in drafts["clean"]) and all(d.tag for d in drafts["role_reversed"])
 
 

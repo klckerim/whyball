@@ -2,7 +2,112 @@
   "meta": {
     "verifier_version": "verifier-v1",
     "model": "gpt-5-mini",
-    "n": 4
+    "n": 4,
+    "clean": 8,
+    "development_set": true,
+    "note": "development set: these drafts are excluded from P4's held-out set",
+    "drafts": [
+      {
+        "kind": "wrong_slot_binding",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M001"
+      },
+      {
+        "kind": "wrong_slot_binding",
+        "match": "m-7-dominant_loss",
+        "moment": "m-7-dominant_loss-M003"
+      },
+      {
+        "kind": "wrong_slot_binding",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M003"
+      },
+      {
+        "kind": "wrong_slot_binding",
+        "match": "m-7-dominant_loss",
+        "moment": "m-7-dominant_loss-M007"
+      },
+      {
+        "kind": "role_reversed",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M008"
+      },
+      {
+        "kind": "role_reversed",
+        "match": "m-100",
+        "moment": "m-100-M001"
+      },
+      {
+        "kind": "role_reversed",
+        "match": "m-3-late_comeback",
+        "moment": "m-3-late_comeback-M008"
+      },
+      {
+        "kind": "role_reversed",
+        "match": "m-100",
+        "moment": "m-100-M004"
+      },
+      {
+        "kind": "event_wrong_claim",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M008"
+      },
+      {
+        "kind": "event_wrong_claim",
+        "match": "m-100",
+        "moment": "m-100-M008"
+      },
+      {
+        "kind": "event_wrong_claim",
+        "match": "m-0-late_comeback",
+        "moment": "m-0-late_comeback-M004"
+      },
+      {
+        "kind": "event_wrong_claim",
+        "match": "m-0-late_comeback",
+        "moment": "m-0-late_comeback-M010"
+      },
+      {
+        "kind": "clean",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M001"
+      },
+      {
+        "kind": "clean",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M003"
+      },
+      {
+        "kind": "clean",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M002"
+      },
+      {
+        "kind": "clean",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M004"
+      },
+      {
+        "kind": "clean",
+        "match": "m-7-dominant_loss",
+        "moment": "m-7-dominant_loss-M003"
+      },
+      {
+        "kind": "clean",
+        "match": "m-7-dominant_loss",
+        "moment": "m-7-dominant_loss-M008"
+      },
+      {
+        "kind": "clean",
+        "match": "m-42-red_card_swing",
+        "moment": "m-42-red_card_swing-M006"
+      },
+      {
+        "kind": "clean",
+        "match": "m-7-dominant_loss",
+        "moment": "m-7-dominant_loss-M007"
+      }
+    ]
   },
   "rows": [
     {
@@ -18,17 +123,17 @@
       "issues": [
         {
           "code": "wrong_slot_binding",
-          "reason": "The numeric shot count is attached to the pressure label instead of the pressure metric.",
+          "reason": "The numeric value for shots is placed where the pressure-balance value should appear.",
           "span": "pressure balance over the last 10 minutes of play 1 in their favour."
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1345,
-        "out": 365,
-        "reasoning": 256
+        "in": 1519,
+        "out": 313,
+        "reasoning": 192
       },
-      "duration_ms": 5974
+      "duration_ms": 5993
     },
     {
       "kind": "wrong_slot_binding",
@@ -43,17 +148,17 @@
       "issues": [
         {
           "code": "wrong_slot_binding",
-          "reason": "the shot tally is presented in the wrong order, suggesting Vellorin have zero shots instead of four",
-          "span": "a 0–4 lead in shots"
+          "reason": "The shot advantage is presented with the numbers reversed; Vellorin lead four to zero, not zero to four.",
+          "span": "0–4 lead in shots"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1546,
-        "out": 601,
-        "reasoning": 512
+        "in": 1733,
+        "out": 292,
+        "reasoning": 192
       },
-      "duration_ms": 6770
+      "duration_ms": 3237
     },
     {
       "kind": "wrong_slot_binding",
@@ -63,22 +168,28 @@
       "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play 0 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC +1.00.",
       "verdict": "reject",
       "codes": [
+        "wrong_slot_binding",
         "wrong_slot_binding"
       ],
       "issues": [
         {
           "code": "wrong_slot_binding",
-          "reason": "The pressure value is attributed to Brannoch FC but the pressure claim applies to Morvane Athletic.",
+          "reason": "A shot-count value was attached to the pressure-balance phrase instead of the pressure metric.",
+          "span": "0 in their favour."
+        },
+        {
+          "code": "wrong_slot_binding",
+          "reason": "The pressure-balance value was placed as if it were Brannoch FC's shot count.",
           "span": "Brannoch FC +1.00"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1503,
-        "out": 295,
-        "reasoning": 192
+        "in": 1677,
+        "out": 493,
+        "reasoning": 384
       },
-      "duration_ms": 6864
+      "duration_ms": 4064
     },
     {
       "kind": "wrong_slot_binding",
@@ -93,17 +204,17 @@
       "issues": [
         {
           "code": "wrong_slot_binding",
-          "reason": "Numbers are attached to the wrong labels and therefore describe the wrong stats.",
+          "reason": "The numeric values are attached to the wrong metrics so the shot count and possession percent are mislabelled.",
           "span": "5 of the ball and a 71%–1 lead in shots"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1674,
-        "out": 417,
+        "in": 1861,
+        "out": 398,
         "reasoning": 320
       },
-      "duration_ms": 4541
+      "duration_ms": 4095
     },
     {
       "kind": "role_reversed",
@@ -118,17 +229,17 @@
       "issues": [
         {
           "code": "role_reversed",
-          "reason": "The text describes the player as preventing a goal while the claims show he scored at that minute.",
+          "reason": "The events show Murek Ymberto scored at 84', not that he prevented a goal.",
           "span": "Murek Ymberto kept it out at 84'"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1237,
-        "out": 188,
-        "reasoning": 64
+        "in": 1380,
+        "out": 207,
+        "reasoning": 128
       },
-      "duration_ms": 3504
+      "duration_ms": 3780
     },
     {
       "kind": "role_reversed",
@@ -143,17 +254,17 @@
       "issues": [
         {
           "code": "unsupported_statement",
-          "reason": "The events show he was sent off but do not support that he was the victim of a challenge.",
-          "span": "Iveno Gundrel was the victim of the challenge at 14'."
+          "reason": "Nothing in the claims or events indicates he was a victim of a challenge; the evidence only records a red card for him.",
+          "span": "Iveno Gundrel was the victim of the challenge at 14'"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 973,
-        "out": 194,
+        "in": 1065,
+        "out": 239,
         "reasoning": 128
       },
-      "duration_ms": 2642
+      "duration_ms": 3701
     },
     {
       "kind": "role_reversed",
@@ -168,17 +279,17 @@
       "issues": [
         {
           "code": "role_reversed",
-          "reason": "The text presents the player as having saved the kick while the evidence shows he scored the penalty.",
-          "span": "Sarvik Pelvisto kept the kick out"
+          "reason": "The player is described as saving the kick but the event shows he scored the penalty.",
+          "span": "kept the kick out"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 885,
+        "in": 932,
         "out": 227,
         "reasoning": 128
       },
-      "duration_ms": 2669
+      "duration_ms": 2660
     },
     {
       "kind": "role_reversed",
@@ -193,17 +304,17 @@
       "issues": [
         {
           "code": "role_reversed",
-          "reason": "The text describes the player making a save, but the evidence shows he scored a goal.",
-          "span": "kept it out"
+          "reason": "The text describes the player as making a save while the facts show he scored a goal.",
+          "span": "Hesko Ilvanto kept it out at 29'"
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1067,
-        "out": 197,
+        "in": 1160,
+        "out": 215,
         "reasoning": 128
       },
-      "duration_ms": 2543
+      "duration_ms": 2923
     },
     {
       "kind": "event_wrong_claim",
@@ -218,17 +329,17 @@
       "issues": [
         {
           "code": "event_wrong_claim",
-          "reason": "The 22' goal did not produce a 1–2 scoreline according to the listed events.",
+          "reason": "The 1–2 score is the end-of-range score, not the immediate score after Brestani's 22' goal.",
           "span": "making it Brannoch FC 1–2 Morvane Athletic."
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1168,
-        "out": 403,
-        "reasoning": 320
+        "in": 1267,
+        "out": 511,
+        "reasoning": 384
       },
-      "duration_ms": 4271
+      "duration_ms": 4337
     },
     {
       "kind": "event_wrong_claim",
@@ -243,17 +354,17 @@
       "issues": [
         {
           "code": "event_wrong_claim",
-          "reason": "The 29' goal did not make the score 2–1; the second Tessdal goal occurred at 90+1' so the 29' goal could not have produced that score.",
+          "reason": "The 29' goal did not produce a 2–1 scoreline; a later goal at 90+1' was also required for that score.",
           "span": "making it Tessdal Wanderers 2–1 Isteven United."
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1130,
-        "out": 381,
+        "in": 1223,
+        "out": 362,
         "reasoning": 256
       },
-      "duration_ms": 5123
+      "duration_ms": 3459
     },
     {
       "kind": "event_wrong_claim",
@@ -268,17 +379,17 @@
       "issues": [
         {
           "code": "event_wrong_claim",
-          "reason": "The 18' goal alone did not produce a 0–2 score; the event does not support that scoreline.",
+          "reason": "The 18' goal alone does not establish a 0–2 score; that total reflects an additional goal later.",
           "span": "making it Drunmark Rovers 0–2 Ostmere United."
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1136,
-        "out": 469,
-        "reasoning": 384
+        "in": 1229,
+        "out": 307,
+        "reasoning": 192
       },
-      "duration_ms": 5497
+      "duration_ms": 4331
     },
     {
       "kind": "event_wrong_claim",
@@ -293,17 +404,17 @@
       "issues": [
         {
           "code": "event_wrong_claim",
-          "reason": "The 83' goal did not create a 3–2 scoreline according to the provided events.",
+          "reason": "The 83' goal made the score level; the 3–2 score occurred later at 89'.",
           "span": "making it Drunmark Rovers 3–2 Ostmere United."
         }
       ],
       "error": null,
       "tokens": {
-        "in": 1454,
-        "out": 530,
-        "reasoning": 448
+        "in": 1597,
+        "out": 411,
+        "reasoning": 320
       },
-      "duration_ms": 6195
+      "duration_ms": 4610
     },
     {
       "kind": "clean",
@@ -316,11 +427,28 @@
       "issues": [],
       "error": null,
       "tokens": {
-        "in": 1345,
-        "out": 301,
-        "reasoning": 256
+        "in": 1519,
+        "out": 225,
+        "reasoning": 192
       },
-      "duration_ms": 6933
+      "duration_ms": 3031
+    },
+    {
+      "kind": "clean",
+      "moment": "m-42-red_card_swing-M003",
+      "moment_type": "pressure_shift",
+      "tag": null,
+      "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play +1.00 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC 0.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1677,
+        "out": 228,
+        "reasoning": 192
+      },
+      "duration_ms": 2699
     },
     {
       "kind": "clean",
@@ -333,11 +461,11 @@
       "issues": [],
       "error": null,
       "tokens": {
-        "in": 1069,
-        "out": 140,
+        "in": 1162,
+        "out": 103,
         "reasoning": 64
       },
-      "duration_ms": 2194
+      "duration_ms": 1789
     },
     {
       "kind": "clean",
@@ -350,11 +478,11 @@
       "issues": [],
       "error": null,
       "tokens": {
-        "in": 983,
-        "out": 90,
+        "in": 1075,
+        "out": 93,
         "reasoning": 64
       },
-      "duration_ms": 1595
+      "duration_ms": 1896
     },
     {
       "kind": "clean",
@@ -367,11 +495,62 @@
       "issues": [],
       "error": null,
       "tokens": {
-        "in": 1546,
-        "out": 294,
-        "reasoning": 256
+        "in": 1733,
+        "out": 164,
+        "reasoning": 128
       },
-      "duration_ms": 3977
+      "duration_ms": 2430
+    },
+    {
+      "kind": "clean",
+      "moment": "m-7-dominant_loss-M008",
+      "moment_type": "penalty",
+      "tag": null,
+      "text": "Alvezo Hazulov's penalty was saved at 70'.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 936,
+        "out": 68,
+        "reasoning": 0
+      },
+      "duration_ms": 1596
+    },
+    {
+      "kind": "clean",
+      "moment": "m-42-red_card_swing-M006",
+      "moment_type": "goal",
+      "tag": null,
+      "text": "Davel Selvado scored at 61', making it Brannoch FC 1–1 Morvane Athletic.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1157,
+        "out": 187,
+        "reasoning": 128
+      },
+      "duration_ms": 2301
+    },
+    {
+      "kind": "clean",
+      "moment": "m-7-dominant_loss-M007",
+      "moment_type": "dominance_without_reward",
+      "tag": null,
+      "text": "66' — Vellorin FC dominate without reward: since 46' they have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
+      "verdict": "pass",
+      "codes": [],
+      "issues": [],
+      "error": null,
+      "tokens": {
+        "in": 1861,
+        "out": 134,
+        "reasoning": 64
+      },
+      "duration_ms": 2170
     }
   ]
 }
