@@ -169,8 +169,8 @@
     {
       "at_seq": 127,
       "checks": {
-        "claims_total": 4,
-        "claims_verified": 4,
+        "claims_total": 5,
+        "claims_verified": 5,
         "lint_issues": 0
       },
       "claims": [
@@ -201,8 +201,8 @@
           "value": 1.0
         },
         {
-          "comparison": "approx",
-          "display": "55%",
+          "comparison": "eq",
+          "display": "1",
           "end": "22'",
           "evidence": [
             {
@@ -217,14 +217,40 @@
               "type": "goal"
             }
           ],
-          "id": "possession",
-          "kind": "ratio",
-          "label": "possession",
-          "metric": "possession",
+          "id": "team_goals",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
           "player": null,
           "start": "0'",
           "team": "home",
-          "value": 0.55
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "22'",
+          "evidence": [
+            {
+              "id": "m-42-red_card_swing#127",
+              "minute": 22,
+              "minute_label": "22'",
+              "period": 1,
+              "player": "Murek Brestani",
+              "second": 0,
+              "seq": 127,
+              "team": "home",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
         },
         {
           "comparison": "eq",
@@ -285,20 +311,12 @@
       "minute_label": "22'",
       "period": 1,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
           "claim_id": null,
-          "text": "Murek Brestani scored at 22', and Brannoch FC have had "
-        },
-        {
-          "claim_id": "possession",
-          "text": "55%"
-        },
-        {
-          "claim_id": null,
-          "text": " of the ball since kickoff. The score is Brannoch FC "
+          "text": "Murek Brestani scored at 22', and Brannoch FC opened the scoring. The score is Brannoch FC "
         },
         {
           "claim_id": "score_home",
@@ -319,14 +337,127 @@
       ],
       "source": "llm",
       "team": "home",
-      "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff. The score is Brannoch FC 1–0 Morvane Athletic.",
-      "trace": [],
+      "text": "Murek Brestani scored at 22', and Brannoch FC opened the scoring. The score is Brannoch FC 1–0 Morvane Athletic.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4161,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "team_goals",
+              "margin",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "opener"
+            ],
+            "menu_claims": 6,
+            "note": "Home side opened the scoring, shifting momentum and forcing the visitors onto the back foot and into a chase; it alters the tactical balance and rewards the side that has been enjoying more possession.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "goal",
+              "opener"
+            ]
+          },
+          "started_ms": 8,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1704,
+            "out": 293,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 5163,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-42-red_card_swing#127}, and {clause:opener}. {clause:score}."
+          },
+          "started_ms": 4172,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2254,
+            "out": 470,
+            "reasoning": 384
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 9336,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2205,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 9339,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1504,
+            "out": 97,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 11545,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -587,7 +718,7 @@
       "minute_label": "38'",
       "period": 1,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
@@ -606,13 +737,124 @@
       "source": "llm",
       "team": "home",
       "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4489,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "sent_off",
+              "players",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "score"
+            ],
+            "menu_claims": 5,
+            "note": "A home player was sent off, leaving them down a player and shifting the balance of the match in the opponents' favor, forcing tactical changes and altering the momentum.",
+            "selected": [
+              "sent_off",
+              "players",
+              "score"
+            ]
+          },
+          "started_ms": 335,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1564,
+            "out": 337,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 6735,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-42-red_card_swing#213}, and {clause:players}."
+          },
+          "started_ms": 4826,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2080,
+            "out": 626,
+            "reasoning": 576
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 1,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 11562,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2467,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 11563,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1125,
+            "out": 109,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 14033,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "red_card",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -891,7 +1133,7 @@
       "minute_label": "61'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
@@ -918,13 +1160,123 @@
       "source": "llm",
       "team": "away",
       "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC 1–1 Morvane Athletic.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 3330,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "margin",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 6,
+            "note": "A goal that drew the game level, shifting momentum and restoring parity after the other side had been in front.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "goal",
+              "margin"
+            ]
+          },
+          "started_ms": 338,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1695,
+            "out": 246,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 4402,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-42-red_card_swing#359}, and {clause:equalizer}. {clause:score}."
+          },
+          "started_ms": 3669,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2112,
+            "out": 568,
+            "reasoning": 512
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 3,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 8073,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 3400,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 8078,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1381,
+            "out": 340,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 11480,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -1074,7 +1426,7 @@
       "minute_label": "81'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 14,
       "segments": [
         {
@@ -1109,20 +1461,128 @@
       "source": "llm",
       "team": "home",
       "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 3492,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "pressure",
+              "shots_for",
+              "shots_against"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 5,
+            "note": "Pressure has swung to the home side, who are pressing strongly with recent attempts while the visitors have had none, creating a clear momentum shift and sustained attacking threat.",
+            "selected": [
+              "pressure",
+              "shots_for",
+              "shots_against"
+            ]
+          },
+          "started_ms": 7,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1987,
+            "out": 313,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 4842,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:pressure}, and {clause:shots}."
+          },
+          "started_ms": 3503,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2371,
+            "out": 409,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 4,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 8346,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2837,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 8351,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1770,
+            "out": 181,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 11192,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "pressure_shift",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
       "at_seq": 494,
       "checks": {
-        "claims_total": 6,
-        "claims_verified": 6,
+        "claims_total": 5,
+        "claims_verified": 5,
         "lint_issues": 0
       },
       "claims": [
@@ -1255,32 +1715,6 @@
           "start": "0'",
           "team": "away",
           "value": 2.0
-        },
-        {
-          "comparison": "approx",
-          "display": "50%",
-          "end": "84'",
-          "evidence": [
-            {
-              "id": "m-42-red_card_swing#494",
-              "minute": 84,
-              "minute_label": "84'",
-              "period": 2,
-              "player": "Murek Ymberto",
-              "second": 0,
-              "seq": 494,
-              "team": "away",
-              "type": "goal"
-            }
-          ],
-          "id": "possession",
-          "kind": "ratio",
-          "label": "possession",
-          "metric": "possession",
-          "player": null,
-          "start": "0'",
-          "team": "away",
-          "value": 0.5
         }
       ],
       "id": "m-42-red_card_swing-M008",
@@ -1289,7 +1723,7 @@
       "minute_label": "84'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
@@ -1318,27 +1752,132 @@
         },
         {
           "claim_id": null,
-          "text": " Morvane Athletic and Morvane Athletic have had "
-        },
-        {
-          "claim_id": "possession",
-          "text": "50%"
-        },
-        {
-          "claim_id": null,
-          "text": " of the ball since kickoff."
+          "text": " Morvane Athletic."
         }
       ],
       "source": "llm",
       "team": "away",
-      "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match. The score is Brannoch FC 1–2 Morvane Athletic and Morvane Athletic have had 50% of the ball since kickoff.",
-      "trace": [],
+      "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match. The score is Brannoch FC 1–2 Morvane Athletic.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4345,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "margin",
+              "deficit",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "go_ahead"
+            ],
+            "menu_claims": 7,
+            "note": "A late goal flipped the game: the visitors came from behind to take the lead, shifting momentum and changing the match state.",
+            "selected": [
+              "score_away",
+              "score_home",
+              "go_ahead",
+              "goal"
+            ]
+          },
+          "started_ms": 8,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1950,
+            "out": 317,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 3850,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-42-red_card_swing#494}, and {clause:go_ahead}. {clause:score}."
+          },
+          "started_ms": 4357,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2302,
+            "out": 482,
+            "reasoning": 384
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 8209,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2210,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 8212,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1677,
+            "out": 133,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 10425,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
-        "attempts": 2,
+        "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -1444,12 +1983,12 @@
       "minute_label": "90+1'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 5,
       "segments": [
         {
           "claim_id": null,
-          "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at "
+          "text": "Morvane Athletic lead the pressure balance over the last 10 minutes of play at "
         },
         {
           "claim_id": "pressure",
@@ -1478,19 +2017,127 @@
       ],
       "source": "llm",
       "team": "away",
-      "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",
-      "trace": [],
+      "text": "Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4195,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "pressure",
+              "shots_for",
+              "shots_against"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 5,
+            "note": "Away side have taken control of the pressure in the final phase, producing the only shot in the recent period while their opponents had none, shifting momentum and keeping their advantage.",
+            "selected": [
+              "pressure",
+              "shots_for",
+              "shots_against"
+            ]
+          },
+          "started_ms": 11,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1769,
+            "out": 358,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 4859,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:pressure}, and {clause:shots}."
+          },
+          "started_ms": 4208,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2151,
+            "out": 399,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 3,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 9070,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2066,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 9075,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1551,
+            "out": 121,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 11144,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "pressure_shift",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",
-  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
   "teams": {
     "away": "Morvane Athletic",
     "home": "Brannoch FC"

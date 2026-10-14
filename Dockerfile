@@ -29,7 +29,7 @@ RUN pip install -e ".[monitor]" -c deploy/constraints.txt
 # Demo data, the publication store, and the two docs files `python -m app.publish --check` compares.
 COPY data/demo/ data/demo/
 COPY data/demo_narration/ data/demo_narration/
-COPY docs/LLM_RUN.json docs/DEMO_NARRATION.md docs/
+COPY docs/AGENT_RUN.json docs/DEMO_NARRATION.md docs/
 COPY --from=web /build/web/dist web/dist
 
 RUN useradd --system --uid 10001 --no-create-home whyball

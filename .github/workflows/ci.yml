@@ -71,6 +71,10 @@ jobs:
           found=$(docker run --rm --user root --entrypoint sh whyball:ci -c \
             'find / -xdev \( -name ".env" -o -name ".env.*" -o -name notes -o -name .git \) -not -path "/proc/*" -not -path "*/site-packages/*"')
           if [ -n "$found" ]; then echo "forbidden paths in the image:"; echo "$found"; exit 1; fi
+      - name: Image has no agent code or Agent Framework (the service never runs agents)
+        run: |
+          docker run --rm --entrypoint python whyball:ci -c \
+            "import importlib.util, os, sys; bad = [m for m in ('agent_framework', 'openai') if importlib.util.find_spec(m)]; bad += ['app/agents'] if os.path.exists('app/agents') else []; print(bad); sys.exit(1 if bad else 0)"
       - name: Image starts and answers
         run: |
           docker run -d --name whyball-ci -p 8000:8000 whyball:ci

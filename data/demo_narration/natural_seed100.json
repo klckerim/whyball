@@ -11,8 +11,8 @@
     {
       "at_seq": 84,
       "checks": {
-        "claims_total": 3,
-        "claims_verified": 3,
+        "claims_total": 5,
+        "claims_verified": 5,
         "lint_issues": 0
       },
       "claims": [
@@ -93,6 +93,58 @@
           "start": "0'",
           "team": "away",
           "value": 0.51
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "14'",
+          "evidence": [
+            {
+              "id": "m-100#84",
+              "minute": 14,
+              "minute_label": "14'",
+              "period": 1,
+              "player": "Iveno Gundrel",
+              "second": 10,
+              "seq": 84,
+              "team": "away",
+              "type": "red_card"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "14'",
+          "evidence": [
+            {
+              "id": "m-100#84",
+              "minute": 14,
+              "minute_label": "14'",
+              "period": 1,
+              "player": "Iveno Gundrel",
+              "second": 10,
+              "seq": 84,
+              "team": "away",
+              "type": "red_card"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
         }
       ],
       "id": "m-100-M001",
@@ -101,12 +153,12 @@
       "minute_label": "14'",
       "period": 1,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 10,
       "segments": [
         {
           "claim_id": null,
-          "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to "
+          "text": "Iveno Gundrel was sent off at 14', and Isteven United are down to "
         },
         {
           "claim_id": "players",
@@ -114,7 +166,7 @@
         },
         {
           "claim_id": null,
-          "text": " players on the pitch, and Isteven United have had "
+          "text": " players on the pitch. Isteven United have had "
         },
         {
           "claim_id": "possession",
@@ -122,19 +174,152 @@
         },
         {
           "claim_id": null,
-          "text": " of the ball since kickoff."
+          "text": " of the ball since kickoff, and the score is Tessdal Wanderers "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": " Isteven United."
         }
       ],
       "source": "llm",
       "team": "away",
-      "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to 10 players on the pitch, and Isteven United have had 51% of the ball since kickoff.",
-      "trace": [],
+      "text": "Iveno Gundrel was sent off at 14', and Isteven United are down to 10 players on the pitch. Isteven United have had 51% of the ball since kickoff, and the score is Tessdal Wanderers 0–0 Isteven United.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4578,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "error": "note_has_number",
+            "message": "the note contains a number",
+            "token": "one"
+          },
+          "started_ms": 11,
+          "status": "error",
+          "step": "analyst",
+          "tokens": {
+            "in": 1531,
+            "out": 355,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 0,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "menu": "full",
+            "reason": "note_has_number"
+          },
+          "started_ms": 4589,
+          "status": "ok",
+          "step": "analyst_fallback",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 5729,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-100#84}, and {clause:players}. {clause:possession}, and {clause:score}."
+          },
+          "started_ms": 4592,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2108,
+            "out": 408,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 10324,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2570,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 10328,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1597,
+            "out": 184,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 12901,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "red_card",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -467,8 +652,8 @@
     {
       "at_seq": 175,
       "checks": {
-        "claims_total": 5,
-        "claims_verified": 5,
+        "claims_total": 4,
+        "claims_verified": 4,
         "lint_issues": 0
       },
       "claims": [
@@ -499,8 +684,8 @@
           "value": 1.0
         },
         {
-          "comparison": "eq",
-          "display": "1",
+          "comparison": "approx",
+          "display": "58%",
           "end": "29'",
           "evidence": [
             {
@@ -515,40 +700,14 @@
               "type": "goal"
             }
           ],
-          "id": "team_goals",
-          "kind": "count",
-          "label": "goals",
-          "metric": "goals",
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
           "player": null,
           "start": "0'",
           "team": "home",
-          "value": 1.0
-        },
-        {
-          "comparison": "eq",
-          "display": "1",
-          "end": "29'",
-          "evidence": [
-            {
-              "id": "m-100#175",
-              "minute": 29,
-              "minute_label": "29'",
-              "period": 1,
-              "player": "Hesko Ilvanto",
-              "second": 28,
-              "seq": 175,
-              "team": "home",
-              "type": "goal"
-            }
-          ],
-          "id": "margin",
-          "kind": "state",
-          "label": "goal margin",
-          "metric": "score_margin",
-          "player": null,
-          "start": "0'",
-          "team": "home",
-          "value": 1.0
+          "value": 0.58
         },
         {
           "comparison": "eq",
@@ -609,12 +768,20 @@
       "minute_label": "29'",
       "period": 1,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 28,
       "segments": [
         {
           "claim_id": null,
-          "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers "
+          "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had "
+        },
+        {
+          "claim_id": "possession",
+          "text": "58%"
+        },
+        {
+          "claim_id": null,
+          "text": " of the ball since kickoff. The score is Tessdal Wanderers "
         },
         {
           "claim_id": "score_home",
@@ -635,21 +802,136 @@
       ],
       "source": "llm",
       "team": "home",
-      "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers 1–0 Isteven United.",
-      "trace": [],
+      "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers have had 58% of the ball since kickoff. The score is Tessdal Wanderers 1–0 Isteven United.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 3541,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "team_goals",
+              "margin",
+              "score_home",
+              "score_away",
+              "possession"
+            ],
+            "expanded_clause_ids": [
+              "opener"
+            ],
+            "menu_claims": 6,
+            "note": "Opened the scoring, breaking the deadlock and giving the home side the lead after a sustained period of possession dominance.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "opener",
+              "goal",
+              "possession"
+            ]
+          },
+          "started_ms": 13,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1676,
+            "out": 309,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 9779,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-100#175}, and {clause:possession}. {clause:score}."
+          },
+          "started_ms": 3557,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2330,
+            "out": 910,
+            "reasoning": 832
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 3,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 13339,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2144,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 13344,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1406,
+            "out": 103,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 15492,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
       "at_seq": 317,
       "checks": {
-        "claims_total": 5,
-        "claims_verified": 5,
+        "claims_total": 4,
+        "claims_verified": 4,
         "lint_issues": 0
       },
       "claims": [
@@ -680,8 +962,8 @@
           "value": 1.0
         },
         {
-          "comparison": "approx",
-          "display": "49%",
+          "comparison": "eq",
+          "display": "0",
           "end": "51'",
           "evidence": [
             {
@@ -696,14 +978,14 @@
               "type": "goal"
             }
           ],
-          "id": "possession",
-          "kind": "ratio",
-          "label": "possession",
-          "metric": "possession",
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
           "player": null,
           "start": "0'",
           "team": "away",
-          "value": 0.49
+          "value": 0.0
         },
         {
           "comparison": "eq",
@@ -756,32 +1038,6 @@
           "start": "0'",
           "team": "away",
           "value": 1.0
-        },
-        {
-          "comparison": "eq",
-          "display": "0",
-          "end": "51'",
-          "evidence": [
-            {
-              "id": "m-100#317",
-              "minute": 51,
-              "minute_label": "51'",
-              "period": 2,
-              "player": "Quenlo Pelvisto",
-              "second": 23,
-              "seq": 317,
-              "team": "away",
-              "type": "goal"
-            }
-          ],
-          "id": "margin",
-          "kind": "state",
-          "label": "goal margin",
-          "metric": "score_margin",
-          "player": null,
-          "start": "0'",
-          "team": "away",
-          "value": 0.0
         }
       ],
       "id": "m-100-M005",
@@ -790,20 +1046,12 @@
       "minute_label": "51'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 23,
       "segments": [
         {
           "claim_id": null,
-          "text": "Quenlo Pelvisto scored at 51', and Isteven United have had "
-        },
-        {
-          "claim_id": "possession",
-          "text": "49%"
-        },
-        {
-          "claim_id": null,
-          "text": " of the ball since kickoff. The score is Tessdal Wanderers "
+          "text": "Quenlo Pelvisto scored at 51', and Isteven United drew level. The score is Tessdal Wanderers "
         },
         {
           "claim_id": "score_home",
@@ -819,19 +1067,131 @@
         },
         {
           "claim_id": null,
-          "text": " Isteven United, and Isteven United drew level."
+          "text": " Isteven United."
         }
       ],
       "source": "llm",
       "team": "away",
-      "text": "Quenlo Pelvisto scored at 51', and Isteven United have had 49% of the ball since kickoff. The score is Tessdal Wanderers 1–1 Isteven United, and Isteven United drew level.",
-      "trace": [],
+      "text": "Quenlo Pelvisto scored at 51', and Isteven United drew level. The score is Tessdal Wanderers 1–1 Isteven United.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4083,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "margin",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "equalizer"
+            ],
+            "menu_claims": 6,
+            "note": "The away side struck to level the game, cancelling the hosts' lead and shifting momentum back to an open contest.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "goal",
+              "equalizer"
+            ]
+          },
+          "started_ms": 14,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1667,
+            "out": 245,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 5181,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-100#317}, and {clause:equalizer}. {clause:score}."
+          },
+          "started_ms": 4100,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2093,
+            "out": 696,
+            "reasoning": 640
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 9283,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 3707,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 9287,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1373,
+            "out": 244,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 12996,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -1236,7 +1596,7 @@
       "minute_label": "79'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 1,
       "segments": [
         {
@@ -1287,20 +1647,132 @@
       "source": "llm",
       "team": "home",
       "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots, yet the score is Tessdal Wanderers 1–1 Isteven United.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4245,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "possession",
+              "shots_for",
+              "shots_against",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 6,
+            "note": "Home side controlling possession and outshooting the opposition across the period, yet their dominance has not produced a winning goal so the match remains tied.",
+            "selected": [
+              "possession",
+              "shots_for",
+              "shots_against",
+              "score_home",
+              "score_away"
+            ]
+          },
+          "started_ms": 9,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1877,
+            "out": 346,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 4216,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:dominance}, yet {clause:score}."
+          },
+          "started_ms": 4257,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2463,
+            "out": 136,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 3,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 8475,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2509,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 8480,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1774,
+            "out": 267,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 10993,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "dominance_without_reward",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
       "at_seq": 550,
       "checks": {
-        "claims_total": 5,
-        "claims_verified": 5,
+        "claims_total": 3,
+        "claims_verified": 3,
         "lint_issues": 0
       },
       "claims": [
@@ -1329,58 +1801,6 @@
           "start": "90+1'",
           "team": "home",
           "value": 1.0
-        },
-        {
-          "comparison": "eq",
-          "display": "1",
-          "end": "90+1'",
-          "evidence": [
-            {
-              "id": "m-100#550",
-              "minute": 90,
-              "minute_label": "90+1'",
-              "period": 2,
-              "player": "Brisko Ymberto",
-              "second": 13,
-              "seq": 550,
-              "team": "home",
-              "type": "goal"
-            }
-          ],
-          "id": "margin",
-          "kind": "state",
-          "label": "goal margin",
-          "metric": "score_margin",
-          "player": null,
-          "start": "0'",
-          "team": "home",
-          "value": 1.0
-        },
-        {
-          "comparison": "approx",
-          "display": "52%",
-          "end": "90+1'",
-          "evidence": [
-            {
-              "id": "m-100#550",
-              "minute": 90,
-              "minute_label": "90+1'",
-              "period": 2,
-              "player": "Brisko Ymberto",
-              "second": 13,
-              "seq": 550,
-              "team": "home",
-              "type": "goal"
-            }
-          ],
-          "id": "possession",
-          "kind": "ratio",
-          "label": "possession",
-          "metric": "possession",
-          "player": null,
-          "start": "0'",
-          "team": "home",
-          "value": 0.52
         },
         {
           "comparison": "eq",
@@ -1441,20 +1861,12 @@
       "minute_label": "90+1'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 13,
       "segments": [
         {
           "claim_id": null,
-          "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had "
-        },
-        {
-          "claim_id": "possession",
-          "text": "52%"
-        },
-        {
-          "claim_id": null,
-          "text": " of the ball since kickoff, and the score is Tessdal Wanderers "
+          "text": "Brisko Ymberto scored at 90+1', and the score is Tessdal Wanderers "
         },
         {
           "claim_id": "score_home",
@@ -1475,19 +1887,131 @@
       ],
       "source": "llm",
       "team": "home",
-      "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had 52% of the ball since kickoff, and the score is Tessdal Wanderers 2–1 Isteven United.",
-      "trace": [],
+      "text": "Brisko Ymberto scored at 90+1', and the score is Tessdal Wanderers 2–1 Isteven United.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4524,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "margin",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "go_ahead"
+            ],
+            "menu_claims": 6,
+            "note": "A late go ahead goal broke a draw and put the home side in front, turning the match in stoppage time and deciding the outcome.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "goal",
+              "go_ahead"
+            ]
+          },
+          "started_ms": 9,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1762,
+            "out": 383,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 3442,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-100#550}, and {clause:score}."
+          },
+          "started_ms": 4536,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2125,
+            "out": 369,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 7979,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 1932,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 7982,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1216,
+            "out": 108,
+            "reasoning": 64
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 9917,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",
-  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
   "teams": {
     "away": "Isteven United",
     "home": "Tessdal Wanderers"

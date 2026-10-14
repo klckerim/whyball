@@ -7,9 +7,12 @@ from app.analytics import detect_moments
 from app.explain.selector import select_moments
 from app.generator.freeze import demo_paths
 from app.generator.models import read_jsonl
-from app.publish import SOURCES, MatchStore
+from app.publish import SOURCES, MatchStore, TraceStep
 from app.publish.__main__ import main
 from app.publish.store import DEFAULT_OUT_DIR, DEFAULT_REPORT, DEFAULT_RUN, PublishError, build, outputs
+
+# The pre-agent narrator run: most of these tests are about how a run's drafts are replayed (the default run is the agent's).
+OLD_RUN = DEFAULT_RUN.parent / "LLM_RUN.json"
 
 REGEN_HINT = "the store is out of date; run python -m app.publish"
 RED_CARD = [p for p in demo_paths() if p[2].stem == "red_card_swing_seed42"]
@@ -17,12 +20,17 @@ RED_CARD = [p for p in demo_paths() if p[2].stem == "red_card_swing_seed42"]
 
 @pytest.fixture(scope="module")
 def result():
-    return build()
+    return build(OLD_RUN)
 
 
 @pytest.fixture(scope="module")
 def run_data():
-    return json.loads(DEFAULT_RUN.read_text(encoding="utf-8"))
+    return json.loads(OLD_RUN.read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module")
+def agent_result():
+    return build(DEFAULT_RUN)
 
 
 def _write_run(tmp_path, data):
@@ -54,7 +62,7 @@ def test_repo_store_matches_schema_and_events(scenario, seed, path):
     assert [m.id for m in store.moments] == [m.id for m in detect_moments(events)]
     for m in store.moments:
         assert m.source in SOURCES
-        assert m.trace == []
+        assert [TraceStep.model_validate(t) for t in m.trace] is not None  # a stored trace is a valid trace
         assert m.text.strip() and m.claims
         for c in m.claims:
             assert c.evidence or c.kind == "count"
@@ -153,7 +161,7 @@ def test_missing_or_mismatched_draft_falls_back(tmp_path, run_data, change, code
 # --- difference report ---------------------------------------------------------------------------
 
 
-def test_diff_report_lists_changed_cards(result):
+def test_diff_report_lists_changed_cards(result):  # on the pre-agent run
     assert [d.moment_id for d in result.diffs] == ["m-42-red_card_swing-M008", "m-7-dominant_loss-M003"]
     assert all(d.old != d.new for d in result.diffs)
     m003 = result.diffs[1]
@@ -318,3 +326,24 @@ def test_a_step_written_by_the_agents_validates_against_the_store_schema():
     step = TraceStep.make("narrate", "narrator", attempt=1, started_ms=3, duration_ms=9, input_ref="menu",
                           output={"template": "{clause:goal}."}, tokens=Tokens(1, 2, 3), model="m")
     assert Stored.model_validate(step.to_dict()).model_dump() == step.to_dict()
+
+
+# --- the published agent run (docs/AGENT_RUN.json, the default) ----------------------------------------------
+
+
+def test_the_default_run_is_the_agent_run_and_its_cards_carry_trace_and_verification(agent_result):
+    assert DEFAULT_RUN.name == "AGENT_RUN.json"
+    llm = [c for s in agent_result.stores for c in s.moments if c.source == "llm"]
+    tpl = [c for s in agent_result.stores for c in s.moments if c.source == "template"]
+    assert len(llm) == 15 and len(tpl) == 10 and agent_result.fallbacks == [] and agent_result.diffs == []
+    for c in llm:
+        assert c.trace and c.trace[-1]["step"] == "finalize" and c.verification.verifier in ("passed", "retried_then_passed")
+        assert c.verification.label_source == "llm" and c.run_id == agent_result.run_id
+    for c in tpl:  # not in the run: template cards, no meaning check
+        assert c.trace == [] and (c.verification.verifier, c.verification.label_source) == ("not_run", "template")
+
+
+def test_the_published_store_is_the_agent_runs():
+    for _, _, path in demo_paths():
+        store = MatchStore.model_validate_json((DEFAULT_OUT_DIR / f"{path.stem}.json").read_text(encoding="utf-8"))
+        assert store.prompt_version.startswith("foundry-v5.2") and "@2026-10-14" in store.run_id

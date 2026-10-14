@@ -59,3 +59,10 @@ def test_agent_code_is_not_imported_by_anything_but_itself_and_the_tests():
         if me in path.parents:
             continue
         assert not {m for m in _imports(path) if m.startswith("app.agents")}, path
+
+
+def test_the_docker_build_context_leaves_the_agents_out_and_the_image_copies_the_agent_run():
+    ignore = (REPO / ".dockerignore").read_text(encoding="utf-8").splitlines()
+    assert "app/agents" in ignore
+    dockerfile = (REPO / "Dockerfile").read_text(encoding="utf-8")
+    assert "docs/AGENT_RUN.json" in dockerfile and "docs/LLM_RUN.json" not in dockerfile

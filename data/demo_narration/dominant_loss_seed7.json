@@ -545,7 +545,7 @@
       "minute_label": "45+1'",
       "period": 1,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 33,
       "segments": [
         {
@@ -596,13 +596,125 @@
       "source": "llm",
       "team": "home",
       "text": "Since 25' Vellorin FC have had 59% of the ball and a 4–0 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 5586,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "possession",
+              "shots_for",
+              "shots_against",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 6,
+            "note": "Home side dominating possession and creating the bulk of the shots while the game remains goalless, leaving their pressure unconverted.",
+            "selected": [
+              "possession",
+              "shots_for",
+              "shots_against",
+              "score_home",
+              "score_away"
+            ]
+          },
+          "started_ms": 14,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1949,
+            "out": 607,
+            "reasoning": 512
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 4778,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:dominance}, yet {clause:score}."
+          },
+          "started_ms": 5603,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2525,
+            "out": 404,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 10384,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2426,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 10389,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1822,
+            "out": 195,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 12819,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "dominance_without_reward",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -755,8 +867,8 @@
     {
       "at_seq": 350,
       "checks": {
-        "claims_total": 3,
-        "claims_verified": 3,
+        "claims_total": 4,
+        "claims_verified": 4,
         "lint_issues": 0
       },
       "claims": [
@@ -777,12 +889,38 @@
               "type": "goal"
             }
           ],
-          "id": "goal",
+          "id": "team_goals",
           "kind": "count",
           "label": "goals",
           "metric": "goals",
-          "player": "Nolvek Ilvanto",
-          "start": "57'",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#350",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 350,
+              "team": "away",
+              "type": "goal"
+            }
+          ],
+          "id": "margin",
+          "kind": "state",
+          "label": "goal margin",
+          "metric": "score_margin",
+          "player": null,
+          "start": "0'",
           "team": "away",
           "value": 1.0
         },
@@ -845,12 +983,12 @@
       "minute_label": "57'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
           "claim_id": null,
-          "text": "Nolvek Ilvanto scored at 57', and the score is Vellorin FC "
+          "text": "Tessdal Athletic opened the scoring. The score is Vellorin FC "
         },
         {
           "claim_id": "score_home",
@@ -871,14 +1009,127 @@
       ],
       "source": "llm",
       "team": "away",
-      "text": "Nolvek Ilvanto scored at 57', and the score is Vellorin FC 0–1 Tessdal Athletic.",
-      "trace": [],
+      "text": "Tessdal Athletic opened the scoring. The score is Vellorin FC 0–1 Tessdal Athletic.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 3450,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "goal",
+              "team_goals",
+              "margin",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [
+              "opener"
+            ],
+            "menu_claims": 6,
+            "note": "The away side opened the scoring to take the lead, a moment that changes control and momentum after a stretch when they had limited possession.",
+            "selected": [
+              "score_away",
+              "score_home",
+              "opener",
+              "goal"
+            ]
+          },
+          "started_ms": 18,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1710,
+            "out": 287,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 5853,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:opener}. {clause:score}."
+          },
+          "started_ms": 3470,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2250,
+            "out": 765,
+            "reasoning": 704
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 2,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 9325,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 3852,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 9329,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1372,
+            "out": 279,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 13184,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "goal",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
@@ -1273,7 +1524,7 @@
       "minute_label": "66'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 57,
       "segments": [
         {
@@ -1324,20 +1575,132 @@
       "source": "llm",
       "team": "home",
       "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
-      "trace": [],
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 4406,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "possession",
+              "shots_for",
+              "shots_against",
+              "score_home",
+              "score_away"
+            ],
+            "expanded_clause_ids": [],
+            "menu_claims": 6,
+            "note": "The home side has dominated possession and outshot the opponent over the recent period but remain behind after conceding earlier, showing strong control without getting the equaliser.",
+            "selected": [
+              "score_home",
+              "score_away",
+              "possession",
+              "shots_for",
+              "shots_against"
+            ]
+          },
+          "started_ms": 20,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 2080,
+            "out": 378,
+            "reasoning": 256
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 2612,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{clause:dominance}, yet {clause:score}."
+          },
+          "started_ms": 4428,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2663,
+            "out": 184,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 4,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 7042,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2409,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 7048,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1954,
+            "out": 170,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 9460,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "dominance_without_reward",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     },
     {
       "at_seq": 428,
       "checks": {
-        "claims_total": 2,
-        "claims_verified": 2,
+        "claims_total": 4,
+        "claims_verified": 4,
         "lint_issues": 0
       },
       "claims": [
@@ -1392,6 +1755,58 @@
           "start": "0'",
           "team": "home",
           "value": 0.62
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "70'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#428",
+              "minute": 70,
+              "minute_label": "70'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 0,
+              "seq": 428,
+              "team": "home",
+              "type": "penalty"
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "70'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#428",
+              "minute": 70,
+              "minute_label": "70'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 0,
+              "seq": 428,
+              "team": "home",
+              "type": "penalty"
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
         }
       ],
       "id": "m-7-dominant_loss-M008",
@@ -1400,7 +1815,7 @@
       "minute_label": "70'",
       "period": 2,
       "prompt_version": "foundry-v5.2:gpt-5-mini",
-      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
       "second": 0,
       "segments": [
         {
@@ -1413,24 +1828,151 @@
         },
         {
           "claim_id": null,
-          "text": " of the ball since kickoff."
+          "text": " of the ball since kickoff. The score is Vellorin FC "
+        },
+        {
+          "claim_id": "score_home",
+          "text": "0"
+        },
+        {
+          "claim_id": null,
+          "text": "–"
+        },
+        {
+          "claim_id": "score_away",
+          "text": "1"
+        },
+        {
+          "claim_id": null,
+          "text": " Tessdal Athletic."
         }
       ],
       "source": "llm",
       "team": "home",
-      "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
-      "trace": [],
+      "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff. The score is Vellorin FC 0–1 Tessdal Athletic.",
+      "trace": [
+        {
+          "agent": "analyst",
+          "attempt": 0,
+          "duration_ms": 3243,
+          "input_ref": "menu",
+          "model": "gpt-5-mini",
+          "output": {
+            "effective": [
+              "penalty",
+              "score_home",
+              "score_away",
+              "possession"
+            ],
+            "expanded_clause_ids": [
+              "score"
+            ],
+            "menu_claims": 4,
+            "note": "A saved penalty denied the home side a clear chance to overturn the opponent's lead, a turning point given their heavy possession and control.",
+            "selected": [
+              "penalty",
+              "score",
+              "possession"
+            ]
+          },
+          "started_ms": 5,
+          "status": "ok",
+          "step": "analyst",
+          "tokens": {
+            "in": 1460,
+            "out": 271,
+            "reasoning": 192
+          }
+        },
+        {
+          "agent": "narrator",
+          "attempt": 1,
+          "duration_ms": 3143,
+          "input_ref": "menu+briefing",
+          "model": "gpt-5-mini",
+          "output": {
+            "feedback": [],
+            "template": "{event:m-7-dominant_loss#428}, and {clause:possession}. {clause:score}."
+          },
+          "started_ms": 3250,
+          "status": "ok",
+          "step": "narrate",
+          "tokens": {
+            "in": 2088,
+            "out": 381,
+            "reasoning": 320
+          }
+        },
+        {
+          "agent": "guard",
+          "attempt": 1,
+          "duration_ms": 3,
+          "input_ref": "drafts[1]",
+          "model": null,
+          "output": {
+            "codes": [],
+            "ok": true
+          },
+          "started_ms": 6395,
+          "status": "ok",
+          "step": "guard",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        },
+        {
+          "agent": "verifier",
+          "attempt": 1,
+          "duration_ms": 2570,
+          "input_ref": "drafts[1]",
+          "model": "gpt-5-mini",
+          "output": {
+            "issues": [],
+            "verdict": "pass"
+          },
+          "started_ms": 6400,
+          "status": "ok",
+          "step": "verify",
+          "tokens": {
+            "in": 1435,
+            "out": 168,
+            "reasoning": 128
+          }
+        },
+        {
+          "agent": "workflow",
+          "attempt": 1,
+          "duration_ms": 0,
+          "input_ref": "guard",
+          "model": null,
+          "output": {
+            "label_source": "llm",
+            "source": "llm",
+            "verifier": "passed"
+          },
+          "started_ms": 8974,
+          "status": "ok",
+          "step": "finalize",
+          "tokens": {
+            "in": null,
+            "out": null,
+            "reasoning": null
+          }
+        }
+      ],
       "type": "penalty",
       "verification": {
         "attempts": 1,
         "guard": true,
-        "label_source": "guard_only",
-        "verifier": "not_run"
+        "label_source": "llm",
+        "verifier": "passed"
       }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",
-  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+  "run_id": "foundry-v5.2:gpt-5-mini@2026-10-14T18:44:11+00:00",
   "teams": {
     "away": "Tessdal Athletic",
     "home": "Vellorin FC"

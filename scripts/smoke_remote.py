@@ -5,7 +5,9 @@
 
 Prints one PASS/FAIL line per check and exits 1 if any failed. Checks: /healthz, /api/matches (three
 matches), a deep link (HTML), and the replay SSE stream: at least N events, and the first event must
-arrive progressively, not all at the end (a buffering proxy delivers the whole stream at once).
+arrive progressively, not all at the end (a buffering proxy delivers the whole stream at once). P2 checks on
+red_card_swing_seed42: its replay carries at least one stored `trace` SSE event, and every card of /moments has a
+`verification` field (guard, verifier, attempts, label_source).
 --wait SECONDS first retries /healthz (once a second) until the server answers, for a container that is
 still starting; if it never does, one FAIL line is printed. Default 0: no waiting.
 It only reads; it calls no endpoint that spends money.
@@ -21,6 +23,8 @@ import urllib.error
 import urllib.request
 
 EXPECTED_MATCHES = 3
+TRACE_MATCH = "red_card_swing_seed42"
+VERIFICATION_KEYS = {"guard", "verifier", "attempts", "label_source"}
 PROGRESSIVE_FRACTION = 0.5  # the N events must spread over at least this much of the expected time
 
 
@@ -51,6 +55,21 @@ def read_events(url: str, count: int, timeout: float) -> list[tuple[float, dict]
             elif name == "end":
                 break
     return out
+
+
+def count_events(url: str, timeout: float) -> dict[str, int]:
+    """Every SSE event name of a whole replay with how often it occurs (use speed=0: no waiting)."""
+    req = urllib.request.Request(url, headers={"Accept": "text/event-stream", "User-Agent": "whyball-smoke/1"})
+    counts: dict[str, int] = {}
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        for raw in r:
+            line = raw.decode("utf-8").rstrip("\r\n")
+            if line.startswith("event: "):
+                name = line[7:]
+                counts[name] = counts.get(name, 0) + 1
+                if name == "end":
+                    break
+    return counts
 
 
 def wait_ready(base: str, seconds: float, timeout: float) -> tuple[bool, str]:
@@ -112,6 +131,20 @@ def run(base: str, events: int = 8, speed: float = 30.0, timeout: float = 30.0,
                 check(ok, "sse-progressive",
                       f"first event after {first:.2f}s, event {events} after {last:.2f}s "
                       f"(spread {last - first:.2f}s, expected about {expected:.2f}s)")
+
+        # P2: the stored agent trace is replayed and every card says what checked it
+        if TRACE_MATCH in {m["id"] for m in matches}:
+            counts = count_events(f"{base}/api/matches/{TRACE_MATCH}/replay?speed=0", timeout)
+            check(counts.get("trace", 0) >= 1, "trace-sse", f"{counts.get('trace', 0)} trace events in {TRACE_MATCH}")
+            status, _, body = get(f"{base}/api/matches/{TRACE_MATCH}/moments", timeout)
+            cards = json.loads(body) if status == 200 else []
+            bad = [c.get("id") for c in cards if not isinstance(c.get("verification"), dict)
+                   or set(c["verification"]) != VERIFICATION_KEYS]
+            check(status == 200 and bool(cards) and not bad, "verification",
+                  f"HTTP {status}, {len(cards)} cards, {len(bad)} without a verification field")
+        else:
+            check(False, "trace-sse", f"{TRACE_MATCH} is not among the matches")
+            check(False, "verification", f"{TRACE_MATCH} is not among the matches")
     except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError) as e:
         check(False, "request", f"{type(e).__name__}: {e}")
     check(True, "total-time", f"{time.monotonic() - t0:.1f}s")

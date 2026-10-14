@@ -1,7 +1,7 @@
 """Builds the publication store from the last LLM run, without calling a model.
 
 For each demo match, the moments the selector picks are replayed from the model drafts of the
-last run in docs/LLM_RUN.json (the placeholder template, not the rendered text): the draft goes
+last run in docs/AGENT_RUN.json, or any run file of that shape such as docs/LLM_RUN.json (the placeholder template, not the rendered text): the draft goes
 through the current pipeline (`run_moment`: text_lint, menu rules, verify_claim, render) once,
 without retries. A draft that no longer passes falls back to the template narration
 (`template_fallback`). Moments the selector does not pick get the template narration (`template`).
@@ -40,7 +40,7 @@ from .schema import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RUN = REPO_ROOT / "docs" / "LLM_RUN.json"
+DEFAULT_RUN = REPO_ROOT / "docs" / "AGENT_RUN.json"  # the agent workflow's run (P2); LLM_RUN.json is the pre-agent narrator run
 DEFAULT_OUT_DIR = REPO_ROOT / "data" / "demo_narration"
 DEFAULT_REPORT = REPO_ROOT / "docs" / "DEMO_NARRATION.md"
 LANGUAGE = "en"

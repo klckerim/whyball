@@ -1,79 +1,63 @@
 # STATUS
 
-Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [UI_SPEC](docs/UI_SPEC.md), [DESIGN](docs/DESIGN.md).
+Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_SPEC](docs/UI_SPEC.md), design log [DESIGN](docs/DESIGN.md).
 
 ## Frozen
 - Scope freeze: evening of 24 October. No new features after that (CLAUDE.md).
 - Synthetic seeded data only (fixtures change only via `app.generator.freeze`, [datasheet](docs/DATASHEET.md)).
-  LLM only in the Explain stage; unverified sentences are never published (max 2 retries, then template).
-- API response shapes: only additive changes (U0: timeline `x`/`y`, `squads`; U1: card `checks`, events, series; U2: card `segments`).
+- LLM only in the Explain stage. Guard (code) rejects first; the Verifier agent can only reject; 3 attempts, then template.
+- foundry-v5.2 Narrator prompt and slot language are frozen (hash-pinned in tests, as are analyst-v1 and verifier-v1).
+- API shapes: additive only (U0 `x`/`y`, `squads`; U1 `checks`, events, series; U2 `segments`; P2 `verification`, stored `trace`, `trace` SSE, `start_used`).
 
 ## Done
-- Generator, analytics, moment detector, selector, claim verifier, template narrator, lint, cache.
-- Foundry narrator foundry-v2 → v5.2 (claim menu); 3 live runs, 0/45 fallbacks ([LLM_RUN](docs/LLM_RUN.md)).
-- Injection eval v2–v5.2 ([EVAL](docs/EVAL.md)); publication store replays the last run ([DEMO_NARRATION](docs/DEMO_NARRATION.md)).
-- README, CI (pytest, Vitest + build, gitleaks, docker). FastAPI (matches, moments, events, series, SSE, `/healthz`, UI deep links).
-- U0 (UI v2 foundation, no screens): UI_SPEC + DESIGN log; `/healthz`, `/api/metrics`, timeline `x`/`y`,
-  `squads`; OpenAPI → `web/src/api/schema.gen.ts` + drift checks; `web/test-fixtures/` from the real API;
-  `<Fact>` + T1/T2 tests; `web/src/design/tokens.css` (light/dark, stage always dark); fonts; Radix.
-- U1 (7 commits): shell, routes, On Air stage, transport, timeline, pressure band; card `checks` at publish.
-- U2 (9 commits): card text stored as `segments` (claim values marked by the code that writes them); Proof face
-  (moment rail, Receipt with definition/window/verification record, evidence pitch + list); Flip (seal button, P);
-  band caption; old UI and `/legacy` deleted. 4 screens reviewed ([DESIGN](docs/DESIGN.md) D26-D31).
-- P1 (8 commits): image, start-up guard, DefaultAzureCredential, frozen API surface, remote smoke test,
-  CI docker job (+ `--wait` fix), [DEPLOY](docs/DEPLOY.md), optional App Insights. Deployed 2026-10-14 (the user ran `az`):
-  Sweden Central, image tag p1-20261014-1822, 0.5 vCPU / 1.0 Gi, 1-2 replicas, user-assigned identity + AcrPull,
-  remote smoke test ALL PASSED. Foundry role not assigned, App Insights not enabled.
-  Public address: https://whyball.happyground-485eb3be.swedencentral.azurecontainerapps.io
+- Generator, analytics, moment detector, selector, claim verifier, template narrator, lint, cache, foundry-v2..v5.2 ([LLM_RUN](docs/LLM_RUN.md)), injection eval ([EVAL](docs/EVAL.md)).
+- FastAPI (matches, moments, events, series, SSE incl. stored trace, `/healthz`, deep links); CI (pytest, Vitest + build, gitleaks, docker).
+- UI: U0 foundation, U1 On Air, U2 Proof (Receipt, evidence pitch, Flip), old UI deleted. P1: image, guard, frozen API surface, deployed.
+- P2 (this round, 21 commits): agent workflow on Agent Framework core 1.19.0 / foundry 1.13.1 (newest at least 14 days old). Analyst, Narrator
+  (wrapped), Guard (code), Verifier; immutable state, 3-attempt edges, fallbacks, flags `analyst`/`verifier`, stored trace + `verification`
+  on every card. The published store is the agent run ([AGENT_RUN](docs/AGENT_RUN.md)); offline CLI `python -m app.agents.run`.
+  The service never imports agents (tests, CI step, `.dockerignore`); the image has no Agent Framework.
 
 ## In progress
-- 7 U1 + 8 P1 (deployed) + P1 closure + 9 U2 commits on `master` only, not pushed; U0 and tag `llm-baseline-v2` are on origin. CI not checked here.
+- Everything on `master` is local until pushed; origin has U0 and tag `llm-baseline-v2` (the user pushed the P2 3a commit; CI was green then).
 
 ## Next
-- Push; confirm CI. The deployed app (P1) still serves the U1 build: redeploy (DEPLOY 8.1) to publish U2.
-- U3: trace tape, Rejected takes, Red pen, Method (fixtures first, real data after; the old trace panel's job).
-- Verifier gaps (EVAL, below): fix or document before the freeze.
+- Push; confirm CI. Redeploy (DEPLOY 8.1) to serve U2 + P2 (the live app still runs the P1 build).
+- U3: show the trace (trace tape, Rejected takes, Red pen, Method); the seal label (`checker.ts`) changes when the trace is visible.
+- P3: MCP client replaces `app/agents/tools.py`. P4: arms A/B/C measurement on a held-out set (not [DEVELOPMENT_SET](docs/DEVELOPMENT_SET.md)).
+- Open API decision: `score`, `score_margin`, `players_on_pitch` still say `claim_range` (now with `start_used: false`).
 
 ## Decisions (with reason)
 - CI pins actions to commit SHAs on Node 24 LTS; gitleaks-action needs no license key (personal repo).
-- Claim menu (v5): the model picks menu ids, code builds the numbers, so numbers cannot drift.
-- Replays use the stored publication, no live model call: demo is deterministic and free.
-- UI v2 decisions (themes, safe areas, fonts, Radix, Fact contract) are logged with sources in DESIGN.md.
-- openapi-typescript runs from `web/tools/openapi-gen` (own lockfile, TS 5.9.3): it needs the TS 5 JS
-  API, the app is on TS 7 (DESIGN D10).
-- Stage plays fetched events with a client clock, not SSE (exact seek, fake-timer tests; DESIGN D14).
-- Seal reads the card's `checks` and says "Checked by code": no Verifier agent exists (D21, D28).
-- Segments come from the code that writes the text, never from matching the sentence (D26).
+- Claim menu (v5): the model picks menu ids, code builds the numbers. Segments come from the code that writes the text (D26).
+- Replays use the stored publication, no live model call: the demo is deterministic and free. SSE trace is stored, not run (D37, D40).
+- Agents: roles, state, limits, closed Verifier codes, D6 (Verifier failure labels, never blocks), arms A/B/C: DESIGN D32-D40.
+- Verifier is shown each metric's window and definition and each clause's claims and meaning; an unlocated span is still a rejection.
+- Analyst note: digits and cardinal numbers banned, ordinary words allowed; a clause id expands to its claims.
+- Seal reads the card's `checks` and says "Checked by code" (one constant, `web/src/design/checker.ts`).
 
 ## Open risks / known limits
-- Verifier misses (foundry-v5.2, [EVAL](docs/EVAL.md)): `wrong_slot_binding` 0% caught,
-  `role_reversed` 69.0%, `event_wrong_claim` 71.6%. Qualitative claims inside a grounded sentence pass.
-- Eval and run samples are small (15 moments per run, 3 runs).
-- Stored card red_card_swing 90+1' mentions an 84' goal that none of its claims cover.
-- Tests (2026-10-14, uncached): pytest 672, Vitest 396 (old UI's 104 gone with it), `npm run smoke` 7; initial JS 113.6 KB gzip.
-- Minutes, names and event phrases inside a card sentence are plain text, not `<Fact>` (D26).
-- 390 px: stage pitch is small, close timeline glyphs overlap near full time (U5).
-- After `app.publish`: rerun `app.api.fixtures` (pytest fails until then, by design).
-- Two demo matches share one run id and prompt version. `.env.example` is tracked; never opened.
+- Agent evidence is thin: 15 cards x 4 runs, 3 demo matches. Verifier smoke (development set): 12/12 injected rejected, 0/8 clean flagged;
+  real cards: 0 true rejections, 2 false alarms (before the record fixes). No claim about agent value before P4.
+- The Verifier gave different verdicts on identical input once (natural M008). 9 of 15 published texts differ from the pre-agent store
+  (Narrator composition and Analyst narrowing, none from a Verifier rejection).
+- dominant_loss M005 text has no scorer or minute (dull candidate, P4 labelling). Stored card red_card_swing 90+1' mentions an uncovered 84' goal.
+- Minutes, names and event phrases inside a card sentence are plain text, not `<Fact>` (D26). 390 px stage pitch small (U5).
+- Tests (2026-10-14, uncached): pytest 972, Vitest 415, `npm run smoke` 7; initial JS 113.7 KB gzip. After `app.publish` rerun `app.api.fixtures`.
+- Price per token unknown (cost only in tokens). `.env.example` is tracked; never opened.
 
 ## Deploy state
-- Azure Container Apps, one container, Sweden Central ([DEPLOY](docs/DEPLOY.md)).
-- Image: digest-pinned, non-root; `python -m app.serve` refuses to start if `app.publish --check` fails; CI scans it.
-- Public, no endpoint calls a model or billable resource (`tests/test_api_surface.py`). Checks: local image smoke (U2 build) and the Azure smoke (P1 build) ALL PASSED.
+- Azure Container Apps, one container, Sweden Central ([DEPLOY](docs/DEPLOY.md)); live address and first deploy in README / DEPLOY.
+- Image: digest-pinned, non-root; `python -m app.serve` refuses to start if `app.publish --check` (now over AGENT_RUN.json) fails; CI scans it.
+- Local image (U2 + P2 build): `smoke_remote.py` ALL PASSED incl. trace SSE and `verification` checks; no `agent_framework`, no `app/agents` inside.
 
 ## Mentor summary
-- Commits (U2): 6f34e8c P1 closure · aae49f7 explain parts · 86cb9da segments in store/API/fixtures · 975c4bc Fact sources
-  + SentenceText · e88edf8 Proof · 9d54c1b Flip · c91cfe6 band caption · ba7457a review fixes · c18b078 old UI deleted · docs.
-- Tests: pytest 672 (+27), Vitest 396 (500 before the old UI went), smoke 7; JS 113.6 KB gzip (budget 250).
-- `provenance.allow.ts` additions: 0. Unplaceable claims: 0 of 90 (74 in the sentence, 16 stated in words:
-  goals 8, score_margin 5, red_cards 2, penalties_saved 1: a count of 1 or a margin is worded, not numbered).
-- Dropped old features: trace panel (U3), Evidence/Trace tabs and bottom sheet, EventSource replay hook, crests,
-  `markClaims`, featured/all filter, claim chips + hover preview, old timeline bar and pitch.
-- Deviations: seal reads "Checked by code" (was "Verified"); Fact got claim-field, window and checks sources (D28);
-  proof uses plain divs for the faces (no Radix `Tabs.Content`, so the old face stays for the turn); stage height
-  allowance 290 to 320 px for the band caption.
-- TODO(verify): none added. Slips: two commits went in with `;` after a failing check (fixed by amend before moving on).
-- Resembles the forbidden list: left rail is text + glyph, not an icon menu; the 56 px claim value is plain text on
-  the Receipt, not a coloured tile. Nothing else (no avatars, crests, heat maps, sparkles, glass).
-- Shots (untracked): notes/shots/u2/{onair-1440x900-dark,proof-1440x900-dark,proof-1920x1080-light,proof-390x844-dark}.png;
-  no horizontal scroll, no console errors. Docker build + `smoke_remote.py --wait 60` on a local container: ALL PASSED.
+- Commits P2: spike + 3a-3g (2fa6242..1d314d9), CLI, canary and reruns, smoke test, publish switch (this commit); two U2 fixes before them.
+- Tests: pytest 972, Vitest 415, smoke 7 (+ remote smoke: trace-sse, verification); JS 113.7 KB (unchanged).
+- Spike: cycles + conditional edges work; state is deep-copied (immutable state, read-modify-write); one workflow per run; failures propagate (caught).
+- Pins: core 1.19.0, foundry 1.13.1, openai 1.14.4 (1.20+/1.14.x were younger than 14 days); findings re-verified on them.
+- Live runs: 167 calls, 287.8k tokens in / 54.3k out across canary, rerun, two 15-card runs and 2 smoke runs. Final: 15 llm cards, 0 fallback,
+  1 Analyst fallback, 0 Verifier rejections, 67.6 s, 83.3k/15.0k tokens. Analyst + Verifier are ~55% of input tokens.
+- Deviations: self-written estimate; `app/agents` kept out of the image; stray `human_review.<ts>.csv` from a re-render deleted.
+- TODO(verify): token prices; whether `claim_end` window kind should replace `claim_range` for state metrics in the API.
+- First signs (not results): Verifier caught 12/12 injected drafts on a small development set; Analyst narrowing changed 2 texts by dropping possession.

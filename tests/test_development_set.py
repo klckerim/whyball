@@ -18,7 +18,7 @@ def test_the_smoke_drafts_are_all_in_the_development_set():
 
 
 def test_every_card_of_the_agent_runs_is_in_the_development_set():
-    for name in ("AGENT_RUN.json", "AGENT_RUN_canary.json", "AGENT_RUN_rerun1.json"):
+    for name in ("AGENT_RUN.json", "AGENT_RUN_canary.json", "archive/AGENT_RUN_rerun1.json", "archive/AGENT_RUN_run2.json"):
         path = DOCS / name
         if not path.exists():
             continue

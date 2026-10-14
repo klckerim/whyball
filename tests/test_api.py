@@ -334,12 +334,39 @@ def test_the_replay_sends_a_stored_trace_after_its_card(tmp_path):
     assert [n for n, _ in follow] == ["trace"] * 3
     assert [d["step"] for _, d in follow] == ["narrate", "guard", "finalize"]
     assert [d["n"] for _, d in follow] == [0, 1, 2] and all(d["moment_id"] == card["id"] for _, d in follow)
-    # the other cards have no trace: only this card's steps appear
-    assert sum(n == "trace" for n in names) == 3
+    # the store holds a trace for every model card (the agent run): the stream sends exactly the stored steps
+    store = json.loads((data / "demo_narration" / f"{MATCH}.json").read_text())
+    assert sum(n == "trace" for n in names) == sum(len(m["trace"]) for m in store["moments"])
 
 
-def test_the_replay_of_a_store_without_traces_is_unchanged(client):
-    names = {n for n, _ in parse_sse(client.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)}
+def test_the_published_replay_carries_every_stored_trace_step_after_its_card(client):
+    events = parse_sse(client.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)
+    cards = {m["id"]: m for m in STORE["moments"]}
+    traces = [(d["moment_id"], d["n"], d["step"]) for n, d in events if n == "trace"]
+    assert traces == [(m["id"], i, s["step"]) for m in STORE["moments"] for i, s in enumerate(m["trace"])]
+    assert traces  # the published store is an agent run
+    # a trace step follows its own card's moment event; match events and moments keep their order
+    order = [(n, d.get("id") or d.get("moment_id")) for n, d in events if n in ("moment", "trace")]
+    for i, (n, mid) in enumerate(order):
+        if n == "trace":
+            assert order[i - 1][1] == mid and mid in cards
+
+
+def test_the_replay_of_a_store_without_traces_is_unchanged(tmp_path):
+    import shutil
+
+    data = tmp_path / "data"
+    shutil.copytree(DEFAULT_OUT_DIR.parent / "demo", data / "demo")
+    (data / "demo_narration").mkdir()
+    store = json.loads((DEFAULT_OUT_DIR / f"{MATCH}.json").read_text(encoding="utf-8"))
+    for m in store["moments"]:
+        m["trace"] = []
+    (data / "demo_narration" / f"{MATCH}.json").write_text(json.dumps(store), encoding="utf-8")
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    with TestClient(create_app(data_dir=data, static_dir=static)) as c:
+        names = {n for n, _ in parse_sse(c.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)}
     assert names == {"match_event", "moment", "end"}
 
 

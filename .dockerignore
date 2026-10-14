@@ -7,6 +7,8 @@
 .github
 .claude
 notes
+# Offline agent workflow (P2): the service never runs it and the image installs no Agent Framework.
+app/agents
 data/cache
 web/dist
 **/__pycache__

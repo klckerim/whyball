@@ -21,7 +21,7 @@ def test_passes_against_the_local_server(server, capsys):  # noqa: F811
     base, _ = server
     assert smoke.main([base, "--events", "5"]) == 0
     out = capsys.readouterr().out
-    for name in ("healthz", "matches", "deep-link", "sse-events", "sse-progressive", "total-time"):
+    for name in ("healthz", "matches", "deep-link", "sse-events", "sse-progressive", "trace-sse", "verification", "total-time"):
         assert f"PASS {name}:" in out
     assert "ALL PASSED" in out and "FAIL" not in out
 
@@ -30,6 +30,8 @@ class Fake(BaseHTTPRequestHandler):
     """buffered=True sends the whole SSE body at the end (what a buffering proxy does)."""
     buffered = False
     matches = 3
+    traces = True  # the replay carries stored trace events
+    verification = True  # the moment cards carry a verification field
 
     def log_message(self, *a):
         pass
@@ -45,7 +47,12 @@ class Fake(BaseHTTPRequestHandler):
         if self.path == "/healthz":
             self._send(b'{"ok": true, "matches": 3}', "application/json")
         elif self.path == "/api/matches":
-            self._send(json.dumps([{"id": f"m{i}"} for i in range(self.matches)]).encode(), "application/json")
+            ids = ["red_card_swing_seed42", *[f"m{i}" for i in range(1, self.matches)]]
+            self._send(json.dumps([{"id": i} for i in ids[:self.matches]]).encode(), "application/json")
+        elif self.path.endswith("/moments"):
+            v = {"guard": True, "verifier": "passed", "attempts": 1, "label_source": "llm"}
+            cards = [{"id": f"c{i}", **({"verification": v} if self.verification else {})} for i in range(3)]
+            self._send(json.dumps(cards).encode(), "application/json")
         elif self.path.startswith("/match/"):
             self._send(b'<div id="root"></div>', "text/html; charset=utf-8")
         elif "/replay" in self.path:
@@ -54,6 +61,9 @@ class Fake(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
             self.end_headers()
             events = [f"event: match_event\ndata: {json.dumps({'t': i * 6})}\n\n".encode() for i in range(6)]
+            if self.traces:
+                events.append(b'event: trace\ndata: {"step": "narrate"}\n\n')
+            events.append(b"event: end\ndata: {}\n\n")
             if self.buffered:
                 time.sleep(1.2)
                 self.wfile.write(b"".join(events))
@@ -78,6 +88,8 @@ def fake_server(**attrs):
     ({}, None),
     ({"buffered": True}, "sse-progressive"),
     ({"matches": 2}, "matches"),
+    ({"traces": False}, "trace-sse"),
+    ({"verification": False}, "verification"),
 ])
 def test_fake_servers(attrs, failing):
     httpd = fake_server(**attrs)
