@@ -373,7 +373,8 @@ only consume this container's CPU, which is capped at 2 replicas.
 This is enforced by tests:
 - `tests/test_api_surface.py` freezes the full list of routes (all `GET`) and fails when one is added;
   it also checks that building and serving the app imports no `openai`, `agent_framework`, `azure` or
-  `anthropic` module. The image does not install those packages either.
+  `anthropic` module. The image has no model client; the Azure packages in it come only from the optional
+  Application Insights extra (section 13) and are imported only when its connection string is set.
 - `app/serve.py` refuses to start if `python -m app.publish --check` fails.
 
 If a later feature needs a request-time model call: put authentication and a rate limit in front of it first,
@@ -433,3 +434,67 @@ streaming response that keeps sending events is TODO(verify); plan as if it does
   (`docs/DESIGN.md` D14). Only outside consumers (the planned `/overlay`) use SSE.
 - When a connection drops, the client reconnects with `from_t=<t of the last event it received>`; the
   endpoint restarts from that second (events at exactly `from_t` repeat, so de-duplicate on `seq`).
+
+## 13. Optional: Application Insights request traces
+
+Lowest priority; the app works without it. `app/telemetry.py` does **nothing** (no import, no exporter, no
+network) unless `APPLICATIONINSIGHTS_CONNECTION_STRING` is set. When it is set, the Microsoft OpenTelemetry
+distro (`microsoft-opentelemetry==1.3.9`, released 2026-09-09, the newest release at least two weeks old on
+2026-10-14; extra `monitor`, installed in the image) sends **request traces only**: logging and metrics are
+switched off in code (`disable_logging`, `disable_metrics`), so no application log text leaves the container.
+A request trace has the method, path, status and duration (and the client address that the platform adds);
+the app has no user data, login or cookies. Package choice: Learn now recommends this distro for new apps
+(<https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=python>), and its keyword
+arguments are documented at <https://github.com/microsoft/opentelemetry-distro-python>.
+What the HTTP instrumentation records per request beyond that (headers, query strings) is not documented
+there: TODO(verify) before relying on "no personal data" for anything beyond this demo's own URLs.
+
+### 13.1 Create the Application Insights resource, backed by the existing workspace 💲
+
+```bash
+export LAW_ID=$(az monitor log-analytics workspace list --resource-group "$APP_RG" --query "[0].id" -o tsv)  # TODO(verify)
+az monitor app-insights component create --app "$APP_NAME-ai" --location "$LOCATION"   --resource-group "$APP_RG" --workspace "$LAW_ID" --kind web --application-type web
+```
+Source: <https://learn.microsoft.com/cli/azure/monitor/app-insights/component#az-monitor-app-insights-component-create>
+(`--app`, `--location`, `--resource-group`, `--workspace`, `--kind`, `--application-type`; the command comes from the
+`application-insights` CLI extension, which installs itself on first use). The `log-analytics workspace list` form is TODO(verify).
+
+Expected: JSON with `"provisioningState": "Succeeded"`. Data goes to the Log Analytics workspace (first 5 GB a month
+free, see section 9). **If not:** if the extension prompt appears, accept it; if the workspace id is empty, create
+the resource without `--workspace` (Learn shows that form) and note it then has its own retention setting.
+
+### 13.2 Give the connection string to the app as a secret ✎
+
+```bash
+export AI_CONNECTION_STRING=$(az monitor app-insights component show --app "$APP_NAME-ai"   --resource-group "$APP_RG" --query connectionString -o tsv)           # TODO(verify) field name
+az containerapp secret set --name "$APP_NAME" --resource-group "$APP_RG"   --secrets "ai-connection-string=$AI_CONNECTION_STRING"                # TODO(verify) flags
+az containerapp update --name "$APP_NAME" --resource-group "$APP_RG"   --set-env-vars "APPLICATIONINSIGHTS_CONNECTION_STRING=secretref:ai-connection-string"
+unset AI_CONNECTION_STRING
+```
+Source: `show`: <https://learn.microsoft.com/cli/azure/monitor/app-insights/component#az-monitor-app-insights-component-show>;
+secrets and `secretref:` in `--env-vars`: <https://learn.microsoft.com/azure/container-apps/manage-secrets#referencing-secrets-in-environment-variables>
+and <https://learn.microsoft.com/cli/azure/containerapp#az-containerapp-up> (`--env-vars`: "Prefix value with 'secretref:'");
+`az containerapp secret set`: <https://learn.microsoft.com/azure/container-apps/containerapp-up#configure-container-app-settings>
+(the command is named there; its flags are TODO(verify)). The value lives only in the Container Apps secret store
+and your shell variable; it is not in the image or the repo. Changing a secret creates no revision; the `update`
+with the env var does, and that is what makes the app pick it up (same Learn page: deploy a new revision or restart one).
+
+Expected: the new revision starts; the console log shows no `telemetry stays off` line. **If not:**
+`az containerapp logs show … --type console --tail 50` (section 6). "Exporter is missing a valid region" means the
+connection string is wrong (it must contain `IngestionEndpoint=https://<region>…`).
+
+### 13.3 Verify the first request trace 👁
+
+```bash
+python3 scripts/smoke_remote.py "https://$APP_FQDN"
+```
+Then in the portal: the Application Insights resource → **Investigate → Transaction search** (or **Overview →
+Server requests**). Source: <https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=python#confirm-data-is-flowing>
+("it might take a few minutes for data to show up").
+
+Expected: within a few minutes, requests for `/healthz`, `/api/matches` and the replay appear. **If not:** the
+Learn troubleshooting page for Python linked from the same article; first check the secret name matches.
+
+To turn it off: `az containerapp update … --remove-env-vars APPLICATIONINSIGHTS_CONNECTION_STRING` (flag in the
+`update` syntax on the CLI reference page). Deleting `$APP_RG` (8.3) removes the resource with everything else.
+

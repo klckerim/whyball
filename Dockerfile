@@ -24,7 +24,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY deploy/constraints.txt deploy/constraints.txt
 COPY app/ app/
-RUN pip install -e . -c deploy/constraints.txt
+RUN pip install -e ".[monitor]" -c deploy/constraints.txt
 
 # Demo data, the publication store, and the two docs files `python -m app.publish --check` compares.
 COPY data/demo/ data/demo/

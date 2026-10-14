@@ -19,6 +19,10 @@ dependencies = [
 dev = ["pytest>=8", "openai>=3.29"]
 # For Foundry (FoundryNarrator, app/llm/hello.py); the core and the tests do not need it.
 llm = ["agent-framework-foundry", "azure-identity", "python-dotenv"]
+# Application Insights request traces (app/telemetry.py). Exact version: the newest release at least two
+# weeks old when chosen (1.3.9, 2026-09-09). The container image installs it; without
+# APPLICATIONINSIGHTS_CONNECTION_STRING nothing is imported or configured.
+monitor = ["microsoft-opentelemetry==1.3.9"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
