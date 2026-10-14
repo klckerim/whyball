@@ -254,9 +254,14 @@ def build_match(
     once = replace(config, max_retries=0)
 
     cards = []
+    extra_used: set[str] = set()
     for m in moments:
         logs: list[AttemptLog] = []
-        if m.id in selected:
+        # Model cards for the selected moments; an agent run can also have written cards for the others (`--moments all`).
+        agent_card = "verification" in run_by_id.get(m.id, {}) and run_by_id[m.id].get("source") == "llm"
+        if agent_card:
+            extra_used.add(m.id)
+        if m.id in selected or agent_card:
             rec = run_moment(m, replay, events, language=LANGUAGE, config=once, on_attempt=logs.append)
         else:
             rec = run_moment(m, template, events, language=LANGUAGE, config=config)
@@ -300,7 +305,7 @@ def build_match(
                 claims_verified=sum(r.ok for r in rec.verification),
             ),
         ))
-    result.unused_run_cards += sorted(set(run_by_id) - selected)
+    result.unused_run_cards += sorted(set(run_by_id) - selected - extra_used)
 
     teams = events[0].data["teams"]
     return MatchStore(
@@ -408,6 +413,8 @@ def build(
 ) -> BuildResult:
     data = json.loads(Path(run_path).read_text(encoding="utf-8"))
     meta, run = data["meta"], data["runs"][-1]
+    if meta.get("dry_run"):
+        raise PublishError(f"{run_path} is a dry run (a scripted client, no model): it is never published")
     run_id = run_id_of(meta, run)
     result = BuildResult(run_id=run_id, run_file=_rel(Path(run_path)), prompt_version=meta["prompt_version"])
     run_matches = {m["match_id"]: m["moments"] for m in run["matches"]}
