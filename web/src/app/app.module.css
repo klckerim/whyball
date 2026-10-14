@@ -82,7 +82,7 @@
 }
 /* The stage takes the width the viewport height allows, so stage + transport fit one screen. */
 .stageWrap {
-  width: min(100%, calc((100dvh - 250px) * 16 / 9));
+  width: min(100%, calc((100dvh - 290px) * 16 / 9));
   min-width: min(100%, 320px);
   margin: 0 auto;
 }

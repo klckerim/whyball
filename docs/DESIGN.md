@@ -152,3 +152,11 @@ Newest entries at the bottom.
 - The old UI stays at `/legacy` until U2, loaded with `React.lazy` together with its own global CSS.
   CSS loaded by a lazy chunk is not removed on client-side navigation, so `/legacy` is reached only by a
   full page load (typed URL or plain link); the new UI never shares a document with the old CSS.
+
+## D25. Screenshot review tool and U1 review fixes [design]
+- `web/tools/shots/` (isolated, `playwright` 1.64.1 exact, 19 MB, drives the installed Google Chrome: no
+  browser download) shoots 1440×900 dark, 1920×1080 light and 390×844 dark against the real build and
+  store; it reports horizontal scroll, page height and console errors.
+- Fixes from the first review: the stage height allowance (the page scrolled 26 px at 1440×900 and
+  1920×1080), a frame border (the dark stage vanished on the dark page), px floors for stage text (at
+  390 px the score bug was ~6 px tall), and an empty favicon link (the browser's `/favicon.ico` 404).

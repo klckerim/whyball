@@ -1,5 +1,5 @@
 /* Program stage. Sizes are 1080p logical pixels × --u (1/1920 of the frame width), so the frame scales as
- * one picture (UI_SPEC B1, B5). Inside the frame the app tokens are remapped to the always-dark
+ * one picture (UI_SPEC B1, B5); text has a floor in px so a phone-width stage stays readable (DESIGN D18). Inside the frame the app tokens are remapped to the always-dark
  * --stage-* values (DESIGN D4), so shared primitives (Seal, SourceBadge) follow the stage. */
 
 .onAir {
@@ -15,6 +15,7 @@
   container-type: inline-size;
   background: var(--stage-bg);
   color: var(--stage-text);
+  border: 1px solid var(--border);
   border-radius: 4px;
   --bg: var(--stage-bg);
   --surface: var(--stage-surface);
@@ -59,13 +60,13 @@
 }
 .bugRow {
   display: grid;
-  grid-template-columns: calc(28 * var(--u)) minmax(0, 1fr) calc(70 * var(--u));
+  grid-template-columns: max(calc(28 * var(--u)), 10px) minmax(0, 1fr) max(calc(70 * var(--u)), 18px);
   align-items: center;
   gap: calc(16 * var(--u));
 }
 .teamMark {
-  width: calc(24 * var(--u));
-  height: calc(24 * var(--u));
+  width: max(calc(24 * var(--u)), 8px);
+  height: max(calc(24 * var(--u)), 8px);
   border-radius: 50%;
   box-sizing: border-box;
 }
@@ -73,21 +74,21 @@
   background: var(--stage-home);
 }
 .teamMark[data-mark="ring"] {
-  border: calc(6 * var(--u)) solid var(--stage-away);
+  border: max(calc(6 * var(--u)), 2px) solid var(--stage-away);
 }
 .teamName {
   font-weight: 600;
-  font-size: calc(36 * var(--u));
+  font-size: max(calc(36 * var(--u)), 12px);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: calc(420 * var(--u));
+  max-width: max(calc(420 * var(--u)), 150px);
 }
 .score {
   font-weight: 700;
-  font-size: calc(56 * var(--u));
+  font-size: max(calc(56 * var(--u)), 16px);
   line-height: 1;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -97,7 +98,7 @@
   gap: calc(12 * var(--u));
   justify-content: flex-end;
   font-weight: 600;
-  font-size: calc(32 * var(--u));
+  font-size: max(calc(32 * var(--u)), 12px);
   color: var(--stage-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -109,7 +110,7 @@
   padding: calc(8 * var(--u)) calc(16 * var(--u));
   border: calc(3 * var(--u)) solid var(--stage-accent);
   color: var(--stage-accent);
-  font: 700 calc(28 * var(--u)) / 1 var(--font-display);
+  font: 700 max(calc(28 * var(--u)), 11px) / 1 var(--font-display);
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
@@ -145,7 +146,7 @@
 .feedNote {
   position: absolute;
   margin: 0;
-  font: 500 calc(24 * var(--u)) / 1.2 var(--font-body);
+  font: 500 max(calc(24 * var(--u)), 10px) / 1.2 var(--font-body);
   color: var(--stage-muted);
 }
 .noLocation {
@@ -206,7 +207,7 @@
 
 .stageSeal {
   justify-self: end;
-  font-size: calc(40 * var(--u));
+  font-size: max(calc(40 * var(--u)), 13px);
   padding: calc(8 * var(--u)) calc(14 * var(--u));
   background: var(--stage-surface);
 }
