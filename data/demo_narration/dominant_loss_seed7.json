@@ -224,7 +224,13 @@
       "team": "home",
       "text": "10' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 0': Vellorin FC 3, Tessdal Athletic 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 182,
@@ -365,7 +371,13 @@
       "team": "home",
       "text": "30' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +0.67 in their favour. Shots since 20': Vellorin FC 1, Tessdal Athletic 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 269,
@@ -585,7 +597,13 @@
       "team": "home",
       "text": "Since 25' Vellorin FC have had 59% of the ball and a 4–0 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",
       "trace": [],
-      "type": "dominance_without_reward"
+      "type": "dominance_without_reward",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 349,
@@ -726,7 +744,13 @@
       "team": "away",
       "text": "57' — Tessdal Athletic take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 47': Tessdal Athletic 1, Vellorin FC 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 350,
@@ -849,7 +873,13 @@
       "team": "away",
       "text": "Nolvek Ilvanto scored at 57', and the score is Vellorin FC 0–1 Tessdal Athletic.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 401,
@@ -1046,7 +1076,13 @@
       "team": "home",
       "text": "65' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +0.50 in their favour. Shots since 55': Vellorin FC 3, Tessdal Athletic 1.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 408,
@@ -1289,7 +1325,13 @@
       "team": "home",
       "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
       "trace": [],
-      "type": "dominance_without_reward"
+      "type": "dominance_without_reward",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 428,
@@ -1378,7 +1420,13 @@
       "team": "home",
       "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
       "trace": [],
-      "type": "penalty"
+      "type": "penalty",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",

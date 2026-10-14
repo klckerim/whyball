@@ -1,7 +1,8 @@
 """Replay as Server-Sent Events: match events and moment cards in match-clock order.
 
 Each event (the match_meta record aside) is sent as `event: match_event`; a moment card follows right after the event that
-triggered it (`at_seq`) as `event: moment`; the stream ends with `event: end`. `speed` is match
+triggered it (`at_seq`) as `event: moment`, then one `event: trace` per step of the agent run stored with that card (nothing is run: the trace is
+replayed from the publication store; cards without a trace send none); the stream ends with `event: end`. `speed` is match
 seconds per wall-clock second (0: no waiting).
 """
 
@@ -63,4 +64,7 @@ async def replay(match: Match, speed: float, from_t: int = 0) -> AsyncIterator[s
         yield sse("match_event", event_out(e, t))
         for i in cards[e.seq]:
             yield sse("moment", moment_out(match, i))
+            card = match.store.moments[i]
+            for n, step in enumerate(card.trace):
+                yield sse("trace", {"moment_id": card.id, "n": n, **step})
     yield sse("end", {"t": last})

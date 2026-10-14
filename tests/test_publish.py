@@ -9,7 +9,7 @@ from app.generator.freeze import demo_paths
 from app.generator.models import read_jsonl
 from app.publish import SOURCES, MatchStore
 from app.publish.__main__ import main
-from app.publish.store import DEFAULT_OUT_DIR, DEFAULT_REPORT, DEFAULT_RUN, build, outputs
+from app.publish.store import DEFAULT_OUT_DIR, DEFAULT_REPORT, DEFAULT_RUN, PublishError, build, outputs
 
 REGEN_HINT = "the store is out of date; run python -m app.publish"
 RED_CARD = [p for p in demo_paths() if p[2].stem == "red_card_swing_seed42"]
@@ -214,3 +214,107 @@ def test_llm_and_template_cards_both_have_claim_segments(result):
 
 def test_report_lists_the_segment_numbers(result):
     assert "## Segments" in outputs(result, DEFAULT_OUT_DIR, DEFAULT_REPORT)[DEFAULT_REPORT]
+
+
+# --- verification and trace (P2) ---------------------------------------------------------------------------
+
+
+def _step(step, agent, attempt=1, output=None, status="ok", tokens=None):
+    return {"step": step, "agent": agent, "attempt": attempt, "started_ms": 0, "duration_ms": 1, "input_ref": "x",
+            "output": output or {}, "tokens": tokens or {"in": None, "out": None, "reasoning": None},
+            "model": None, "status": status}
+
+
+def _agent_moment(data, verifier="passed", trace=None, attempts=1, label=None, source="llm"):
+    """The run with the first model card of red_card_swing given a verification and a trace (agent run shape)."""
+    moments = _red_card_moments(data)
+    card = next(m for m in moments if m["source"] == "llm")
+    card["verification"] = {"guard": True, "verifier": verifier, "attempts": attempts,
+                            "label_source": label or ("llm" if verifier in ("passed", "retried_then_passed") else "guard_only")}
+    card["trace"] = trace if trace is not None else [
+        _step("narrate", "narrator"), _step("guard", "guard", output={"ok": True, "codes": []}),
+        _step("verify", "verifier", output={"verdict": "pass", "issues": []}), _step("finalize", "workflow")]
+    card["source"] = source
+    return card
+
+
+def _build_one(tmp_path, data):
+    from app.publish.store import build
+
+    return build(_write_run(tmp_path, data), RED_CARD)
+
+
+def test_cards_of_an_older_run_say_no_meaning_check_ran(result):
+    for s in result.stores:
+        for c in s.moments:
+            assert c.trace == []
+            v = c.verification
+            assert (v.guard, v.verifier) == (True, "not_run")
+            assert v.label_source == {"llm": "guard_only", "template": "template", "template_fallback": "template_fallback"}[c.source]
+
+
+def test_an_agent_runs_verification_and_trace_are_stored_with_the_card(tmp_path, run_data):
+    data = copy.deepcopy(run_data)
+    card = _agent_moment(data)
+    store = _build_one(tmp_path, data).stores[0]
+    got = next(m for m in store.moments if m.id == card["id"])
+    assert got.verification.model_dump() == card["verification"]
+    assert [t["step"] for t in got.trace] == ["narrate", "guard", "verify", "finalize"]
+    assert got.source == "llm" and got.verification.label_source == "llm"
+
+
+@pytest.mark.parametrize("kw,message", [
+    (dict(verifier="passed", label="guard_only"), "label_source"),
+    (dict(verifier="skipped_error", label="llm"), "label_source"),
+    (dict(verifier="passed", attempts=4), "attempts"),
+    (dict(verifier="passed", trace=[_step("narrate", "narrator")]), "finalize"),
+    (dict(verifier="passed", trace=[_step("narrate", "narrator"), _step("finalize", "workflow")]), "passing verify step"),
+    (dict(verifier="skipped_error", trace=[_step("narrate", "narrator"), _step("finalize", "workflow")]), "verifier_error"),
+    (dict(verifier="not_run", label="guard_only", trace=[_step("verify", "verifier", output={"verdict": "pass"}),
+                                                          _step("finalize", "workflow")]), "not_run"),
+    (dict(verifier="passed", trace=[]), "without a trace"),
+    (dict(verifier="passed", trace=[_step("dance", "narrator")]), "step"),
+])
+def test_a_card_cannot_claim_a_check_its_trace_does_not_show(tmp_path, run_data, kw, message):
+    from pydantic import ValidationError
+
+    data = copy.deepcopy(run_data)
+    _agent_moment(data, **kw)
+    with pytest.raises((PublishError, ValidationError), match=message):
+        _build_one(tmp_path, data)
+
+
+def test_a_guard_only_card_is_stored_as_such(tmp_path, run_data):
+    data = copy.deepcopy(run_data)
+    trace = [_step("narrate", "narrator"), _step("guard", "guard"),
+             _step("verifier_error", "verifier", status="timeout", output={"reason": "timeout"}), _step("finalize", "workflow")]
+    card = _agent_moment(data, verifier="skipped_error", trace=trace)
+    got = next(m for m in _build_one(tmp_path, data).stores[0].moments if m.id == card["id"])
+    assert got.source == "llm" and got.verification.label_source == "guard_only" and got.verification.verifier == "skipped_error"
+
+
+def test_a_trace_is_dropped_when_the_current_code_publishes_another_kind_of_card(tmp_path, run_data):
+    data = copy.deepcopy(run_data)
+    card = _agent_moment(data)
+    card["template"] = "{clause:goal}, and 3 shots."  # the run says llm, but its draft no longer passes the current Guard
+    result = _build_one(tmp_path, data)
+    got = next(m for m in result.stores[0].moments if m.id == card["id"])
+    assert got.source == "template_fallback" and got.trace == [] and got.verification.verifier == "not_run"
+    assert any(card["id"] in line for line in result.trace_dropped)
+    assert "Run traces not stored" in outputs(result, DEFAULT_OUT_DIR, DEFAULT_REPORT)[DEFAULT_REPORT]
+
+
+def test_the_trace_vocabulary_matches_the_agents():
+    from app.agents.trace import AGENTS, STATUSES, STEPS
+    from app.publish.schema import TRACE_AGENTS, TRACE_STATUSES, TRACE_STEPS
+
+    assert (TRACE_STEPS, TRACE_AGENTS, TRACE_STATUSES) == (STEPS, AGENTS, STATUSES)
+
+
+def test_a_step_written_by_the_agents_validates_against_the_store_schema():
+    from app.agents.trace import Tokens, TraceStep
+    from app.publish.schema import TraceStep as Stored
+
+    step = TraceStep.make("narrate", "narrator", attempt=1, started_ms=3, duration_ms=9, input_ref="menu",
+                          output={"template": "{clause:goal}."}, tokens=Tokens(1, 2, 3), model="m")
+    assert Stored.model_validate(step.to_dict()).model_dump() == step.to_dict()

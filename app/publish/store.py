@@ -35,7 +35,9 @@ from app.explain.template_narrator import fmt_minute
 from app.generator.freeze import demo_paths
 from app.generator.models import Event, read_jsonl
 
-from .schema import SOURCES, EvidenceEvent, MatchStore, Segment, StoredChecks, StoredClaim, StoredMoment
+from .schema import (
+    SOURCES, EvidenceEvent, MatchStore, Segment, StoredChecks, StoredClaim, StoredMoment, TraceStep, Verification,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUN = REPO_ROOT / "docs" / "LLM_RUN.json"
@@ -156,6 +158,8 @@ class BuildResult:
     same_second: list[SameSecond] = field(default_factory=list)
     unused_run_cards: list[str] = field(default_factory=list)  # run cards the current selector does not pick
     segment_stats: list[SegmentStat] = field(default_factory=list)
+    verifications: list[tuple[str, str, str, str]] = field(default_factory=list)  # (source, verifier, label, trace?)
+    trace_dropped: list[str] = field(default_factory=list)  # run traces not stored: the current code decided otherwise
 
 
 # --- building ---------------------------------------------------------------------------------------
@@ -278,6 +282,9 @@ def build_match(
                 tuple(f"#{e.seq} {e.type.value}" for e in later), menu_drift, card_drift,
             ))
 
+        verification, trace = _agent_record(rec, run_by_id.get(m.id, {}), match_id, result)
+        result.verifications.append((rec.source, verification.verifier, verification.label_source,
+                                     "trace" if trace else "no trace"))
         claims = _claims(rec.claims, ids, by_seq)
         segments = _segments(rec, ids, claims)
         result.segment_stats.append(_segment_stat(match_id, m.id, rec.source, segments, claims))
@@ -287,7 +294,7 @@ def build_match(
             importance=m.importance, text=rec.text, segments=segments, source=rec.source,
             prompt_version=prompt_version if rec.source == "llm" else config.template_prompt_version,
             run_id=None if rec.source == "template" else run_id,
-            claims=claims, trace=[],
+            claims=claims, trace=trace, verification=verification,
             checks=StoredChecks(
                 lint_issues=len(rec.lint_issues), claims_total=len(rec.verification),
                 claims_verified=sum(r.ok for r in rec.verification),
@@ -329,6 +336,57 @@ def _segment_stat(match_id: str, moment_id: str, source: str, segments: Sequence
         mismatched=tuple(s.claim_id for s in segments if s.claim_id and s.text != by_id[s.claim_id].display),
         plain_digits=sum(s.claim_id is None and any(ch.isdigit() for ch in s.text) for s in segments),
     )
+
+
+MAX_ATTEMPTS = 3
+DEFAULT_LABEL = {"llm": "guard_only", "template": "template", "template_fallback": "template_fallback"}
+
+
+def _agent_record(rec: NarrationRecord, run_rec: dict[str, Any], match_id: str, result: BuildResult
+                  ) -> tuple[Verification, list[dict[str, Any]]]:
+    """Verification and trace of a card. A run that came from the agent workflow carries both; they are kept only when the
+    current code publishes the same kind of card the run did (else the trace would describe another text). Cards of
+    older runs and template cards get the plain defaults: Guard passed, no meaning check ran."""
+    attempts = min(max(int(run_rec.get("attempts") or 1), 1), MAX_ATTEMPTS)
+    default = Verification(guard=True, verifier="not_run", attempts=1 if rec.source == "template" else attempts,
+                           label_source=DEFAULT_LABEL[rec.source])
+    if "verification" not in run_rec and not run_rec.get("trace"):
+        return default, []
+    if run_rec.get("source") != rec.source:
+        result.trace_dropped.append(f"{match_id}/{rec.moment_id}: run {run_rec.get('source')} → published {rec.source}")
+        return default, []
+    verification = Verification.model_validate(run_rec.get("verification") or default.model_dump())
+    trace = [TraceStep.model_validate(s).model_dump(mode="json") for s in run_rec.get("trace", [])]
+    _check_agent_record(rec, verification, trace)
+    return verification, trace
+
+
+def _check_agent_record(rec: NarrationRecord, v: Verification, trace: list[dict[str, Any]]) -> None:
+    """A card never claims a check its trace does not show."""
+    where = rec.moment_id
+    if not 1 <= v.attempts <= MAX_ATTEMPTS:
+        raise PublishError(f"{where}: attempts {v.attempts} outside 1..{MAX_ATTEMPTS}")
+    expect = {"llm": ("llm",) if v.verifier in ("passed", "retried_then_passed") else ("guard_only",),
+              "template": ("template",), "template_fallback": ("template_fallback",)}[rec.source]
+    if v.label_source not in expect:
+        raise PublishError(f"{where}: label_source {v.label_source!r} does not fit {rec.source}/{v.verifier}")
+    if rec.source != "llm" and v.verifier != "not_run":
+        raise PublishError(f"{where}: a {rec.source} card cannot carry a verifier result")
+    if not trace:
+        if v.verifier != "not_run":
+            raise PublishError(f"{where}: verifier {v.verifier!r} without a trace")
+        return
+    if any(s["attempt"] > MAX_ATTEMPTS for s in trace):
+        raise PublishError(f"{where}: a trace step beyond attempt {MAX_ATTEMPTS}")
+    if trace[-1]["step"] != "finalize":
+        raise PublishError(f"{where}: the trace does not end with finalize")
+    verdicts = [s for s in trace if s["step"] == "verify" and s["output"].get("verdict") == "pass"]
+    if v.verifier in ("passed", "retried_then_passed") and not verdicts:
+        raise PublishError(f"{where}: verifier {v.verifier!r} without a passing verify step")
+    if v.verifier == "skipped_error" and not any(s["step"] == "verifier_error" for s in trace):
+        raise PublishError(f"{where}: skipped_error without a verifier_error step")
+    if v.verifier == "not_run" and verdicts:
+        raise PublishError(f"{where}: not_run, but the trace holds a passing verify step")
 
 
 def _ids(rec: NarrationRecord, logs: Sequence[AttemptLog]) -> tuple[str, ...]:
@@ -423,6 +481,7 @@ def render_report(result: BuildResult) -> str:
         lines += ["", "Run cards the current selector does not pick (not published from the run): "
                   + ", ".join(f"`{i}`" for i in result.unused_run_cards) + "."]
     lines += _segment_report(result)
+    lines += _agent_report(result)
     affected = sum(s.affects_card for s in result.same_second)
     lines += [
         "",
@@ -480,6 +539,28 @@ def _segment_report(result: BuildResult) -> list[str]:
         "and in the Receipt, without a piece to underline: "
         + (", ".join(f"`{m}` {n}" for m, n in sorted(by_metric.items())) or "none") + ".",
     ]
+    return lines
+
+
+def _agent_report(result: BuildResult) -> list[str]:
+    from collections import Counter
+
+    counts = Counter(result.verifications)
+    lines = [
+        "",
+        "## Verification and trace",
+        "",
+        "What ran on each published card (`verification`) and whether the agent run's trace is stored (`trace`). "
+        "`label_source` `guard_only` is a model draft the Guard accepted and no meaning check covered (Verifier off or "
+        "failed). Cards of runs that predate the agent workflow have no trace and no meaning check.",
+        "",
+        "| Source | Verifier | Label | Trace | Cards |",
+        "|---|---|---|---|---:|",
+    ]
+    lines += [f"| {s} | {v} | {lab} | {tr} | {n} |" for (s, v, lab, tr), n in sorted(counts.items())]
+    if result.trace_dropped:
+        lines += ["", "Run traces not stored (the current code published another kind of card than the run did):", ""]
+        lines += [f"- {t}" for t in result.trace_dropped]
     return lines
 
 

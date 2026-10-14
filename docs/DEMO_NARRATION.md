@@ -41,6 +41,15 @@ Each card's text is stored in pieces (`segments`); a piece that states a claim's
 
 Claims with no value in the sentence are claims the sentence states in words ("was sent off" for a red card count of 1, "scored" for a goal count of 1, "drew level" for a margin); they stay in `claims` and in the Receipt, without a piece to underline: `goals` 8, `penalties_saved` 1, `red_cards` 2, `score_margin` 5.
 
+## Verification and trace
+
+What ran on each published card (`verification`) and whether the agent run's trace is stored (`trace`). `label_source` `guard_only` is a model draft the Guard accepted and no meaning check covered (Verifier off or failed). Cards of runs that predate the agent workflow have no trace and no meaning check.
+
+| Source | Verifier | Label | Trace | Cards |
+|---|---|---|---|---:|
+| llm | not_run | guard_only | no trace | 15 |
+| template | not_run | template | no trace | 10 |
+
 ## Same-second check
 
 A claim ends at the moment's second (`MatchTime`), so `measure` also counts events of that second that come after the moment's own event (`at_seq`). Each moment's menu claims and its published claims are measured twice, with every event up to the end second and with events up to `at_seq`; listed when the value or the counted events differ.

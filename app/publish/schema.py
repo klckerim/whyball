@@ -60,6 +60,40 @@ class Segment(_Model):
     claim_id: str | None = None
 
 
+VerifierStatus = Literal["passed", "retried_then_passed", "skipped_error", "not_run"]
+LabelSource = Literal["llm", "template", "template_fallback", "guard_only"]
+TRACE_STEPS: tuple[str, ...] = (
+    "analyst", "analyst_fallback", "narrate", "guard", "verify", "verifier_error",
+    "retry", "fallback", "finalize", "workflow_error",
+)
+TRACE_AGENTS: tuple[str, ...] = ("analyst", "narrator", "guard", "verifier", "workflow", "template")
+TRACE_STATUSES: tuple[str, ...] = ("ok", "error", "timeout")
+
+
+class Verification(_Model):
+    """How the published text was checked. `source` (the badge) keeps its meaning; this says what ran on it."""
+
+    guard: bool  # text lint + binding + verify_claim passed (always true for a published card)
+    verifier: VerifierStatus  # the meaning check: passed (first try), retried_then_passed, skipped_error, not_run
+    attempts: int  # Narrator + Guard + Verifier rounds used (1 for template cards)
+    label_source: LabelSource  # guard_only: a model draft nobody checked for meaning (Verifier off or failed)
+
+
+class TraceStep(_Model):
+    """One step of the agent run that wrote the card (app/agents/trace.py writes it; this validates it)."""
+
+    step: Literal[TRACE_STEPS]  # type: ignore[valid-type]
+    agent: Literal[TRACE_AGENTS]  # type: ignore[valid-type]
+    attempt: int
+    started_ms: int
+    duration_ms: int
+    input_ref: str
+    output: dict[str, Any]
+    tokens: dict[str, int | None]  # in, out, reasoning
+    model: str | None
+    status: Literal[TRACE_STATUSES]  # type: ignore[valid-type]
+
+
 class StoredMoment(_Model):
     id: str
     period: int
@@ -76,8 +110,9 @@ class StoredMoment(_Model):
     prompt_version: str  # of the narrator that wrote the published text
     run_id: str | None  # the LLM run the card was replayed from (None for template cards)
     claims: list[StoredClaim]
-    trace: list[dict[str, Any]]  # agent trace; empty in the replayed store
+    trace: list[dict[str, Any]]  # agent trace (TraceStep items); empty for cards no agent run wrote
     checks: StoredChecks
+    verification: Verification
 
 
 class Teams(_Model):

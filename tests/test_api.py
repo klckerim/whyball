@@ -297,3 +297,52 @@ def test_deep_links_get_the_ui(client, path):
 @pytest.mark.parametrize("path", ["/missing.js", "/assets/x.png", "/api/nope", "/api/matches/nope/x"])
 def test_missing_files_and_api_paths_stay_404(client, path):
     assert client.get(path).status_code == 404
+
+
+# --- the stored agent trace is replayed, never run (P2) -------------------------------------------------------
+
+
+def _store_with_trace(tmp_path):
+    import shutil
+
+    data = tmp_path / "data"
+    shutil.copytree(DEFAULT_OUT_DIR.parent / "demo", data / "demo")
+    (data / "demo_narration").mkdir()
+    store = json.loads((DEFAULT_OUT_DIR / f"{MATCH}.json").read_text(encoding="utf-8"))
+    card = next(m for m in store["moments"] if m["source"] == "llm")
+    card["trace"] = [
+        {"step": s, "agent": a, "attempt": 1, "started_ms": i, "duration_ms": 2, "input_ref": "x", "output": {},
+         "tokens": {"in": None, "out": None, "reasoning": None}, "model": None, "status": "ok"}
+        for i, (s, a) in enumerate([("narrate", "narrator"), ("guard", "guard"), ("finalize", "workflow")])
+    ]
+    (data / "demo_narration" / f"{MATCH}.json").write_text(json.dumps(store), encoding="utf-8")
+    return data, card
+
+
+def test_the_replay_sends_a_stored_trace_after_its_card(tmp_path):
+    data, card = _store_with_trace(tmp_path)
+    static = tmp_path / "static"
+    static.mkdir()
+    (static / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    with TestClient(create_app(data_dir=data, static_dir=static)) as c:
+        events = parse_sse(c.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)
+    names = [n for n, _ in events]
+    assert set(names) == {"match_event", "moment", "trace", "end"} and names[-1] == "end"
+    at = names.index("moment") if False else next(i for i, (n, d) in enumerate(events) if n == "moment" and d["id"] == card["id"])
+    follow = events[at + 1:at + 4]
+    assert [n for n, _ in follow] == ["trace"] * 3
+    assert [d["step"] for _, d in follow] == ["narrate", "guard", "finalize"]
+    assert [d["n"] for _, d in follow] == [0, 1, 2] and all(d["moment_id"] == card["id"] for _, d in follow)
+    # the other cards have no trace: only this card's steps appear
+    assert sum(n == "trace" for n in names) == 3
+
+
+def test_the_replay_of_a_store_without_traces_is_unchanged(client):
+    names = {n for n, _ in parse_sse(client.get(f"/api/matches/{MATCH}/replay", params={"speed": 0}).text)}
+    assert names == {"match_event", "moment", "end"}
+
+
+def test_a_moment_carries_its_verification(client):
+    for m in client.get(f"/api/matches/{MATCH}/moments").json():
+        assert set(m["verification"]) == {"guard", "verifier", "attempts", "label_source"}
+        assert m["trace"] == [] or all("step" in s for s in m["trace"])

@@ -498,6 +498,9 @@
           "type": {
             "title": "Type",
             "type": "string"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
           }
         },
         "required": [
@@ -518,6 +521,7 @@
           "claims",
           "trace",
           "checks",
+          "verification",
           "t"
         ],
         "title": "MomentOut",
@@ -896,6 +900,48 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "Verification": {
+        "additionalProperties": false,
+        "description": "How the published text was checked. `source` (the badge) keeps its meaning; this says what ran on it.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "guard": {
+            "title": "Guard",
+            "type": "boolean"
+          },
+          "label_source": {
+            "enum": [
+              "llm",
+              "template",
+              "template_fallback",
+              "guard_only"
+            ],
+            "title": "Label Source",
+            "type": "string"
+          },
+          "verifier": {
+            "enum": [
+              "passed",
+              "retried_then_passed",
+              "skipped_error",
+              "not_run"
+            ],
+            "title": "Verifier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "guard",
+          "verifier",
+          "attempts",
+          "label_source"
+        ],
+        "title": "Verification",
         "type": "object"
       }
     }

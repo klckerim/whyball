@@ -332,6 +332,7 @@ export interface components {
             }[];
             /** Type */
             type: string;
+            verification: components["schemas"]["Verification"];
         };
         /** Period */
         Period: {
@@ -458,6 +459,26 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * Verification
+         * @description How the published text was checked. `source` (the badge) keeps its meaning; this says what ran on it.
+         */
+        Verification: {
+            /** Attempts */
+            attempts: number;
+            /** Guard */
+            guard: boolean;
+            /**
+             * Label Source
+             * @enum {string}
+             */
+            label_source: "llm" | "template" | "template_fallback" | "guard_only";
+            /**
+             * Verifier
+             * @enum {string}
+             */
+            verifier: "passed" | "retried_then_passed" | "skipped_error" | "not_run";
         };
     };
     responses: never;

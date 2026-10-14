@@ -158,7 +158,13 @@
       "team": "home",
       "text": "13' — Brannoch FC take control: pressure balance over the last 10 minutes of play is +0.75 in their favour. Shots since 3': Brannoch FC 1, Morvane Athletic 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 127,
@@ -315,7 +321,13 @@
       "team": "home",
       "text": "Murek Brestani scored at 22', and Brannoch FC have had 55% of the ball since kickoff. The score is Brannoch FC 1–0 Morvane Athletic.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 176,
@@ -500,7 +512,13 @@
       "team": "away",
       "text": "32' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 22': Morvane Athletic 2, Brannoch FC 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 213,
@@ -589,7 +607,13 @@
       "team": "home",
       "text": "Orvik Belmaro was sent off at 38', and Brannoch FC are down to 10 players on the pitch.",
       "trace": [],
-      "type": "red_card"
+      "type": "red_card",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 270,
@@ -740,7 +764,13 @@
       "team": "away",
       "text": "45' — Morvane Athletic take control: pressure balance over the last 10 minutes of play is +0.67 in their favour. Shots since 45': Morvane Athletic 0, Brannoch FC 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 359,
@@ -889,7 +919,13 @@
       "team": "away",
       "text": "Davel Selvado scored at 61', and Morvane Athletic drew level. The score is Brannoch FC 1–1 Morvane Athletic.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 476,
@@ -1074,7 +1110,13 @@
       "team": "home",
       "text": "Brannoch FC lead the pressure balance over the last 10 minutes of play at +0.83, and Brannoch FC have had 2 shots to Morvane Athletic's 0 since 71'.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 494,
@@ -1291,7 +1333,13 @@
       "team": "away",
       "text": "Murek Ymberto scored at 84', and Morvane Athletic came from behind to take the lead, having trailed by 1 goal earlier in the match. The score is Brannoch FC 1–2 Morvane Athletic and Morvane Athletic have had 50% of the ball since kickoff.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 2,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 522,
@@ -1432,7 +1480,13 @@
       "team": "away",
       "text": "Murek Ymberto scored at 84', and Morvane Athletic lead the pressure balance over the last 10 minutes of play at +1.00, and Morvane Athletic have had 1 shot to Brannoch FC's 0 since 80'.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",

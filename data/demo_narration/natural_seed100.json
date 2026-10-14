@@ -129,7 +129,13 @@
       "team": "away",
       "text": "Iveno Gundrel was sent off at 14'. Isteven United are down to 10 players on the pitch, and Isteven United have had 51% of the ball since kickoff.",
       "trace": [],
-      "type": "red_card"
+      "type": "red_card",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 98,
@@ -281,7 +287,13 @@
       "team": "away",
       "text": "16' — Isteven United take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 6': Isteven United 1, Tessdal Wanderers 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 174,
@@ -444,7 +456,13 @@
       "team": "home",
       "text": "29' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.78 in their favour. Shots since 19': Tessdal Wanderers 1, Isteven United 0.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 175,
@@ -619,7 +637,13 @@
       "team": "home",
       "text": "Hesko Ilvanto scored at 29', and Tessdal Wanderers opened the scoring. The score is Tessdal Wanderers 1–0 Isteven United.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 317,
@@ -802,7 +826,13 @@
       "team": "away",
       "text": "Quenlo Pelvisto scored at 51', and Isteven United have had 49% of the ball since kickoff. The score is Tessdal Wanderers 1–1 Isteven United, and Isteven United drew level.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 353,
@@ -1032,7 +1062,13 @@
       "team": "home",
       "text": "59' — Tessdal Wanderers take control: pressure balance over the last 10 minutes of play is +0.57 in their favour. Shots since 49': Tessdal Wanderers 4, Isteven United 1.",
       "trace": [],
-      "type": "pressure_shift"
+      "type": "pressure_shift",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "template",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 478,
@@ -1252,7 +1288,13 @@
       "team": "home",
       "text": "Since 59' Tessdal Wanderers have had 61% of the ball and a 4–0 lead in shots, yet the score is Tessdal Wanderers 1–1 Isteven United.",
       "trace": [],
-      "type": "dominance_without_reward"
+      "type": "dominance_without_reward",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     },
     {
       "at_seq": 550,
@@ -1435,7 +1477,13 @@
       "team": "home",
       "text": "Brisko Ymberto scored at 90+1', and Tessdal Wanderers went ahead. Tessdal Wanderers have had 52% of the ball since kickoff, and the score is Tessdal Wanderers 2–1 Isteven United.",
       "trace": [],
-      "type": "goal"
+      "type": "goal",
+      "verification": {
+        "attempts": 1,
+        "guard": true,
+        "label_source": "guard_only",
+        "verifier": "not_run"
+      }
     }
   ],
   "prompt_version": "foundry-v5.2:gpt-5-mini",
