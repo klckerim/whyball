@@ -28,6 +28,7 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Web test fixtures (from the real API over data/demo_narration; rerun after app.publish or an API response change): .venv/bin/python -m app.api.fixtures [--check] → web/test-fixtures/ (+ manifest.json hashes)
 - API types (after an API model change): .venv/bin/python -m app.api.openapi (→ web/openapi.json; --check in pytest), then cd web && npm ci --prefix tools/openapi-gen && npm run gen:api (→ web/src/api/schema.gen.ts; npm run check:api in CI)
 - UI screenshots (review, not tests; uses the installed Google Chrome, no browser download): cd web && npm run build && npm ci --prefix tools/shots && node tools/shots/shots.mjs [out-dir] (default notes/shots/u1, untracked)
+- Container (see docs/DEPLOY.md; the user runs every `az` command): docker build -t whyball . && docker run -p 8000:8000 whyball (entry `python -m app.serve`, starts only if `app.publish --check` passes); remote smoke: python3 scripts/smoke_remote.py <url>; deploy constraints: deploy/constraints.txt; the public API surface is frozen by tests/test_api_surface.py (no request-time LLM or billable-resource endpoint)
 - Foundry connection test: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
 At the end of every task, update STATUS.md (replace stale lines, keep it under 80 lines) and rewrite its Mentor summary section.
