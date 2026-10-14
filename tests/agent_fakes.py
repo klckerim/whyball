@@ -47,3 +47,29 @@ class ScriptedClient:
 
 def draft_json(template: str) -> str:
     return json.dumps({"text": template})
+
+
+def passing_template(moment, events, menu=None) -> str:
+    """The first one- or two-clause placeholder template the Guard accepts for the moment (primary claims need some)."""
+    from app.agents import tools
+    from app.agents.guard import guard_check
+    from app.explain.menu import build_menu
+
+    menu = menu or build_menu(moment, events)
+    ctx = tools.slot_context(moment, events)
+    ids = [c.id for c in menu.clauses]
+    for template in [f"{{clause:{a}}}." for a in ids] + [f"{{clause:{a}}}, and {{clause:{b}}}." for a in ids for b in ids if a != b]:
+        if asyncio.run(guard_check(template, menu, ctx)).ok:
+            return template
+    raise AssertionError("no passing template")
+
+
+VERDICT_PASS = json.dumps({"ok": True, "issues": []})
+
+
+def verdict_reject(span: str, code: str = "role_reversed", reason: str = "roles swapped") -> str:
+    return json.dumps({"ok": False, "issues": [{"code": code, "span": span, "reason": reason}]})
+
+
+def analyst_reply(ids, note="why it matters") -> str:
+    return json.dumps({"claim_ids": list(ids), "context_note": note})

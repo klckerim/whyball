@@ -19,6 +19,7 @@ from typing import Any, Literal, Protocol
 from app.analytics.moments import Moment
 from app.explain.claims import Claim, VerificationResult
 from app.explain.menu import ClaimMenu
+from app.explain.narrator import Feedback, FeedbackItem
 from app.explain.template_narrator import Part
 
 from .trace import TraceStep
@@ -54,9 +55,20 @@ class DraftRecord:
 
 @dataclass(frozen=True)
 class FeedbackEntry:
-    source: str  # "guard" | "verifier"
+    """One reason an attempt was rejected, in the pipeline's own terms (`FeedbackItem`): source is lint | verify |
+    draft (the Guard), verifier (the Verifier) or narrator (a failed call)."""
+
+    source: str
     code: str
     fragment: str | None = None
+    claim_index: int | None = None
+
+    @classmethod
+    def from_item(cls, item: FeedbackItem) -> FeedbackEntry:
+        return cls(item.source, item.code, item.fragment, item.claim_index)
+
+    def to_item(self) -> FeedbackItem:
+        return FeedbackItem(self.source, self.code, fragment=self.fragment, claim_index=self.claim_index)
 
 
 @dataclass(frozen=True)
@@ -69,6 +81,35 @@ class FeedbackRecord:
     @property
     def codes(self) -> tuple[str, ...]:
         return tuple(e.code for e in self.entries)
+
+    def to_feedback(self) -> Feedback:
+        """The Narrator's input for the next attempt: the type the pipeline sends."""
+        return Feedback(self.attempt, tuple(e.to_item() for e in self.entries))
+
+
+@dataclass(frozen=True)
+class GuardResult:
+    """What the deterministic Guard decided about one draft (agents/guard.py computes it)."""
+
+    ok: bool
+    template: str
+    items: tuple[FeedbackItem, ...]  # why it was rejected (empty when ok)
+    lint_codes: tuple[str, ...]
+    claims: tuple[Claim, ...]
+    claim_ids: tuple[str, ...]
+    verification: tuple[VerificationResult, ...]
+    text: str | None  # rendered by code; None unless ok
+    parts: tuple[Part, ...]
+
+    @property
+    def codes(self) -> tuple[str, ...]:
+        return tuple(i.code for i in self.items)
+
+    def feedback_record(self, attempt: int) -> FeedbackRecord:
+        return FeedbackRecord(attempt, tuple(FeedbackEntry.from_item(i) for i in self.items))
+
+    def feedback(self, attempt: int) -> Feedback:
+        return self.feedback_record(attempt).to_feedback()
 
 
 @dataclass(frozen=True)
@@ -105,6 +146,7 @@ class NarrationState:
     feedback_history: tuple[FeedbackRecord, ...] = ()
     attempt: int = 0
     trace: tuple[TraceStep, ...] = ()
+    guard: GuardResult | None = None  # the Guard's latest verdict (the Verifier reads an accepted one)
     final_card: FinalCard | None = field(default=None)
 
     @property
@@ -126,6 +168,14 @@ class NarrationState:
 
     def with_feedback(self, feedback: FeedbackRecord) -> NarrationState:
         return replace(self, feedback_history=(*self.feedback_history, feedback))
+
+    def with_rendered(self, text: str) -> NarrationState:
+        """The newest draft's rendered text, once the Guard accepted it."""
+        last = replace(self.drafts[-1], text=text)
+        return replace(self, drafts=(*self.drafts[:-1], last))
+
+    def with_guard(self, guard: GuardResult) -> NarrationState:
+        return replace(self, guard=guard)
 
     def with_step(self, step: TraceStep) -> NarrationState:
         return replace(self, trace=(*self.trace, step))

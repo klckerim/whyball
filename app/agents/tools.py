@@ -17,8 +17,9 @@ from app.explain.menu import ClaimMenu, build_menu
 from app.explain.narrator import FeedbackItem
 from app.explain.pipeline import check_menu_draft
 from app.explain.slots import SlotContext, render_parts
-from app.explain.template_narrator import Part
-from app.explain.text_lint import LintIssue
+from app.explain.template_narrator import Part, join_sentences
+from app.explain.template_narrator import narrate as template_narrate
+from app.explain.text_lint import LintIssue, Roster, lint_text
 from app.generator.models import Event
 
 
@@ -56,3 +57,46 @@ async def check_template(
         return TemplateCheck(tuple(items), issues, results, claims, ids, None, ())
     parts = render_parts(template, claims, ids, results, ctx, menu.clause_templates(ctx.language))
     return TemplateCheck((), issues, results, claims, ids, "".join(p.text for p in parts), parts)
+
+
+@dataclass(frozen=True)
+class FallbackCard:
+    """The labelled template narration: only sentences whose claims verify and that pass lint."""
+
+    text: str
+    parts: tuple[Part, ...]
+    claims: tuple[Claim, ...]
+    verification: tuple[VerificationResult, ...]
+    published_sentences: int
+    total_sentences: int
+
+
+async def template_fallback(
+    moment: Moment, events: Sequence[Event], config: ExplainConfig = DEFAULT_EXPLAIN_CONFIG, language: str = "en"
+) -> FallbackCard:
+    """The same fallback `pipeline.run_moment` publishes after its last retry."""
+    roster = Roster.from_events(events)
+    narration = template_narrate(moment, events, config)
+    published, claims, results = [], [], []
+    for i, sentence in enumerate(narration.sentences):
+        text = sentence.text[language]
+        if narration.sentence_ok(i) and lint_text(text, sentence.claims, roster, config, language).ok:
+            published.append(sentence)
+            claims += sentence.claims
+            results += narration.results[i]
+    text, _, parts = join_sentences(published, language)
+    return FallbackCard(text, parts, tuple(claims), tuple(results), len(published), len(narration.sentences))
+
+
+def template_claim_ids(claims: Sequence[Claim]) -> tuple[str, ...]:
+    """Ids for claims that have no menu id: metric + side, numbered when repeated. The same rule as the publication
+    store's (tests/test_agents_tools.py keeps them equal); the store cannot import this package."""
+    ids: list[str] = []
+    for c in claims:
+        base = c.metric if c.subject.team is None else f"{c.metric}_{c.subject.team}"
+        cid, n = base, 1
+        while cid in ids:
+            n += 1
+            cid = f"{base}_{n}"
+        ids.append(cid)
+    return tuple(ids)

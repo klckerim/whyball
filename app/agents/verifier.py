@@ -34,9 +34,8 @@ from app.explain.slots import SlotContext, format_value
 from app.explain.template_narrator import fmt_minute
 from app.generator.models import Event
 
-from .guard import GuardResult
 from .limits import DEFAULT_AGENTS_CONFIG, AgentsConfig, CallBudget
-from .state import FeedbackEntry, FeedbackRecord
+from .state import FeedbackEntry, FeedbackRecord, GuardResult
 from .trace import Stopwatch, Tokens, TraceStep
 
 VERIFIER_VERSION = "verifier-v1"
@@ -178,7 +177,7 @@ class VerifyResult:
     def narrator_feedback(self, attempt: int) -> Feedback | None:
         if self.feedback is None:
             return None
-        return Feedback(attempt, tuple(FeedbackItem("verifier", e.code, fragment=e.fragment) for e in self.feedback.entries))
+        return Feedback(attempt, tuple(e.to_item() for e in self.feedback.entries))
 
 
 class VerifierAgent:

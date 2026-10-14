@@ -44,7 +44,7 @@ def _populated() -> NarrationState:
     s = _state().next_attempt()
     s = s.with_briefing(Briefing(("goal", "score_home"), "a late equaliser"))
     s = s.with_draft(DraftRecord(1, "{clause:goal}", "text"))
-    s = s.with_feedback(FeedbackRecord(1, (FeedbackEntry("guard", "raw_number", "3"),)))
+    s = s.with_feedback(FeedbackRecord(1, (FeedbackEntry("lint", "raw_number", "3"),)))
     s = s.with_step(_step(tokens=Tokens(1, 2, 3), model="m"))
     return s.finish(FinalCard("t", (Part("t"),), (), (), (), "llm", "{x}", Verification(True, "passed", 1, "llm")))
 

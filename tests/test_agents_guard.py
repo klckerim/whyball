@@ -85,7 +85,8 @@ def test_a_bad_template_is_rejected_with_coded_feedback_and_no_text(name):
     assert fb.attempt == 2 and fb.codes == g.codes
     rec = g.feedback_record(2)
     assert rec.attempt == 2 and rec.codes == g.codes
-    assert all(e.source == "guard" for e in rec.entries)
+    assert {e.source for e in rec.entries} <= {"lint", "verify", "draft"}  # the pipeline's own item sources
+    assert rec.to_feedback() == fb
 
 
 def test_a_failing_verify_claim_rejects_the_draft():
