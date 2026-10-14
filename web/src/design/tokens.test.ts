@@ -95,3 +95,17 @@ it("dark overrides every light token", () => {
 it("computes WCAG ratios (black on white is 21:1)", () => {
   expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
 });
+
+// Every colour of the UI lives in tokens.css: no hex or rgb()/hsl() literal anywhere else in src.
+const sources = import.meta.glob<string>(["/src/**/*.{ts,tsx,css}", "!/src/**/*.test.*", "!/src/design/tokens.css", "!/src/api/schema.gen.ts"], {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
+
+it("has no colour literals outside tokens.css", () => {
+  expect(Object.keys(sources).length).toBeGreaterThan(20);
+  for (const [path, text] of Object.entries(sources)) {
+    expect([path, text.match(/#[0-9a-f]{3,8}\b(?![-\w])|\b(?:rgb|hsl)a?\(/gi)]).toEqual([path, null]);
+  }
+});

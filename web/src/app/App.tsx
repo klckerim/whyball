@@ -1,7 +1,5 @@
-// Routes: "/" (first match), "/match/:id" (?mode, ?moment, ?t), "/legacy" (the old UI, loaded only on
-// that route with its own global CSS; reach it with a full page load, DESIGN D24), anything else: not found.
+// Routes: "/" (first match), "/match/:id" (?mode, ?moment, ?t), anything else: not found.
 import * as Tabs from "@radix-ui/react-tabs";
-import { lazy, Suspense } from "react";
 import { BrowserRouter, Outlet, Route, Routes, useOutletContext, useParams, useSearchParams } from "react-router";
 
 import { api } from "../api/client";
@@ -11,8 +9,6 @@ import { MatchView } from "./MatchView";
 import { Empty, Failed, Loading, NotFound } from "./states";
 import { TopBar } from "./TopBar";
 import { type Async, useAsync } from "./useAsync";
-
-const Legacy = lazy(() => import("../legacy/LegacyApp"));
 
 type MatchesState = Async<MatchSummary[]> & { retry: () => void };
 
@@ -54,14 +50,6 @@ function MatchRoute() {
 export function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/legacy"
-        element={
-          <Suspense fallback={<Loading what="the previous UI" />}>
-            <Legacy />
-          </Suspense>
-        }
-      />
       <Route element={<Shell />}>
         <Route index element={<DefaultMatch />} />
         <Route path="match/:id" element={<MatchRoute />} />

@@ -130,7 +130,7 @@ describe("T2: Fact carries an id from the payload and the exact value", () => {
   });
 });
 
-// T1: new UI directories only; the old UI (src/components, src/*.tsx) is replaced, not scanned.
+// T1: every UI directory of src (the old UI is gone).
 const sources = import.meta.glob<string>(
   ["/src/{app,api,design,stage,proof,breakit,method,overlay,state}/**/*.tsx", "!/src/**/*.test.tsx"],
   { query: "?raw", import: "default", eager: true },

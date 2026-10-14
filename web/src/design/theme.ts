@@ -1,7 +1,7 @@
 // Theme choice for UI v2 (docs/DESIGN.md D4): the system setting by default, a manual switch on top.
 // The choice is stored in localStorage when it is reachable; otherwise it lasts for the page only.
 export type Theme = "light" | "dark";
-export const THEME_KEY = "whyball.theme"; // same key as the old UI, so a viewer's choice carries over
+export const THEME_KEY = "whyball.theme";
 
 /** The viewer's explicit choice; null follows the system setting. */
 export function storedTheme(): Theme | null {

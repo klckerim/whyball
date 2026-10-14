@@ -288,7 +288,7 @@ def test_series_rejects_bad_requests(client, params, status):
     assert client.get("/api/matches/nope/series", params={"metric": "possession"}).status_code == 404
 
 
-@pytest.mark.parametrize("path", ["/match/red_card_swing_seed42", "/match/nope", "/legacy", "/match/x/y"])
+@pytest.mark.parametrize("path", ["/match/red_card_swing_seed42", "/match/nope", "/match/x/y"])
 def test_deep_links_get_the_ui(client, path):
     r = client.get(path)
     assert r.status_code == 200 and '<div id="root">' in r.text

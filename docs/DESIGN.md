@@ -148,7 +148,7 @@ Newest entries at the bottom.
   `?t=` (seconds on the continuous clock), else on the first model-written (`llm`) card, so the first
   view shows a full lower third rather than an empty kickoff.
 
-## D24. Old UI isolation
+## D24. Old UI isolation (superseded in U2: the old UI and `/legacy` are deleted)
 - The old UI stays at `/legacy` until U2, loaded with `React.lazy` together with its own global CSS.
   CSS loaded by a lazy chunk is not removed on client-side navigation, so `/legacy` is reached only by a
   full page load (typed URL or plain link); the new UI never shares a document with the old CSS.
