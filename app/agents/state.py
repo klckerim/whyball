@@ -44,6 +44,7 @@ class Briefing:
 
     claim_ids: tuple[str, ...]
     context_note: str
+    expanded_clause_ids: tuple[str, ...] = ()  # clause ids the Analyst named instead of claim ids, replaced by their claims
 
 
 @dataclass(frozen=True)

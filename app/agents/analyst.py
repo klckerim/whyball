@@ -67,17 +67,22 @@ class BriefingError(ValueError):
 
 
 def validate_briefing(out: AnalystOut, menu: ClaimMenu) -> Briefing:
-    """The Analyst's answer as a Briefing, or a BriefingError. Adds what the Narrator needs to stay usable: every claim
-    of a clause the selection touches (so the clause stays on the menu) and the moment's primary claims."""
+    """The Analyst's answer as a Briefing, or a BriefingError. A clause id is expanded to that clause's claims (recorded in
+    `expanded_clause_ids`). Adds what the Narrator needs to stay usable: every claim of a clause the selection touches
+    (so the clause stays on the menu) and the moment's primary claims."""
     ids = out.claim_ids
     if not ids:
         raise BriefingError("empty_selection", "no claim chosen")
     if len(set(ids)) != len(ids):
         raise BriefingError("duplicate_claim_id", "a claim id is repeated")
     known = menu.by_id
-    unknown = [i for i in ids if i not in known]
+    clauses = menu.clause_by_id
+    # A clause id (the record lists clauses next to claims) stands for the claims of that clause; the prompt is unchanged.
+    expanded = [i for i in ids if i not in known and i in clauses]
+    unknown = [i for i in ids if i not in known and i not in clauses]
     if unknown:
         raise BriefingError("unknown_claim_id", f"not on the menu: {unknown[0]}")
+    claim_ids = list(dict.fromkeys(c for i in ids for c in ((i,) if i in known else clauses[i].claim_ids)))
     note = out.context_note.strip()
     if len(note) > NOTE_MAX_CHARS:
         raise BriefingError("note_too_long", f"{len(note)} characters")
@@ -85,7 +90,7 @@ def validate_briefing(out: AnalystOut, menu: ClaimMenu) -> Briefing:
         raise BriefingError("note_has_number", "the note contains a number")
     if "{" in note or "}" in note:
         raise BriefingError("note_has_placeholder", "the note contains a placeholder")
-    return Briefing(effective_claim_ids(menu, ids), note)
+    return Briefing(effective_claim_ids(menu, claim_ids), note, tuple(expanded))
 
 
 def effective_claim_ids(menu: ClaimMenu, selected: Sequence[str]) -> tuple[str, ...]:
@@ -157,7 +162,12 @@ class AnalystAgent:
 
         def fall_back(status: str, reason: str, message: str, result: ChatResult | None = None) -> AnalystResult:
             first = step("analyst", status, {"error": reason, "message": message[:200]}, result)
-            second = step("analyst_fallback", "ok", {"reason": reason, "menu": "full"})
+            # the fallback is a decision taken now, not the failed call over again: it starts after it and takes ~0 ms
+            started_fb = clock.start()
+            started_ms, duration_ms = clock.span(started_fb)
+            second = TraceStep.make("analyst_fallback", "analyst", attempt=0, started_ms=started_ms, duration_ms=duration_ms,
+                                    input_ref="menu", output={"reason": reason, "menu": "full"}, tokens=None,
+                                    model=self.model_tag or None, status="ok")
             return AnalystResult(None, (first, second))
 
         try:
@@ -183,6 +193,8 @@ class AnalystAgent:
             briefing = validate_briefing(out, menu)
         except BriefingError as e:
             return fall_back("error", e.code, str(e), result)
-        done = step("analyst", "ok", {"selected": list(out.claim_ids), "effective": list(briefing.claim_ids),
+        done = step("analyst", "ok", {"selected": list(out.claim_ids),
+                                       "expanded_clause_ids": list(briefing.expanded_clause_ids),
+                                       "effective": list(briefing.claim_ids), "menu_claims": len(menu.claims),
                                        "note": briefing.context_note}, result)
         return AnalystResult(briefing, (done,))

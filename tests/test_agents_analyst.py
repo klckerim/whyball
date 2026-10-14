@@ -7,7 +7,7 @@ import pytest
 
 from app.agents.analyst import (
     ANALYST_PROMPT, NOTE_MAX_CHARS, AnalystAgent, AnalystOut, BriefingError, effective_claim_ids, effective_menu,
-    narrow_menu, validate_briefing,
+    narrow_menu, validate_briefing, ANALYST_VERSION,
 )
 from app.agents.limits import AgentsConfig, CallBudget
 from app.agents.narrator_agent import narrator_messages
@@ -57,6 +57,7 @@ def test_a_valid_answer_becomes_a_briefing_with_what_the_narrator_needs():
     (AnalystOut(claim_ids=[], context_note="x"), "empty_selection"),
     (AnalystOut(claim_ids=["goal", "goal"], context_note="x"), "duplicate_claim_id"),
     (AnalystOut(claim_ids=["not_on_the_menu"], context_note="x"), "unknown_claim_id"),
+    (AnalystOut(claim_ids=["goal", "also_not_there"], context_note="x"), "unknown_claim_id"),
     (AnalystOut(claim_ids=["goal"], context_note="x" * (NOTE_MAX_CHARS + 1)), "note_too_long"),
     (AnalystOut(claim_ids=["goal"], context_note="he scored in the 90th minute"), "note_has_number"),
     (AnalystOut(claim_ids=["goal"], context_note="the third goal"), "note_has_number"),
@@ -67,6 +68,43 @@ def test_invalid_answers_are_refused_with_a_code(out, code):
     with pytest.raises(BriefingError) as e:
         validate_briefing(out, menu)
     assert e.value.code == code
+
+
+def test_a_clause_id_is_expanded_to_its_claims_and_the_expansion_is_recorded():
+    _, _, menu = case("dominance_without_reward")
+    clause = next(c for c in menu.clauses if len(c.claim_ids) > 1)
+    b = validate_briefing(AnalystOut(claim_ids=[clause.id], context_note="x"), menu)
+    assert set(clause.claim_ids) <= set(b.claim_ids) and b.expanded_clause_ids == (clause.id,)
+    mixed = validate_briefing(AnalystOut(claim_ids=["possession", clause.id], context_note="x"), menu)
+    assert mixed.expanded_clause_ids == (clause.id,)
+    plain = validate_briefing(AnalystOut(claim_ids=["possession"], context_note="x"), menu)
+    assert plain.expanded_clause_ids == ()
+
+
+def test_a_clause_that_is_also_a_claim_id_stays_a_claim():
+    _, _, menu = case("goal")
+    both = [c.id for c in menu.claims if c.id in menu.clause_by_id]
+    assert both, "goal menus have clauses named like their claims (goal, score...)"
+    b = validate_briefing(AnalystOut(claim_ids=[both[0]], context_note="x"), menu)
+    assert b.expanded_clause_ids == ()
+
+
+def test_the_analyst_step_records_the_expansion_and_the_menu_size():
+    events, moment, menu = case("goal")
+    clause_only = next(c.id for c in menu.clauses if c.id not in menu.by_id)
+    r = brief(analyst(events, ScriptedClient(AnalystOut=reply([clause_only]))), moment, menu)
+    assert r.briefing is not None and [s.step for s in r.steps] == ["analyst"]
+    out = r.steps[0].output
+    assert out["expanded_clause_ids"] == [clause_only] and out["menu_claims"] == len(menu.claims)
+    assert len(out["effective"]) == len(r.briefing.claim_ids)
+
+
+def test_the_fallback_step_is_a_zero_length_decision_after_the_failed_call():
+    events, moment, menu = case("goal")
+    r = brief(analyst(events, ScriptedClient(AnalystOut=RuntimeError("down"))), moment, menu)
+    first, fb = r.steps
+    assert fb.duration_ms <= 5 and fb.started_ms >= first.started_ms
+    assert first.duration_ms + fb.duration_ms <= first.duration_ms + 5  # no double counting
 
 
 def test_the_answer_schema_has_no_field_for_facts():
@@ -167,3 +205,10 @@ def test_the_analyst_cannot_remove_a_primary_claim():
     r = brief(analyst(events, ScriptedClient(AnalystOut=reply(["score_home"]))), moment, menu)
     assert r.briefing is not None
     assert "pressure" in r.briefing.claim_ids  # the primary claim came back
+
+
+def test_the_analyst_prompt_is_the_one_the_canary_ran_with():
+    import hashlib
+
+    assert ANALYST_VERSION == "analyst-v1"
+    assert hashlib.sha256(ANALYST_PROMPT.encode()).hexdigest()[:16] == "ce6ea668f5d95070"
