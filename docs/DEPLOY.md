@@ -178,6 +178,15 @@ python3 scripts/smoke_remote.py "https://$APP_FQDN"
 ```
 It uses only the standard library and only reads.
 
+**Right after a deploy, add `--wait 120`:** the container runs `python -m app.publish --check` before it
+starts the server, and a new revision needs time to become ready, so the first requests can be reset or
+refused. `--wait` retries `/healthz` once a second and starts the real checks when it answers (or prints
+`FAIL wait: not ready after 120s` if it never does):
+
+```bash
+python3 scripts/smoke_remote.py "https://$APP_FQDN" --wait 120
+```
+
 Expected:
 ```
 PASS healthz: HTTP 200 {"ok":true,"matches":3}

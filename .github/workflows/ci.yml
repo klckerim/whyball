@@ -74,4 +74,7 @@ jobs:
       - name: Image starts and answers
         run: |
           docker run -d --name whyball-ci -p 8000:8000 whyball:ci
-          python3 scripts/smoke_remote.py http://127.0.0.1:8000 || { docker logs whyball-ci; exit 1; }
+          python3 scripts/smoke_remote.py http://127.0.0.1:8000 --wait 60
+      - name: Container log
+        if: failure()
+        run: docker logs whyball-ci

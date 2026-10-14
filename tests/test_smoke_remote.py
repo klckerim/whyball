@@ -91,3 +91,38 @@ def test_fake_servers(attrs, failing):
 def test_unreachable_server_fails_cleanly(capsys):
     assert smoke.main(["http://127.0.0.1:9", "--timeout", "1"]) == 1
     assert "FAIL request:" in capsys.readouterr().out
+
+
+def test_wait_succeeds_once_the_server_comes_up():
+    # Reserve a port, start answering on it only after 1.5 s: the first attempts are connection errors.
+    probe = ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+    port = probe.server_port
+    probe.server_close()
+    holder = {}
+
+    def later():
+        time.sleep(1.5)
+        holder["httpd"] = ThreadingHTTPServer(("127.0.0.1", port), Fake)
+        holder["httpd"].serve_forever()
+
+    threading.Thread(target=later, daemon=True).start()
+    try:
+        results = smoke.run(f"http://127.0.0.1:{port}", events=5, speed=30.0, timeout=5, wait=10)
+    finally:
+        if "httpd" in holder:
+            holder["httpd"].shutdown()
+    assert results[0][1] == "wait" and results[0][0] and "ready after" in results[0][2]
+    assert all(ok for ok, _, _ in results)
+
+
+def test_wait_times_out_with_one_clear_fail_line(capsys):
+    assert smoke.main(["http://127.0.0.1:9", "--wait", "2", "--timeout", "1"]) == 1
+    out = capsys.readouterr().out
+    assert "FAIL wait: not ready after 2s" in out
+    assert "healthz" not in out  # the normal checks are skipped
+
+
+def test_default_does_not_wait():
+    t = time.monotonic()
+    results = smoke.run("http://127.0.0.1:9", timeout=1)
+    assert [n for _, n, _ in results][0] == "request" and time.monotonic() - t < 3
