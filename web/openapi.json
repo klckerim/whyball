@@ -348,6 +348,10 @@
             ],
             "title": "Minutes"
           },
+          "start_used": {
+            "title": "Start Used",
+            "type": "boolean"
+          },
           "type": {
             "enum": [
               "rolling",
@@ -359,7 +363,8 @@
           }
         },
         "required": [
-          "type"
+          "type",
+          "start_used"
         ],
         "title": "MetricWindow",
         "type": "object"

@@ -4,6 +4,7 @@ import type { Claim, MetricInfo } from "../api/types";
 
 export type WindowText =
   | { kind: "at"; end: string }
+  | { kind: "asof" }
   | { kind: "range" }
   | { kind: "rolling" }
   | { kind: "unknown" };
@@ -12,6 +13,7 @@ export function windowKind(claim: Pick<Claim, "start" | "end">, info: MetricInfo
   if (!info) return { kind: "unknown" };
   if (info.window.type === "rolling") return { kind: "rolling" };
   if (info.window.type === "claim_range") {
+    if (!info.window.start_used) return { kind: "asof" }; // a state at the claim's end: its start is not what was measured
     return claim.start === claim.end ? { kind: "at", end: claim.end } : { kind: "range" };
   }
   return { kind: "unknown" };

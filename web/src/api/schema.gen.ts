@@ -275,6 +275,8 @@ export interface components {
         MetricWindow: {
             /** Minutes */
             minutes?: number | null;
+            /** Start Used */
+            start_used: boolean;
             /**
              * Type
              * @enum {string}

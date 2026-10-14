@@ -26,7 +26,7 @@ from starlette.types import Scope
 
 from app.analytics.config import DEFAULT_CONFIG
 from app.explain.claims import COMPARISONS, KINDS, METRIC_KINDS
-from app.explain.labels import METRIC_DEFINITIONS, METRIC_LABELS, metric_window
+from app.explain.labels import METRIC_DEFINITIONS, METRIC_LABELS, METRICS_IGNORING_START, metric_window
 from app.publish.schema import SOURCES, EvidenceEvent, Score, StoredClaim, StoredMoment, Teams
 
 from .data import TIMELINE_TYPES, Match, load_matches
@@ -96,6 +96,9 @@ class MetricWindow(BaseModel):
     # rolling: the last `minutes` played before the claim end; cumulative: kickoff to the point (series)
     type: Literal["rolling", "claim_range", "cumulative"]
     minutes: float | None = None
+    # Whether the claim's own start is part of what was measured. False for a state at the claim's end (score, score
+    # margin, players on the pitch) and for the rolling pressure balance; a series has no claim, so also False there.
+    start_used: bool
 
 
 class MetricInfo(BaseModel):
@@ -156,7 +159,7 @@ def _summary(m: Match) -> MatchSummary:
 
 def _metric_window(metric: str) -> MetricWindow:
     kind, minutes = metric_window(metric, DEFAULT_CONFIG)
-    return MetricWindow(type=kind, minutes=minutes)  # type: ignore[arg-type]
+    return MetricWindow(type=kind, minutes=minutes, start_used=metric not in METRICS_IGNORING_START)  # type: ignore[arg-type]
 
 
 METRICS = MetricsOut(
@@ -253,7 +256,7 @@ def create_app(data_dir: Path | None = None, static_dir: Path | None = None) -> 
         if metric not in SERIES_METRICS:
             raise HTTPException(404, f"no series for metric: {metric}")
         info = next(i for i in METRICS.metrics if i.id == metric)
-        window = info.window if info.window.type == "rolling" else MetricWindow(type="cumulative")
+        window = info.window if info.window.type == "rolling" else MetricWindow(type="cumulative", start_used=False)
         return Series(
             metric=metric, label=info.label, definition=info.definition, window=window, perspective="home",
             step=step, points=[SeriesPoint(**p) for p in series_points(m, metric, step)],

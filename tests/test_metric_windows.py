@@ -87,3 +87,26 @@ def test_the_pressure_claim_no_longer_shows_a_range_that_contradicts_its_label()
     assert "last 10 minutes" in pressure["definition"]
     shots = next(c for c in rec["claims"] if c["id"] == "shots_for")
     assert "from" in shots  # a count over a range keeps its range
+
+
+@pytest.mark.parametrize("metric", METRIC_KINDS)
+def test_start_used_in_the_api_matches_what_measure_does(metric):
+    assert API[metric].window.start_used == _start_changes_the_value(metric)
+
+
+def test_start_used_is_false_for_exactly_four_metrics_and_existing_window_fields_are_unchanged():
+    assert {m for m, a in API.items() if not a.window.start_used} == {"score", "score_margin", "players_on_pitch", "pressure_balance"}
+    for m, a in API.items():  # type and minutes are what they were before the flag existed
+        assert a.window.type == ("rolling" if m == "pressure_balance" else "claim_range")
+        assert a.window.minutes == (10.0 if m == "pressure_balance" else None)
+
+
+def test_a_series_window_says_it_has_no_claim_start():
+    from fastapi.testclient import TestClient
+
+    from app.api.main import create_app
+
+    with TestClient(create_app()) as c:
+        for metric in ("pressure_balance", "possession"):
+            w = c.get("/api/matches/red_card_swing_seed42/series", params={"metric": metric}).json()["window"]
+            assert w["start_used"] is False

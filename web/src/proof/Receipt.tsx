@@ -126,6 +126,13 @@ function WindowText({ claim, info, loading }: { claim: Claim; info: MetricInfo |
       </>
     );
   }
+  if (w.kind === "asof") {
+    return (
+      <>
+        as of <Fact claim={claim} field="end" />
+      </>
+    );
+  }
   if (w.kind === "range") {
     return (
       <>

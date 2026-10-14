@@ -126,14 +126,37 @@ describe("claim detail", () => {
     fireEvent.click(within(receipt()).getAllByRole("button").find((b) => b.querySelector(`[data-claim-id="${claim.id}"]`))!);
   };
 
-  it("claim_range: the claim's own minutes", () => {
-    const hit = withMetric("score");
+  it("claim_range with a start in use: the claim's own minutes", () => {
+    const hit = withMetric("possession");
     open(hit);
-    const info = metricsFixture.metrics.find((m) => m.id === "score")!;
+    const info = metricsFixture.metrics.find((m) => m.id === "possession")!;
     expect(info.window.type).toBe("claim_range");
+    expect(info.window.start_used).toBe(true);
     const dd = within(claimDetail()).getByText("Window").nextElementSibling!;
     expect(dd.textContent).toBe(hit.claim.start === hit.claim.end ? `at ${hit.claim.end}` : `from ${hit.claim.start} to ${hit.claim.end}`);
     expect(dd.querySelectorAll("[data-claim-id]").length).toBeGreaterThan(0);
+  });
+
+  it.each(["score", "score_margin", "players_on_pitch"])("%s is a state at the end: 'as of', not a range", (metric) => {
+    let hit: ReturnType<typeof withMetric>;
+    try {
+      hit = withMetric(metric);
+    } catch {
+      return; // no fixture card states this metric in its sentence
+    }
+    open(hit);
+    const info = metricsFixture.metrics.find((m) => m.id === metric)!;
+    expect(info.window.type).toBe("claim_range");
+    expect(info.window.start_used).toBe(false);
+    const dd = within(claimDetail()).getByText("Window").nextElementSibling!;
+    expect(dd.textContent).toBe(`as of ${hit.claim.end}`);
+    expect(dd.querySelector("[data-claim-id]")!.getAttribute("data-field")).toBe("end");
+  });
+
+  it("the window flag in /api/metrics: false for exactly the four metrics whose start is not measured", () => {
+    expect(metricsFixture.metrics.filter((m) => !m.window.start_used).map((m) => m.id).sort()).toEqual(
+      ["players_on_pitch", "pressure_balance", "score", "score_margin"],
+    );
   });
 
   it("rolling: the last N minutes, closing at the claim's end, N from /api/metrics", () => {
@@ -169,8 +192,9 @@ describe("claim detail", () => {
 
   it("windowKind follows the API window type", () => {
     const c = { start: "10'", end: "20'" };
-    const info = (type: "rolling" | "claim_range" | "cumulative") => ({ id: "x", kind: "k", label: "l", definition: "d", window: { type, minutes: null } });
+    const info = (type: "rolling" | "claim_range" | "cumulative", start_used = true) => ({ id: "x", kind: "k", label: "l", definition: "d", window: { type, minutes: null, start_used } });
     expect(windowKind(c, info("claim_range")).kind).toBe("range");
+    expect(windowKind(c, info("claim_range", false)).kind).toBe("asof");
     expect(windowKind({ start: "20'", end: "20'" }, info("claim_range")).kind).toBe("at");
     expect(windowKind(c, info("rolling")).kind).toBe("rolling");
     expect(windowKind(c, undefined).kind).toBe("unknown");
@@ -369,7 +393,7 @@ describe("events cited by this card", () => {
   });
 
   it("the sentence follows the registry: kind ratio or a rolling window, nothing else", () => {
-    const info = (kind: string, type: "rolling" | "claim_range" | "cumulative") => ({ id: "x", kind, label: "l", definition: "d", window: { type, minutes: null } });
+    const info = (kind: string, type: "rolling" | "claim_range" | "cumulative") => ({ id: "x", kind, label: "l", definition: "d", window: { type, minutes: null, start_used: true } });
     expect(isAggregate(info("ratio", "claim_range"))).toBe(true);
     expect(isAggregate(info("state", "rolling"))).toBe(true);
     expect(isAggregate(info("count", "claim_range"))).toBe(false);

@@ -95,10 +95,11 @@ def test_metrics(client):
         assert m["label"] == METRIC_LABELS["en"][m["id"]]
         assert m["definition"].strip()
         if m["id"] == "pressure_balance":
-            assert m["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min}
+            assert m["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min, "start_used": False}
             assert f"{DEFAULT_CONFIG.pressure_window_min:g} minutes" in m["definition"]
         else:
-            assert m["window"] == {"type": "claim_range", "minutes": None}
+            start_used = m["id"] not in ("score", "score_margin", "players_on_pitch")
+            assert m["window"] == {"type": "claim_range", "minutes": None, "start_used": start_used}
 
 
 def test_metrics_matches_the_tool_api(client):
@@ -271,10 +272,10 @@ def test_series_matches_metrics_at(client, metric):
 
 def test_series_windows(client):
     pb = client.get(f"/api/matches/{MATCH}/series", params={"metric": "pressure_balance"}).json()
-    assert pb["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min}
+    assert pb["window"] == {"type": "rolling", "minutes": DEFAULT_CONFIG.pressure_window_min, "start_used": False}
     assert any(p["value"] is None for p in pb["points"]) and any(p["value"] is not None for p in pb["points"])
     share = client.get(f"/api/matches/{MATCH}/series", params={"metric": "possession"}).json()
-    assert share["window"] == {"type": "cumulative", "minutes": None}
+    assert share["window"] == {"type": "cumulative", "minutes": None, "start_used": False}
     assert all(p["value"] is not None for p in share["points"])
 
 
