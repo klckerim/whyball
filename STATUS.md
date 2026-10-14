@@ -46,8 +46,7 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - Eval and run samples are small (15 moments per run, 3 runs); one data point per prompt version.
 - Stored card red_card_swing 90+1' mentions an 84' goal that none of its claims cover.
 - Tests (2026-10-14, clean `npm ci`): pytest 598 passed, Vitest 333 passed, `npm run smoke` 3 passed.
-- `web/openapi.json` is compared byte for byte; FastAPI is unpinned (local 0.143.0), so a new FastAPI
-  release can fail the pytest drift check until the file is regenerated.
+- U0 close-out: metric definitions fixed (4); FastAPI/Starlette/Pydantic pinned; names ASCII; history: no endpoint/UUID.
 - After `app.publish`, rerun `python -m app.api.fixtures` (pytest fails until then, by design).
 - Two of the three demo matches share one run id and one prompt version.
 - `.env.example` is tracked on purpose and matches the `\.env` hygiene grep; not opened (deny rule).
@@ -75,5 +74,5 @@ Full list in [CLAUDE.md](CLAUDE.md). Daily ones:
 - Deviation 1: openapi-typescript needs TS 5, so it runs from an isolated tool package (your choice).
 - Deviation 2: the step-5 commit alone fails the old colour test (a `#127` in a comment; a cached run
   hid it); step 6 fixes it. CI only tests the pushed head.
-- Risk: FastAPI is unpinned, so a new release can trip the OpenAPI drift test.
+- Risk closed: fastapi 0.143.0, starlette 1.7.0, pydantic 2.14.1 pinned for the OpenAPI drift test.
 - Next: push and check CI, then U1 (shell + On Air stage, B2 series endpoint).
