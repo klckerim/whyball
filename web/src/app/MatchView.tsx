@@ -9,6 +9,7 @@ import type { MatchDetail, Moment, Series, TimelineEvent } from "../api/types";
 import { SPEEDS } from "../state/clock";
 import { eventAt, stepMoment } from "../state/match";
 import { type Card, initialPlayback, usePlayback } from "../state/playback";
+import { ProofView } from "../proof/ProofView";
 import { OnAir } from "../stage/OnAir";
 import styles from "./app.module.css";
 import { HelpDialog } from "./HelpDialog";
@@ -60,12 +61,22 @@ export function openAt(params: URLSearchParams, moments: Moment[], duration: num
 
 function MatchPlayer({ data }: { data: MatchData }) {
   const { detail, moments, events, series } = data;
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const metrics = useAsync(api.metrics, "metrics");
   const cards: Card[] = useMemo(() => moments.map((m) => ({ id: m.id, t: m.t, text: m.text })), [moments]);
   const [state, dispatch] = usePlayback(cards, () => {
     const at = openAt(params, moments, detail.duration_t);
     return initialPlayback(detail.duration_t, SPEEDS[0].speed, at.t, at.showId, cards);
   });
+  const [proofId, setProofId] = useState<string | null>(
+    () => moments.find((m) => m.id === params.get("moment"))?.id ?? moments.find((m) => m.source === "llm")?.id ?? moments[0]?.id ?? null,
+  );
+  const selectProof = (id: string) => {
+    setProofId(id);
+    const next = new URLSearchParams(params);
+    next.set("moment", id);
+    setParams(next, { replace: true });
+  };
   const [guides, setGuides] = useState(false);
   const [help, setHelp] = useState(false);
   const { t, playing, speed } = state.clock;
@@ -117,7 +128,7 @@ function MatchPlayer({ data }: { data: MatchData }) {
         />
       </Tabs.Content>
       <Tabs.Content value="proof" className={styles.proof}>
-        <p>The Proof view is not built yet; it comes in the next UI stage.</p>
+        <ProofView detail={detail} moments={moments} events={events} metrics={metrics} momentId={proofId} onMoment={selectProof} />
       </Tabs.Content>
       <HelpDialog open={help} onOpenChange={setHelp} />
     </>

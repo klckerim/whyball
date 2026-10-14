@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Series } from "../api/types";
 import { typeLabel } from "../design/TypeGlyph";
-import { matchFixtures, type MatchFixture } from "../test/fixtures";
+import { matchFixtures, metricsFixture, type MatchFixture } from "../test/fixtures";
 import { AppRoutes } from "./App";
 import { shortcutFor } from "./keys";
 import { openAt } from "./MatchView";
@@ -21,6 +21,7 @@ function serve(opts: { fail?: RegExp; pending?: RegExp; override?: Partial<Match
     const url = String(input);
     if (opts.pending?.test(url)) return new Promise<Response>(() => {});
     if (opts.fail?.test(url)) return json({ detail: "boom" }, 500);
+    if (url === "/api/metrics") return json(metricsFixture);
     if (url === "/api/matches") return json(matchFixtures.map((m) => m.summary));
     const m = url.match(/^\/api\/matches\/([^/?]+)(?:\/(\w+))?/);
     const f = m && byId.get(decodeURIComponent(m[1]!));
@@ -120,10 +121,12 @@ describe("routes and states", () => {
     expect(screen.getByRole("button", { name: "Next moment" })).toHaveProperty("disabled", true);
   });
 
-  it("Proof mode is a placeholder until U2", async () => {
+  it("?mode=proof opens the Proof face on the deep-linked moment", async () => {
     serve();
-    renderAt(`/match/${red.summary.id}?mode=proof`);
-    expect(await screen.findByText("The Proof view is not built yet; it comes in the next UI stage.")).toBeTruthy();
+    const card = red.moments.find((m) => m.type === "red_card")!;
+    renderAt(`/match/${red.summary.id}?mode=proof&moment=${card.id}`);
+    const receipt = await screen.findByRole("region", { name: "Receipt" });
+    expect(receipt.getAttribute("data-card-id")).toBe(card.id);
     expect(screen.getByRole("tab", { name: "Proof" }).getAttribute("aria-selected")).toBe("true");
   });
 

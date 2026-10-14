@@ -18,3 +18,6 @@ export function useMediaQuery(query: string): boolean {
 /** Below this width the lower third leaves the stage and becomes a panel under it (DESIGN D18). */
 export const WIDE = "(min-width: 768px)";
 export const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
+/** Proof is three columns from this width (DESIGN D29); below it one column. */
+export const DESKTOP = "(min-width: 1024px)";

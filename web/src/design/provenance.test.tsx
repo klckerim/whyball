@@ -143,6 +143,7 @@ describe("T1: no hand-written numbers in JSX", () => {
   it("scans the new UI sources", () => {
     expect(Object.keys(sources)).toContain("/src/design/Fact.tsx");
     for (const f of ["/src/stage/ScoreBug.tsx", "/src/stage/LowerThird.tsx", "/src/stage/Pitch.tsx", "/src/stage/OnAir.tsx",
+      "/src/proof/Receipt.tsx", "/src/proof/EvidenceList.tsx", "/src/proof/MomentRail.tsx", "/src/design/SentenceText.tsx",
       "/src/app/App.tsx", "/src/app/MatchView.tsx", "/src/app/Transport.tsx", "/src/app/Timeline.tsx", "/src/app/TopBar.tsx"]) {
       expect(Object.keys(sources)).toContain(f);
     }
