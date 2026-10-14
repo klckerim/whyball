@@ -476,11 +476,9 @@ def foundry_narrator_from_env(
     model = os.environ.get("FOUNDRY_MODEL")
     if not endpoint or not model:
         raise ValueError("FOUNDRY_PROJECT_ENDPOINT and FOUNDRY_MODEL are required for the foundry narrator")
-    try:
-        from azure.identity import AzureCliCredential
-    except ImportError as e:
-        raise ImportError(INSTALL_HINT) from e
+    from .credential import make_credential
+
     adapter = FoundryChatClientAdapter(
-        project_endpoint=endpoint, model=model, credential=AzureCliCredential()
+        project_endpoint=endpoint, model=model, credential=make_credential()
     )
     return FoundryNarrator(events, adapter, config=config, model_tag=model)

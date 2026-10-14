@@ -4,7 +4,7 @@ Mirrors Microsoft's official sample; the only difference is that the endpoint an
 https://github.com/microsoft/agent-framework/blob/main/python/samples/01-get-started/01_hello_agent.py
 https://learn.microsoft.com/agent-framework/integrations/by-component/model-providers/microsoft-foundry
 
-Run:
+Run (locally the credential chain falls through to the az login session):
     az login
     .venv/bin/pip install -e ".[llm]"
     .venv/bin/python -m app.llm.hello
@@ -15,8 +15,9 @@ import os
 
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
-from azure.identity import AzureCliCredential
 from dotenv import load_dotenv
+
+from app.explain.credential import make_credential
 
 
 async def main() -> None:
@@ -25,7 +26,7 @@ async def main() -> None:
         client=FoundryChatClient(
             project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
             model=os.environ["FOUNDRY_MODEL"],
-            credential=AzureCliCredential(),
+            credential=make_credential(),
         ),
         instructions="You are a friendly assistant. Keep your answers brief.",
     )
