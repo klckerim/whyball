@@ -43,3 +43,26 @@ def write_run(path: Path, meta: dict[str, Any], started_at: str, finished_at: st
 
 def usage_rows(usage: Sequence[Any]) -> list[dict[str, Any]]:
     return [asdict(u) for u in usage]
+
+
+def append_run(path: Path, meta: dict[str, Any], matches: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
+    """Adds `matches` to the run file at `path` (written by the same model, prompt and flags) and rewrites it. Returns the
+    run's start time and the merged meta (calls, tokens and wall time summed)."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    old, run = data["meta"], data["runs"][-1]
+    for key in ("model", "prompt_version", "analyst_version", "verifier_version", "flags", "moments", "dry_run"):
+        if old.get(key) != meta.get(key):
+            raise SystemExit(f"cannot append: {key} differs ({old.get(key)!r} vs {meta.get(key)!r})")
+    have = {m["match_id"] for m in run["matches"]}
+    clash = have & {m["match_id"] for m in matches}
+    if clash:
+        raise SystemExit(f"cannot append: {sorted(clash)} are already in {path.name}")
+    merged = dict(meta)
+    merged["started_at"] = old["started_at"]
+    merged["calls"] = old["calls"] + meta["calls"]
+    merged["wall_seconds"] = round(old["wall_seconds"] + meta["wall_seconds"], 1)
+    merged["tokens"] = {k: old["tokens"][k] + meta["tokens"][k] for k in meta["tokens"]}
+    data = {"meta": merged, "runs": [{"started_at": old["started_at"], "finished_at": meta["finished_at"],
+                                      "matches": [*run["matches"], *matches]}]}
+    path.write_text(json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    return old["started_at"], merged

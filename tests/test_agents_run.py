@@ -99,3 +99,76 @@ def test_a_live_run_needs_a_confirmation(monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", open("/dev/null"))
     assert main(["--match", RED]) == 2
     assert "needs --yes" in capsys.readouterr().err
+
+
+# --- stop at the first trouble, append ---------------------------------------------------------------------------
+
+
+class TroubleClient:
+    """A good model except for one trouble on its first Narrator call."""
+
+    def __init__(self, trouble):
+        from app.agents.dryrun import DryRunClient
+        self.inner, self.trouble, self.narrated = DryRunClient(), trouble, 0
+
+    async def complete(self, messages, *, response_model, max_tokens, reasoning_effort=None):
+        if response_model.__name__ == "MenuDraftOut":
+            self.narrated += 1
+            if self.narrated == 1 and isinstance(self.trouble, Exception):
+                raise self.trouble
+            if self.narrated == 1:
+                import asyncio
+                await asyncio.sleep(self.trouble)
+        return await self.inner.complete(messages, response_model=response_model, max_tokens=max_tokens,
+                                         reasoning_effort=reasoning_effort)
+
+
+def _moments(case="red_card"):
+    from app.analytics import detect_moments
+    from app.generator.models import read_jsonl
+    events = read_jsonl(RED_PATH[0][2])
+    return events, detect_moments(events)
+
+
+@pytest.mark.parametrize("trouble,expected", [
+    (RuntimeError("Error code: 429 - Too Many Requests"), "rate limit"),
+    (0.5, "timed out"),
+])
+def test_the_first_429_or_timeout_stops_the_run_before_the_next_cards(trouble, expected):
+    import asyncio
+
+    from app.agents.limits import AgentsConfig
+    from app.agents.workflow import AgentWorkflow
+
+    events, moments = _moments()
+    client = TroubleClient(trouble)
+    wf = AgentWorkflow(events, client, agents=AgentsConfig(max_concurrent_cards=1, narrator_timeout_s=0.05), model_tag="m")
+    results = asyncio.run(wf.run_cards(moments[:4], stop_on_trouble=True))
+    assert results[0] is not None and results[1:] == [None, None, None]
+    assert expected in wf.trouble
+    assert client.narrated <= 3  # the first card may retry up to its three attempts; no other card started
+
+
+def test_without_trouble_no_card_is_skipped():
+    import asyncio
+
+    from app.agents.dryrun import DryRunClient
+    from app.agents.workflow import AgentWorkflow
+
+    events, moments = _moments()
+    results = asyncio.run(AgentWorkflow(events, DryRunClient(), model_tag="m").run_cards(moments[:4], stop_on_trouble=True))
+    assert all(r is not None for r in results)
+
+
+def test_append_adds_a_match_to_a_run_file_and_refuses_a_different_setup(tmp_path):
+    out = tmp_path / "run.json"
+    assert main(["--dry-run", "--out", str(out), "--match", RED]) == 0
+    other = [p[2].stem for p in demo_paths() if p[2].stem != RED][0]
+    assert main(["--dry-run", "--out", str(out), "--append", "--match", other]) == 0
+    data = json.loads(out.read_text())
+    assert [m["match_id"] for m in data["runs"][-1]["matches"]] == [RED, other]
+    assert data["meta"]["calls"] > 0
+    with pytest.raises(SystemExit, match="already"):
+        main(["--dry-run", "--out", str(out), "--append", "--match", other])
+    with pytest.raises(SystemExit, match="flags differs"):
+        main(["--dry-run", "--out", str(out), "--append", "--no-verifier", "--match", "natural_seed100"])

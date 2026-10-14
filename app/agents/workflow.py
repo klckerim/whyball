@@ -18,6 +18,8 @@ Guard's; an exception anywhere in the workflow still produces a card (the labell
 from __future__ import annotations
 
 import asyncio
+import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -44,6 +46,7 @@ from .state import (
 from .trace import Stopwatch, TraceStep
 from .verifier import VerifierAgent
 
+TROUBLE_RE = re.compile(r"\b429\b|rate.?limit|too many requests|quota", re.IGNORECASE)
 EMERGENCY_MAX_ITERATIONS = 60  # supersteps; a card needs about 14 at most: this cap is never the rule that stops a card
 
 
@@ -67,6 +70,17 @@ class CardOutcome:
     @property
     def trace(self) -> tuple[TraceStep, ...]:
         return self.state.trace
+
+
+def trouble(outcome: CardOutcome) -> str | None:
+    """Why a run should stop at once: a model call timed out, or the service said 429 / rate limit / quota."""
+    for s in outcome.trace:
+        if s.status == "timeout":
+            return f"{s.agent} call timed out ({s.step}, attempt {s.attempt})"
+        text = json.dumps(s.output)
+        if s.status == "error" and TROUBLE_RE.search(text):
+            return f"{s.agent} call hit a rate limit or quota ({s.step}): {s.output.get('message', '')[:120]}"
+    return None
 
 
 class _Run:
@@ -301,7 +315,7 @@ class AgentWorkflow:
         self.narrator = NarratorAgent(events, client, persona=persona, language=language, **kw)
         self.analyst = AnalystAgent(events, client, language=language, **kw) if flags.analyst else None
         self.verifier = VerifierAgent(events, client, **kw) if flags.verifier else None
-        self._sem: asyncio.Semaphore | None = None
+        self.trouble: str | None = None  # set by the first timeout / 429; cards not yet started are then skipped
 
     def build(self, run: _Run):
         start, analyst, narrate = StartExec(run), AnalystExec(run), NarratorExec(run)
@@ -345,12 +359,18 @@ class AgentWorkflow:
                 output={"error": type(e).__name__, "message": str(e)[:200]}, status="error"))
             return CardOutcome(await fallback_card(state, run, "workflow_error"))
 
-    async def run_cards(self, moments: Sequence[Moment]) -> list[CardOutcome]:
-        """Cards in the given order, at most `max_concurrent_cards` in flight."""
+    async def run_cards(self, moments: Sequence[Moment], *, stop_on_trouble: bool = False) -> list[CardOutcome | None]:
+        """Cards in the given order, at most `max_concurrent_cards` in flight. With `stop_on_trouble`, the first model
+        timeout or 429 stops the run: cards that have not started return None (the ones in flight finish)."""
         sem = asyncio.Semaphore(self.agents.max_concurrent_cards)
 
-        async def one(m: Moment) -> CardOutcome:
+        async def one(m: Moment) -> CardOutcome | None:
             async with sem:
-                return await self.run_card(m)
+                if stop_on_trouble and self.trouble:
+                    return None
+                out = await self.run_card(m)
+                if stop_on_trouble and self.trouble is None:
+                    self.trouble = trouble(out)
+                return out
 
         return list(await asyncio.gather(*(one(m) for m in moments)))

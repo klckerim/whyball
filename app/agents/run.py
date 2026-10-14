@@ -32,7 +32,7 @@ from app.generator.models import read_jsonl
 from .analyst import ANALYST_VERSION
 from .dryrun import DryRunClient
 from .limits import DEFAULT_AGENTS_CONFIG, AgentsConfig, CallBudget
-from .runfile import moment_entry, token_totals, usage_rows, write_run
+from .runfile import append_run, moment_entry, token_totals, usage_rows, write_run
 from .state import Flags
 from .verifier import VERIFIER_VERSION
 from .workflow import AgentWorkflow, CardOutcome
@@ -121,7 +121,8 @@ def _now() -> str:
 
 
 async def run_matches(
-    stems: list[str], mode: str, flags: Flags, client: Any, model_tag: str, agents: AgentsConfig, out_lines: list[str]
+    stems: list[str], mode: str, flags: Flags, client: Any, model_tag: str, agents: AgentsConfig, out_lines: list[str],
+    stopped: list[str], stop_on_trouble: bool = False,
 ) -> tuple[list[dict[str, Any]], list[CardOutcome], CallBudget]:
     budget = CallBudget(agents.max_calls_per_run)
     matches, outcomes = [], []
@@ -133,14 +134,19 @@ async def run_matches(
         if mode == "featured":
             moments = select_moments(moments, DEFAULT_EXPLAIN_CONFIG)
         wf = AgentWorkflow(events, client, flags=flags, agents=agents, model_tag=model_tag, budget=budget)
-        results = await wf.run_cards(moments)
+        results = await wf.run_cards(moments, stop_on_trouble=stop_on_trouble)
         out_lines.append(f"\n{path.stem}: {len(moments)} moments")
+        done = [(m, o) for m, o in zip(moments, results) if o is not None]
         for m, o in zip(moments, results):
             from app.explain.template_narrator import fmt_minute
-            out_lines.append("  " + card_line(m.id, fmt_minute(m.period, m.minute), m.type, o))
-        matches.append({"match_id": path.stem, "moments": [moment_entry(m, o) for m, o in zip(moments, results)],
+            out_lines.append("  " + (card_line(m.id, fmt_minute(m.period, m.minute), m.type, o) if o
+                                     else f"{m.id[-4:]}  not started (run stopped)"))
+        matches.append({"match_id": path.stem, "moments": [moment_entry(m, o) for m, o in done],
                         "usage": usage_rows(wf.narrator.usage)})
-        outcomes += results
+        outcomes += [o for _, o in done]
+        if wf.trouble:
+            stopped.append(wf.trouble)
+            break
     return matches, outcomes, budget
 
 
@@ -155,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--estimate", action="store_true", help="print the call/token estimate and stop")
     ap.add_argument("--yes", action="store_true", help="live run without the typed confirmation")
     ap.add_argument("--out", type=Path, help=f"run file (live default: {DEFAULT_OUT.relative_to(REPO_ROOT)}; dry run: none)")
+    ap.add_argument("--append", action="store_true", help="add these matches to an existing run file (same model and flags)")
     ap.add_argument("--concurrency", type=int, default=DEFAULT_AGENTS_CONFIG.max_concurrent_cards)
     args = ap.parse_args(argv)
 
@@ -192,7 +199,9 @@ def main(argv: list[str] | None = None) -> int:
     started = _now()
     t0 = time.perf_counter()
     lines: list[str] = []
-    matches, outcomes, budget = asyncio.run(run_matches(stems, args.moments, flags, client, model, agents, lines))
+    stopped: list[str] = []
+    matches, outcomes, budget = asyncio.run(run_matches(
+        stems, args.moments, flags, client, model, agents, lines, stopped, stop_on_trouble=not args.dry_run))
     wall = time.perf_counter() - t0
     print("\n".join(lines))
     totals = token_totals(outcomes)
@@ -202,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
           f"· sources {by_source} · guard-only {guard_only} · analyst fallbacks "
           f"{sum(any(s.step == 'analyst_fallback' for s in o.trace) for o in outcomes)} · verifier rejects "
           f"{sum(s.step == 'verify' and s.output.get('verdict') == 'reject' for o in outcomes for s in o.trace)}")
+    if stopped:
+        print(f"\nSTOPPED at the first trouble: {stopped[0]}")
     if out:
         meta = {
             "started_at": started, "finished_at": _now(), "lang": "en", "model": model,
@@ -212,7 +223,14 @@ def main(argv: list[str] | None = None) -> int:
             "timeouts_s": {"narrator": agents.narrator_timeout_s, "analyst": agents.analyst_timeout_s,
                            "verifier": agents.verifier_timeout_s},
         }
-        write_run(out, meta, started, meta["finished_at"], matches)
+        if stopped:  # a stopped run is kept for diagnosis, in a file `app.publish` refuses
+            meta["stopped"] = stopped[0]
+            out = out.with_suffix(".stopped.json")
+        elif args.append and out.exists():
+            started, meta = append_run(out, meta, matches)
+            matches = []
+        if matches or not (args.append and out.exists() and not stopped):
+            write_run(out, meta, started, meta["finished_at"], matches)
         print(f"run file: {out}")
     return 0
 
