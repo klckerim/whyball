@@ -11,6 +11,8 @@ from app.explain.narrator import BudgetExceeded
 class AgentsConfig:
     narrator_timeout_s: float = 60.0  # per call; a reasoning-model call once hung for 60 s, so this is a hard stop
     analyst_timeout_s: float = 30.0
+    analyst_max_tokens: int = 1500  # includes reasoning tokens
+    verifier_max_tokens: int = 1500
     verifier_timeout_s: float = 30.0
     max_concurrent_cards: int = 3  # cards in flight at once (one workflow instance per card)
     max_calls_per_run: int = 150  # model calls of all agents together; 15 cards x up to 9 calls = 135 worst case
