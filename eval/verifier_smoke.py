@@ -107,7 +107,7 @@ async def run(drafts: dict[str, list[Draft]], client, model: str) -> list[dict]:
         for dr in items:
             s = dr.sample
             agent = VerifierAgent(s.events, client, budget=budget, model_tag=model, agents=AgentsConfig())
-            res = await agent.verify(s.moment, dr.guard, s.slot5.ctx, attempt=1, clock=Stopwatch())
+            res = await agent.verify(s.moment, dr.guard, s.slot5.ctx, s.slot5.menu, attempt=1, clock=Stopwatch())
             step = res.steps[0]
             issues = step.output.get("issues", []) if res.verdict != "error" else []
             rows.append({

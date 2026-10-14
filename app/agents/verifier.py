@@ -30,7 +30,8 @@ from app.explain.labels import METRIC_DEFINITIONS, METRICS_IGNORING_START, metri
 from app.explain.llm_narrator import ChatClient, ChatResult
 from app.explain.narrator import BudgetExceeded, Feedback, FeedbackItem
 from app.explain.phrases import event_phrase
-from app.explain.slots import SlotContext, format_value
+from app.explain.menu import ClaimMenu, preview
+from app.explain.slots import SlotContext, format_value, parse_placeholders
 from app.explain.template_narrator import fmt_minute
 from app.generator.models import Event
 
@@ -111,19 +112,49 @@ class VerdictError(ValueError):
         self.code = code
 
 
-def check_verdict(out: VerifierOut, text: str) -> VerifierOut:
-    """Consistency the schema cannot express: ok agrees with the issues, and every span is in the text."""
+def check_verdict(out: VerifierOut) -> VerifierOut:
+    """Consistency the schema cannot express: ok agrees with the issues, and a reason is short. A span that cannot be found
+    in the text is NOT an inconsistency: the Verifier still rejected, only the place is unknown (`locate`)."""
     if out.ok and out.issues:
         raise VerdictError("ok_with_issues", "ok=true with issues")
     if not out.ok and not out.issues:
         raise VerdictError("reject_without_issue", "ok=false without an issue")
     for issue in out.issues:
-        if not issue.span.strip():
-            raise VerdictError("empty_span", "an issue without a span")
         if len(issue.reason) > REASON_MAX_CHARS:
             raise VerdictError("reason_too_long", f"{len(issue.reason)} characters")
-        if issue.span not in text:
-            raise VerdictError("span_not_in_text", f"span {issue.span[:40]!r} is not in the text")
+    return out
+
+
+def locate(issue: IssueOut, text: str) -> bool:
+    """Whether the issue's span is a non-empty piece of the text."""
+    return bool(issue.span.strip()) and issue.span in text
+
+
+# What the code-written score-change clauses mean (the detector's own rule, app/analytics/moments.py `_on_goal`): without it a
+# phrase like "went ahead" has no visible source. Other clauses state exactly the claims they list.
+CLAUSE_MEANING = {
+    "opener": "The goal is the first of the match: the score was 0-0 before it and the scoring team now leads.",
+    "equalizer": "The goal levelled the score: the scoring team was behind before it and the score is now level.",
+    "go_ahead": "The goal broke a level score that already had goals: the scoring team now leads. If the clause says the team "
+                "came from behind, the `deficit` claim is the largest deficit it trailed by earlier in the match.",
+}
+
+
+def _used_clauses(guard: GuardResult, menu: ClaimMenu, ctx: SlotContext, moment: Moment) -> list[dict]:
+    """The clauses (ready, code-written phrases) the draft used: rendered text, the claims each rests on and what it means."""
+    placeholders, _ = parse_placeholders(guard.template)
+    ids = list(dict.fromkeys(p.arg for p in placeholders if p.kind == "clause" and p.arg in menu.clause_by_id))
+    rendered = preview(menu, ctx)
+    change = moment.detail.get("score_change") or {}
+    out = []
+    for cid in ids:
+        entry = {"id": cid, "text": rendered.get(cid, ""), "claims": list(menu.clause_by_id[cid].claim_ids),
+                 "written_by": "code"}
+        if cid in CLAUSE_MEANING:
+            entry["meaning"] = CLAUSE_MEANING[cid]
+            if cid == change.get("kind"):
+                entry["basis"] = {k: change[k] for k in ("kind", "from_behind", "max_deficit") if k in change}
+        out.append(entry)
     return out
 
 
@@ -152,8 +183,11 @@ def _claim_record(cid: str, claim: Claim, ctx: SlotContext) -> dict:
     return record
 
 
-def verifier_record(moment: Moment, guard: GuardResult, events: Sequence[Event], ctx: SlotContext) -> dict:
-    """Final text, pieces, the used claims and their evidence events. Nothing of the Narrator's work."""
+def verifier_record(
+    moment: Moment, guard: GuardResult, events: Sequence[Event], ctx: SlotContext, menu: ClaimMenu
+) -> dict:
+    """Final text, pieces, the used claims and clauses and their evidence events. Nothing of the Narrator's reasoning or
+    earlier drafts; the clauses are the code-written phrases in the text, with their source claims."""
     if not guard.ok or guard.text is None:
         raise ValueError("the Verifier reads only drafts the Guard accepted")
     by_seq = {e.seq: e for e in events}
@@ -175,6 +209,7 @@ def verifier_record(moment: Moment, guard: GuardResult, events: Sequence[Event],
         "pieces": [{"text": p.text, "claim_id": None if p.claim is None else guard.claim_ids[p.claim]}
                    for p in guard.parts],
         "claims": [_claim_record(cid, c, ctx) for cid, c in zip(guard.claim_ids, guard.claims)],
+        "clauses": _used_clauses(guard, menu, ctx, moment),
         "events": record_events,
     }
 
@@ -210,15 +245,15 @@ class VerifierAgent:
         self.events, self.client, self.budget = events, client, budget
         self.config, self.agents, self.model_tag = config, agents, model_tag
 
-    def messages(self, moment: Moment, guard: GuardResult, ctx: SlotContext) -> list[dict[str, str]]:
-        record = verifier_record(moment, guard, self.events, ctx)
+    def messages(self, moment: Moment, guard: GuardResult, ctx: SlotContext, menu: ClaimMenu) -> list[dict[str, str]]:
+        record = verifier_record(moment, guard, self.events, ctx, menu)
         return [
             {"role": "system", "content": VERIFIER_PROMPT},
             {"role": "user", "content": json.dumps(record, ensure_ascii=False, sort_keys=True)},
         ]
 
     async def verify(
-        self, moment: Moment, guard: GuardResult, ctx: SlotContext, *, attempt: int, clock: Stopwatch
+        self, moment: Moment, guard: GuardResult, ctx: SlotContext, menu: ClaimMenu, *, attempt: int, clock: Stopwatch
     ) -> VerifyResult:
         """One Verifier call. Never raises for a model/client failure: an `error` verdict carries a `verifier_error` step."""
         started = clock.start()
@@ -240,7 +275,7 @@ class VerifierAgent:
             return error("error", e.code, str(e))
         timeout = self.agents.verifier_timeout_s
         call = self.client.complete(
-            self.messages(moment, guard, ctx), response_model=VerifierOut, max_tokens=self.agents.verifier_max_tokens,
+            self.messages(moment, guard, ctx, menu), response_model=VerifierOut, max_tokens=self.agents.verifier_max_tokens,
             reasoning_effort=self.config.llm_reasoning_effort,
         )
         try:
@@ -254,13 +289,19 @@ class VerifierAgent:
         except ValidationError as e:
             return error("error", "invalid_output", f"{e.error_count()} schema errors: {e.errors()[0]['type']}", result)
         try:
-            check_verdict(out, guard.text or "")
+            check_verdict(out)
         except VerdictError as e:
             return error("error", e.code, str(e), result)
         if out.ok:
             return VerifyResult("pass", None, (step("verify", "ok", {"verdict": "pass", "issues": []}, result),))
+        text = guard.text or ""
+        located = [locate(i, text) for i in out.issues]
+        # an issue whose span is not in the text is still a rejection: no fragment (the Narrator gets the code and the
+        # reason), and the trace says the place is unknown
         entries = tuple(
-            FeedbackEntry("verifier", i.code, f"{i.span} ({i.reason})"[:240]) for i in out.issues
+            FeedbackEntry("verifier", i.code, f"{i.span} ({i.reason})"[:240] if ok_span else None)
+            for i, ok_span in zip(out.issues, located)
         )
-        issues = [{"code": i.code, "span": i.span, "reason": i.reason} for i in out.issues]
+        issues = [{"code": i.code, "span": i.span, "reason": i.reason, "unlocated_span": not ok_span}
+                  for i, ok_span in zip(out.issues, located)]
         return VerifyResult("reject", FeedbackRecord(attempt, entries), (step("verify", "ok", {"verdict": "reject", "issues": issues}, result),))

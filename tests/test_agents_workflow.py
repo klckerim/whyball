@@ -305,3 +305,15 @@ def test_each_card_has_its_own_state():
     outs = asyncio.run(AgentWorkflow(events, CountingClient(0.01), model_tag="m").run_cards([m, m, m]))
     assert [o.state.attempt for o in outs] == [1, 1, 1]
     assert all(len(o.trace) == 5 for o in outs)  # nothing leaked from a neighbouring card
+
+
+def test_a_rejection_with_an_unlocated_span_still_sends_the_card_back_to_the_narrator():
+    import json
+    unplaced = json.dumps({"ok": False, "issues": [{"code": "qualitative_unsupported", "span": "not in the text", "reason": "hype"}]})
+    c = client(verdict=[unplaced, VERDICT_PASS])
+    out, _ = card(c)
+    assert steps(out).count("narrate") == 2 and "verifier_error" not in steps(out)
+    first = next(s for s in out.trace if s.step == "verify")
+    assert first.output["verdict"] == "reject" and first.output["issues"][0]["unlocated_span"] is True
+    assert "[verifier] qualitative_unsupported" in narrator_users(c)[1]
+    assert out.card.verification.verifier == "retried_then_passed"

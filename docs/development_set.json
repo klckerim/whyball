@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-14",
+  "rule": "P4 held-out excludes these moments and the three demo matches' featured cards; smoke drafts are excluded by (match, moment)",
+  "featured_cards": [
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M002"
+    },
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M004"
+    },
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M006"
+    },
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M007"
+    },
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M008"
+    },
+    {
+      "match": "red_card_swing_seed42",
+      "moment": "m-42-red_card_swing-M009"
+    },
+    {
+      "match": "dominant_loss_seed7",
+      "moment": "m-7-dominant_loss-M003"
+    },
+    {
+      "match": "dominant_loss_seed7",
+      "moment": "m-7-dominant_loss-M005"
+    },
+    {
+      "match": "dominant_loss_seed7",
+      "moment": "m-7-dominant_loss-M007"
+    },
+    {
+      "match": "dominant_loss_seed7",
+      "moment": "m-7-dominant_loss-M008"
+    },
+    {
+      "match": "natural_seed100",
+      "moment": "m-100-M001"
+    },
+    {
+      "match": "natural_seed100",
+      "moment": "m-100-M004"
+    },
+    {
+      "match": "natural_seed100",
+      "moment": "m-100-M005"
+    },
+    {
+      "match": "natural_seed100",
+      "moment": "m-100-M007"
+    },
+    {
+      "match": "natural_seed100",
+      "moment": "m-100-M008"
+    }
+  ],
+  "verifier_smoke_drafts": [
+    {
+      "kind": "wrong_slot_binding",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M001"
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "match": "m-7-dominant_loss",
+      "moment": "m-7-dominant_loss-M003"
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M003"
+    },
+    {
+      "kind": "wrong_slot_binding",
+      "match": "m-7-dominant_loss",
+      "moment": "m-7-dominant_loss-M007"
+    },
+    {
+      "kind": "role_reversed",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M008"
+    },
+    {
+      "kind": "role_reversed",
+      "match": "m-100",
+      "moment": "m-100-M001"
+    },
+    {
+      "kind": "role_reversed",
+      "match": "m-3-late_comeback",
+      "moment": "m-3-late_comeback-M008"
+    },
+    {
+      "kind": "role_reversed",
+      "match": "m-100",
+      "moment": "m-100-M004"
+    },
+    {
+      "kind": "event_wrong_claim",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M008"
+    },
+    {
+      "kind": "event_wrong_claim",
+      "match": "m-100",
+      "moment": "m-100-M008"
+    },
+    {
+      "kind": "event_wrong_claim",
+      "match": "m-0-late_comeback",
+      "moment": "m-0-late_comeback-M004"
+    },
+    {
+      "kind": "event_wrong_claim",
+      "match": "m-0-late_comeback",
+      "moment": "m-0-late_comeback-M010"
+    },
+    {
+      "kind": "clean",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M001"
+    },
+    {
+      "kind": "clean",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M003"
+    },
+    {
+      "kind": "clean",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M002"
+    },
+    {
+      "kind": "clean",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M004"
+    },
+    {
+      "kind": "clean",
+      "match": "m-7-dominant_loss",
+      "moment": "m-7-dominant_loss-M003"
+    },
+    {
+      "kind": "clean",
+      "match": "m-7-dominant_loss",
+      "moment": "m-7-dominant_loss-M008"
+    },
+    {
+      "kind": "clean",
+      "match": "m-42-red_card_swing",
+      "moment": "m-42-red_card_swing-M006"
+    },
+    {
+      "kind": "clean",
+      "match": "m-7-dominant_loss",
+      "moment": "m-7-dominant_loss-M007"
+    }
+  ],
+  "observations": [
+    "red_card_swing_seed42 m-42-red_card_swing-M007: verifier false alarm (rolling window shown as a range)",
+    "natural_seed100 m-100-M008: verifier false alarm on a code-written clause ('went ahead'), same text passed on retry",
+    "dominant_loss_seed7 m-7-dominant_loss-M005 and natural_seed100 m-100-M005: analyst note refused on ordinary words"
+  ]
+}

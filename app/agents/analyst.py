@@ -33,9 +33,11 @@ from .trace import Stopwatch, Tokens, TraceStep
 ANALYST_VERSION = "analyst-v1"
 NOTE_MAX_CHARS = 240
 DIGIT = re.compile(r"\d")
+# Cardinal numbers only. Ordinary words that happen to be ordinals or adverbs ("first", "second half", "once") are allowed.
 NUMBER_WORDS = re.compile(
     r"\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|"
-    r"seventeen|eighteen|nineteen|twenty|hundred|dozen|once|twice|first|second|third)\b", re.IGNORECASE)
+    r"seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b",
+    re.IGNORECASE)
 
 ANALYST_PROMPT = """You are the analyst of a football narration team (synthetic data). Another writer will turn ONE \
 moment into one or two sentences. Code has already built and verified every fact in claims_menu; you decide which \
@@ -61,9 +63,10 @@ class AnalystOut(BaseModel):
 
 
 class BriefingError(ValueError):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(self, code: str, message: str, token: str | None = None) -> None:
         super().__init__(message)
         self.code = code
+        self.token = token  # the word or digit that was refused (note_has_number), for the trace
 
 
 def validate_briefing(out: AnalystOut, menu: ClaimMenu) -> Briefing:
@@ -86,8 +89,9 @@ def validate_briefing(out: AnalystOut, menu: ClaimMenu) -> Briefing:
     note = out.context_note.strip()
     if len(note) > NOTE_MAX_CHARS:
         raise BriefingError("note_too_long", f"{len(note)} characters")
-    if DIGIT.search(note) or NUMBER_WORDS.search(note):
-        raise BriefingError("note_has_number", "the note contains a number")
+    refused = DIGIT.search(note) or NUMBER_WORDS.search(note)
+    if refused:
+        raise BriefingError("note_has_number", "the note contains a number", refused.group(0))
     if "{" in note or "}" in note:
         raise BriefingError("note_has_placeholder", "the note contains a placeholder")
     return Briefing(effective_claim_ids(menu, claim_ids), note, tuple(expanded))
@@ -160,8 +164,10 @@ class AnalystAgent:
                                   input_ref="menu", output=output, tokens=tokens, model=self.model_tag or None,
                                   status=status)
 
-        def fall_back(status: str, reason: str, message: str, result: ChatResult | None = None) -> AnalystResult:
-            first = step("analyst", status, {"error": reason, "message": message[:200]}, result)
+        def fall_back(status: str, reason: str, message: str, result: ChatResult | None = None,
+                      token: str | None = None) -> AnalystResult:
+            detail = {"error": reason, "message": message[:200], **({"token": token} if token else {})}
+            first = step("analyst", status, detail, result)
             # the fallback is a decision taken now, not the failed call over again: it starts after it and takes ~0 ms
             started_fb = clock.start()
             started_ms, duration_ms = clock.span(started_fb)
@@ -192,7 +198,7 @@ class AnalystAgent:
         try:
             briefing = validate_briefing(out, menu)
         except BriefingError as e:
-            return fall_back("error", e.code, str(e), result)
+            return fall_back("error", e.code, str(e), result, e.token)
         done = step("analyst", "ok", {"selected": list(out.claim_ids),
                                        "expanded_clause_ids": list(briefing.expanded_clause_ids),
                                        "effective": list(briefing.claim_ids), "menu_claims": len(menu.claims),

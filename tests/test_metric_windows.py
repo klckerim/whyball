@@ -81,7 +81,7 @@ def test_the_pressure_claim_no_longer_shows_a_range_that_contradicts_its_label()
     ctx = tools.slot_context(moment, events)
     g = asyncio.run(guard_check("{clause:pressure}, and {clause:shots}.", menu, ctx))
     assert g.ok
-    rec = verifier_record(moment, g, events, ctx)
+    rec = verifier_record(moment, g, events, ctx, menu)
     pressure = next(c for c in rec["claims"] if c["id"] == "pressure")
     assert "from" not in pressure and pressure["window"] == {"type": "rolling", "minutes": 10.0}
     assert "last 10 minutes" in pressure["definition"]

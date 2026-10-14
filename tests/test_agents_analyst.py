@@ -60,7 +60,8 @@ def test_a_valid_answer_becomes_a_briefing_with_what_the_narrator_needs():
     (AnalystOut(claim_ids=["goal", "also_not_there"], context_note="x"), "unknown_claim_id"),
     (AnalystOut(claim_ids=["goal"], context_note="x" * (NOTE_MAX_CHARS + 1)), "note_too_long"),
     (AnalystOut(claim_ids=["goal"], context_note="he scored in the 90th minute"), "note_has_number"),
-    (AnalystOut(claim_ids=["goal"], context_note="the third goal"), "note_has_number"),
+    (AnalystOut(claim_ids=["goal"], context_note="three goals in a row"), "note_has_number"),
+    (AnalystOut(claim_ids=["goal"], context_note="the thirty minute mark"), "note_has_number"),
     (AnalystOut(claim_ids=["goal"], context_note="see {value:goal}"), "note_has_placeholder"),
 ])
 def test_invalid_answers_are_refused_with_a_code(out, code):
@@ -212,3 +213,32 @@ def test_the_analyst_prompt_is_the_one_the_canary_ran_with():
 
     assert ANALYST_VERSION == "analyst-v1"
     assert hashlib.sha256(ANALYST_PROMPT.encode()).hexdigest()[:16] == "ce6ea668f5d95070"
+
+
+@pytest.mark.parametrize("note", [
+    "the first goal of a second half that began quietly",
+    "once again the visitors settled, twice as calm",
+    "a third attempt on the second wave of attacks",
+    "the home side found its feet",
+])
+def test_ordinary_words_that_are_not_cardinal_numbers_are_allowed(note):
+    _, _, menu = case("goal")
+    assert validate_briefing(AnalystOut(claim_ids=["goal"], context_note=note), menu).context_note == note
+
+
+@pytest.mark.parametrize("note,token", [("a lone goal and 2 shots", "2"), ("only One chance", "One"), ("a hundred fans", "hundred"),
+                                        ("nineteen", "nineteen"), ("sixty minutes", "sixty")])
+def test_digits_and_cardinal_words_stay_banned_and_the_refused_token_is_named(note, token):
+    _, _, menu = case("goal")
+    with pytest.raises(BriefingError) as e:
+        validate_briefing(AnalystOut(claim_ids=["goal"], context_note=note), menu)
+    assert e.value.code == "note_has_number" and e.value.token == token
+
+
+def test_the_trace_records_the_refused_token():
+    events, moment, menu = case("goal")
+    r = brief(analyst(events, ScriptedClient(AnalystOut=reply(["goal"], "after two quiet halves"))), moment, menu)
+    assert r.briefing is None
+    assert r.steps[0].output["error"] == "note_has_number" and r.steps[0].output["token"] == "two"
+    ok = brief(analyst(events, ScriptedClient(AnalystOut=reply(["goal"], "after a quiet first half"))), moment, menu)
+    assert ok.briefing is not None and "token" not in ok.steps[0].output

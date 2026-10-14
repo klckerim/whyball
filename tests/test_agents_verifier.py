@@ -45,7 +45,7 @@ def setup(case="goal"):
 def verify(client, case="goal", budget=None, **kw):
     events, moment, ctx, g = setup(case)
     a = VerifierAgent(events, client, budget=budget or CallBudget(20), model_tag="m", **kw)
-    return run(a.verify(moment, g, ctx, attempt=1, clock=Stopwatch())), g
+    return run(a.verify(moment, g, ctx, build_menu(moment, events), attempt=1, clock=Stopwatch())), g
 
 
 def reject(code="role_reversed", span=None, reason="the roles are swapped"):
@@ -91,13 +91,11 @@ def test_the_verifier_result_carries_no_text():
 @pytest.mark.parametrize("out,code", [
     (VerifierOut(ok=True, issues=[IssueOut(code="role_reversed", span="a", reason="r")]), "ok_with_issues"),
     (VerifierOut(ok=False, issues=[]), "reject_without_issue"),
-    (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span="not there", reason="r")]), "span_not_in_text"),
-    (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span=" ", reason="r")]), "empty_span"),
     (VerifierOut(ok=False, issues=[IssueOut(code="role_reversed", span="some", reason="r" * (REASON_MAX_CHARS + 1))]), "reason_too_long"),
 ])
 def test_an_inconsistent_verdict_is_refused(out, code):
     with pytest.raises(VerdictError) as e:
-        check_verdict(out, "some text here")
+        check_verdict(out)
     assert e.value.code == code
 
 
@@ -106,8 +104,8 @@ def test_an_inconsistent_verdict_is_refused(out, code):
 
 def test_the_record_holds_text_pieces_claims_and_evidence_and_nothing_of_the_narrators_work():
     events, moment, ctx, g = setup("dominance_without_reward")
-    rec = verifier_record(moment, g, events, ctx)
-    assert set(rec) == {"moment", "teams", "text", "pieces", "claims", "events"}
+    rec = verifier_record(moment, g, events, ctx, build_menu(moment, events))
+    assert set(rec) == {"moment", "teams", "text", "pieces", "claims", "clauses", "events"}
     assert rec["text"] == g.text and "".join(p["text"] for p in rec["pieces"]) == g.text
     assert {p["claim_id"] for p in rec["pieces"] if p["claim_id"]} <= {c["id"] for c in rec["claims"]}
     assert all({"id", "metric", "definition", "window", "team", "player", "value", "to", "evidence"} <= set(c) <= {"id", "metric", "definition", "window", "team", "player", "value", "from", "to", "evidence"} for c in rec["claims"])
@@ -120,7 +118,7 @@ def test_the_record_refuses_a_draft_the_guard_rejected():
     bad = run(guard_check("three shots", build_menu(moment, events), ctx))
     assert not bad.ok
     with pytest.raises(ValueError):
-        verifier_record(moment, bad, events, ctx)
+        verifier_record(moment, bad, events, ctx, build_menu(moment, events))
 
 
 def test_the_call_is_the_verifier_prompt_plus_the_record():
@@ -128,7 +126,7 @@ def test_the_call_is_the_verifier_prompt_plus_the_record():
     verify(client)
     call = client.calls[0]
     assert call["model"] == "VerifierOut" and call["messages"][0]["content"] == VERIFIER_PROMPT
-    assert set(json.loads(call["messages"][1]["content"])) == {"moment", "teams", "text", "pieces", "claims", "events"}
+    assert set(json.loads(call["messages"][1]["content"])) == {"moment", "teams", "text", "pieces", "claims", "clauses", "events"}
 
 
 # --- outcomes ----------------------------------------------------------------------------------------------
@@ -157,7 +155,6 @@ def test_a_rejection_becomes_coded_feedback_for_the_narrator():
     ("{not json", "invalid_output", "error"),
     (json.dumps({"ok": False, "issues": [{"code": "dance", "span": "x", "reason": "y"}]}), "invalid_output", "error"),
     (json.dumps({"ok": True, "issues": [{"code": "role_reversed", "span": "x", "reason": "y"}]}), "ok_with_issues", "error"),
-    (json.dumps({"ok": False, "issues": [{"code": "role_reversed", "span": "NOT IN THE TEXT", "reason": "y"}]}), "span_not_in_text", "error"),
 ])
 def test_a_verifier_failure_is_an_error_verdict_with_a_verifier_error_step(script, reason, status):
     r, _ = verify(ScriptedClient(VerifierOut=script), agents=AgentsConfig(verifier_timeout_s=0.05))
@@ -176,7 +173,7 @@ def test_the_verifiers_answer_never_changes_the_guards_result():
     events, moment, ctx, g = setup()
     before = dataclasses.asdict(g)
     a = VerifierAgent(events, ScriptedClient(VerifierOut=reject()), budget=CallBudget(5))
-    run(a.verify(moment, g, ctx, attempt=1, clock=Stopwatch()))
+    run(a.verify(moment, g, ctx, build_menu(moment, events), attempt=1, clock=Stopwatch()))
     assert dataclasses.asdict(g) == before and g.ok and g.text
 
 
@@ -199,3 +196,98 @@ def test_the_verifier_prompt_is_still_verifier_v1():
 
     assert VERIFIER_VERSION == "verifier-v1"
     assert hashlib.sha256(VERIFIER_PROMPT.encode()).hexdigest()[:16] == "e19185ba149f1a39"
+
+
+# --- an unlocated span is still a rejection (P2 final round) -------------------------------------------------
+
+
+@pytest.mark.parametrize("span", ["NOT IN THE TEXT", "", "   "])
+def test_a_rejection_whose_span_is_not_in_the_text_is_still_a_rejection(span):
+    script = json.dumps({"ok": False, "issues": [{"code": "role_reversed", "span": span, "reason": "roles swapped"}]})
+    r, _ = verify(ScriptedClient(VerifierOut=script))
+    assert r.verdict == "reject" and r.feedback is not None  # not a verifier_error
+    entry = r.feedback.entries[0]
+    assert (entry.source, entry.code, entry.fragment) == ("verifier", "role_reversed", None)
+    (s,) = r.steps
+    assert s.step == "verify" and s.status == "ok" and s.output["verdict"] == "reject"
+    assert s.output["issues"] == [{"code": "role_reversed", "span": span, "reason": "roles swapped", "unlocated_span": True}]
+    fb = r.narrator_feedback(1)
+    assert fb.codes == ("role_reversed",) and fb.items[0].fragment is None
+
+
+def test_a_located_span_is_marked_so_and_keeps_its_fragment():
+    r, g = verify(ScriptedClient(VerifierOut=reject("role_reversed", reason="swapped")))
+    assert r.steps[0].output["issues"][0]["unlocated_span"] is False
+    assert r.feedback.entries[0].fragment.startswith(g.text.split()[0])
+
+
+def test_the_narrator_gets_the_code_when_the_place_is_unknown():
+    from app.agents.narrator_agent import narrator_messages
+    from app.explain.config import DEFAULT_EXPLAIN_CONFIG
+
+    script = json.dumps({"ok": False, "issues": [{"code": "qualitative_unsupported", "span": "nowhere", "reason": "hype"}]})
+    r, _ = verify(ScriptedClient(VerifierOut=script))
+    events, moment = moment_case("goal")
+    user = narrator_messages(moment, events, "neutral", "en", r.narrator_feedback(1), DEFAULT_EXPLAIN_CONFIG,
+                             build_menu(moment, events))[1]["content"]
+    assert "[verifier] qualitative_unsupported" in user and "fragment=" not in user.split("FEEDBACK")[1]
+
+
+def test_verifier_error_is_only_for_schema_timeout_or_exceptions():
+    cases = {
+        "invalid_output": "{not json",
+        "ok_with_issues": json.dumps({"ok": True, "issues": [{"code": "role_reversed", "span": "x", "reason": "y"}]}),
+        "reject_without_issue": json.dumps({"ok": False, "issues": []}),
+        "reason_too_long": json.dumps({"ok": False, "issues": [{"code": "role_reversed", "span": "x", "reason": "r" * 300}]}),
+    }
+    for reason, script in cases.items():
+        r, _ = verify(ScriptedClient(VerifierOut=script))
+        assert r.verdict == "error" and r.steps[0].output["reason"] == reason, reason
+
+
+# --- clauses in the record ----------------------------------------------------------------------------------
+
+
+def test_the_record_names_each_clause_the_text_uses_with_its_claims_and_rendered_text():
+    events, moment = moment_case("dominance_without_reward")
+    menu = build_menu(moment, events)
+    ctx = tools.slot_context(moment, events)
+    g = run(guard_check("{clause:dominance}, yet {clause:score}.", menu, ctx))
+    assert g.ok
+    rec = verifier_record(moment, g, events, ctx, menu)
+    by = {c["id"]: c for c in rec["clauses"]}
+    assert set(by) == {"dominance", "score"}
+    assert set(by["dominance"]["claims"]) == {"possession", "shots_for", "shots_against"} and by["dominance"]["written_by"] == "code"
+    assert "of the ball" in by["dominance"]["text"] and set(by["score"]["claims"]) == {"score_home", "score_away"}
+    assert {c["id"] for c in rec["claims"]} >= set(by["dominance"]["claims"])  # their definitions are in `claims`
+
+
+def test_a_score_change_clause_carries_the_detectors_meaning_and_basis():
+    for case in ("goal", "goal_from_behind"):
+        events, moment = moment_case(case)
+        change = moment.detail.get("score_change")
+        if not change:
+            continue
+        menu = build_menu(moment, events)
+        ctx = tools.slot_context(moment, events)
+        kind = change["kind"]
+        g = run(guard_check("{clause:%s}, and {clause:score}." % kind, menu, ctx))
+        assert g.ok, case
+        clause = next(c for c in verifier_record(moment, g, events, ctx, menu)["clauses"] if c["id"] == kind)
+        assert clause["meaning"] and clause["basis"]["kind"] == kind and clause["claims"]
+    events, moment = moment_case("goal_from_behind")
+    menu = build_menu(moment, events)
+    ctx = tools.slot_context(moment, events)
+    g = run(guard_check("{clause:go_ahead}, and {clause:score}.", menu, ctx))
+    clause = next(c for c in verifier_record(moment, g, events, ctx, menu)["clauses"] if c["id"] == "go_ahead")
+    assert "came from behind" in clause["text"] and "deficit" in clause["claims"] and clause["basis"]["from_behind"] is True
+    assert "level score that already had goals" in clause["meaning"]
+
+
+def test_clauses_not_used_are_not_listed_and_event_phrases_are_not_clauses():
+    events, moment = moment_case("red_card")
+    menu = build_menu(moment, events)
+    ctx = tools.slot_context(moment, events)
+    g = run(guard_check("{clause:sent_off}, and {clause:score}.", menu, ctx))
+    rec = verifier_record(moment, g, events, ctx, menu)
+    assert [c["id"] for c in rec["clauses"]] == ["sent_off", "score"]

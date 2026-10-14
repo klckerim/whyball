@@ -220,7 +220,8 @@ class VerifierExec(Executor):
             await ctx.send_message(Signal("finalize", "verifier_off"))
             return
         assert state.guard is not None and state.guard.ok
-        res = await self.run.wf.verifier.verify(state.moment, state.guard, self.run.slot_ctx, attempt=state.attempt,
+        res = await self.run.wf.verifier.verify(state.moment, state.guard, self.run.slot_ctx,
+                                                effective_menu(state.menu, state.briefing), attempt=state.attempt,
                                                 clock=self.run.clock)
         if res.verdict == "reject":
             assert res.feedback is not None
