@@ -27,4 +27,6 @@ Python + FastAPI, Vite + React + TS, SQLite, Azure Container Apps.
 - Web UI (Vite + React + TS, web/): cd web && npm ci; npm run dev (proxies /api to :8000) | npm run build (→ web/dist, served by the API) | npm test (Vitest) | npm run smoke (build + tests/test_smoke_e2e.py against the real build)
 - Foundry connection test: az login; .venv/bin/pip install -e ".[llm]"; .venv/bin/python -m app.llm.hello
 
+At the end of every task, update STATUS.md (replace stale lines, keep it under 80 lines) and rewrite its Mentor summary section.
+
 ## Scope freeze: evening of 24 October. No new features after that.
