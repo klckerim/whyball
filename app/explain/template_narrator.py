@@ -37,9 +37,67 @@ def require_language(language: str | None) -> str:
 
 
 @dataclass(frozen=True)
+class Part:
+    """A piece of a sentence. `claim` is the index of the claim whose value the piece states (None: plain text)."""
+
+    text: str
+    claim: int | None = None
+
+
+def coalesce(parts: Sequence[Part]) -> tuple[Part, ...]:
+    """Drops empty pieces and joins neighbouring plain pieces."""
+    out: list[Part] = []
+    for p in parts:
+        if not p.text:
+            continue
+        if out and out[-1].claim is None and p.claim is None:
+            out[-1] = Part(out[-1].text + p.text)
+        else:
+            out.append(p)
+    return tuple(out)
+
+
+@dataclass(frozen=True)
 class Sentence:
     text: dict[str, str]  # language → text
     claims: tuple[Claim, ...]
+    # English pieces with the claim values marked, written by the code that wrote the text (no matching).
+    # Empty: the sentence states no claim value in numbers.
+    parts: tuple[Part, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.parts:
+            assert "".join(p.text for p in self.parts) == self.text["en"], "parts differ from the sentence"
+            assert all(p.claim is None or 0 <= p.claim < len(self.claims) for p in self.parts)
+
+    def pieces(self, language: str) -> tuple[Part, ...]:
+        """Parts of the sentence; plain text when it has none (or the language has no parts)."""
+        if self.parts and language == "en":
+            return self.parts
+        return (Part(self.text[language]),)
+
+
+def join_sentences(
+    sentences: Sequence[Sentence], language: str
+) -> tuple[str, tuple[Claim, ...], tuple[Part, ...]]:
+    """Text (sentences joined by a space), claims and parts; part claim indices are offset into the joined claims."""
+    parts: list[Part] = []
+    claims: list[Claim] = []
+    for i, s in enumerate(sentences):
+        if i:
+            parts.append(Part(" "))
+        parts += [Part(p.text, None if p.claim is None else p.claim + len(claims)) for p in s.pieces(language)]
+        claims += s.claims
+    return " ".join(s.text[language] for s in sentences), tuple(claims), coalesce(parts)
+
+
+def sentence(claims: Sequence[Claim], *pieces: str | tuple[str, Claim]) -> Sentence:
+    """A sentence from plain strings and (value text, claim) pairs; the claim is found by identity."""
+    parts = tuple(
+        Part(p) if isinstance(p, str) else Part(p[0], next(i for i, c in enumerate(claims) if c is p[1]))
+        for p in pieces
+    )
+    return Sentence({"en": "".join(p.text for p in parts)}, tuple(claims), coalesce(parts))
 
 
 @dataclass(frozen=True)
@@ -132,13 +190,9 @@ class _Context:
         h = self.measured("score", "home")
         a = self.measured("score", "away")
         home, away = self.names["home"], self.names["away"]
-        return Sentence(
-            {"en": f"{home} {h:g}–{a:g} {away}."},
-            (
-                self.state("score", "home", "eq", h, evidence),
-                self.state("score", "away", "eq", a, evidence),
-            ),
-        )
+        ch = self.state("score", "home", "eq", h, evidence)
+        ca = self.state("score", "away", "eq", a, evidence)
+        return sentence((ch, ca), f"{home} ", (f"{h:g}", ch), "–", (f"{a:g}", ca), f" {away}.")
 
 
 # --- sentences per moment type ------------------------------------------------
@@ -176,13 +230,13 @@ def _red_card(c: _Context) -> list[Sentence]:
             },
             (sent_off,),
         ),
-        Sentence(
-            {
-                "en": f"{team} are down to {left:g} players.",
-            },
-            (c.state("players_on_pitch", side, "eq", left, team_reds),),
-        ),
+        _down_to(c, team, side, left, team_reds),
     ]
+
+
+def _down_to(c: _Context, team: str, side: str, left: float, team_reds: Sequence[int]) -> Sentence:
+    claim = c.state("players_on_pitch", side, "eq", left, team_reds)
+    return sentence((claim,), f"{team} are down to ", (f"{left:g}", claim), " players.")
 
 
 _PENALTY_TEXT = {
@@ -238,19 +292,18 @@ def _pressure_shift(c: _Context) -> list[Sentence]:
     start = _since(c.t, c.config.context_minutes)
     shots = c.count("shots", Subject(side), start)
     opp_shots = c.count("shots", Subject(other(side)), start)
+    pressure = c.state("pressure_balance", side, "approx", balance, c.m.event_ids)
     return [
-        Sentence(
-            {
-                "en": f"{c.minute} — {team} take control: {metric_label('pressure_balance', 'en')} "
-                      f"is {balance:+.2f} in their favour.",
-            },
-            (c.state("pressure_balance", side, "approx", balance, c.m.event_ids),),
+        sentence(
+            (pressure,),
+            f"{c.minute} — {team} take control: {metric_label('pressure_balance', 'en')} is ",
+            (f"{balance:+.2f}", pressure),
+            " in their favour.",
         ),
-        Sentence(
-            {
-                "en": f"Shots since {start.minute}': {team} {shots.value:g}, {opp} {opp_shots.value:g}.",
-            },
+        sentence(
             (shots, opp_shots),
+            f"Shots since {start.minute}': {team} ", (f"{shots.value:g}", shots),
+            f", {opp} ", (f"{opp_shots.value:g}", opp_shots), ".",
         ),
     ]
 
@@ -275,15 +328,15 @@ def _dominance(c: _Context) -> list[Sentence]:
     )
     s, o = shots.value, opp_shots.value
     # Possession and shots share one window; the window is written before both values so it binds to both.
+    poss, home_score, away_score = claims[0], claims[3], claims[4]
     return [
-        Sentence(
-            {
-                "en": f"{c.minute} — {team} dominate without reward: since {fmt_minute(start.period, start.minute)} "
-                      f"they have had "
-                      f"{pct}% of the ball and a {s:g}–{o:g} lead in shots, yet the score is "
-                      f"{home} {h:g}–{a:g} {away}.",
-            },
+        sentence(
             claims,
+            f"{c.minute} — {team} dominate without reward: since {fmt_minute(start.period, start.minute)} "
+            "they have had ",
+            (f"{pct}%", poss), " of the ball and a ", (f"{s:g}", shots), "–", (f"{o:g}", opp_shots),
+            " lead in shots, yet the score is ",
+            f"{home} ", (f"{h:g}", home_score), "–", (f"{a:g}", away_score), f" {away}.",
         )
     ]
 

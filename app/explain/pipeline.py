@@ -25,7 +25,9 @@ from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
 from .menu import ClaimMenu, bind_menu
 from .narrator import Draft, Feedback, FeedbackItem, Narrator, NarratorError
 from .selector import select_moments
-from .slots import SlotContext, bind_template, lint_template, render
+from .slots import SlotContext, bind_template, lint_template, render_parts
+from .template_narrator import Part
+from .template_narrator import join_sentences
 from .template_narrator import narrate as template_narrate
 from .template_narrator import require_language
 from .text_lint import LintIssue, Roster, lint_text
@@ -47,6 +49,8 @@ class NarrationRecord:
     cache_key: str | None
     trace: tuple[dict[str, Any], ...]
     template: str | None = None  # pre-render template of a slot-based draft
+    # `text` in pieces; a piece with a claim index states that claim's value. Empty: not recorded.
+    parts: tuple[Part, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -68,6 +72,7 @@ class NarrationRecord:
             "cache_key": self.cache_key,
             "trace": list(self.trace),
             "template": self.template,
+            "parts": [[p.text, p.claim] for p in self.parts],
         }
 
     @classmethod
@@ -87,6 +92,7 @@ class NarrationRecord:
             cache_key=d["cache_key"],
             trace=tuple(d["trace"]),
             template=d.get("template"),
+            parts=tuple(Part(t, c) for t, c in d.get("parts", [])),
         )
 
 
@@ -277,12 +283,13 @@ def run_moment(
             trace.append({"attempt": attempt, "step": "accept", "ok": True, "source": narrator.source})
             if cache is not None:
                 trace.append({"attempt": attempt, "step": "cache_store", "ok": True, "key": key})
-            text = draft.text
+            text, parts = draft.text, draft.parts or ((Part(draft.text),) if draft.text else ())
             if draft.template is not None:
                 clauses = draft.menu.clause_templates(language) if draft.menu is not None else None
-                text = render(draft.template, claims_out, ids_out, results, ctx, clauses)
+                parts = render_parts(draft.template, claims_out, ids_out, results, ctx, clauses)
+                text = "".join(p.text for p in parts)
             rec = record(text=text, claims=claims_out, verification=results, lint_issues=(),
-                         attempts=attempt, source=narrator.source, template=draft.template)
+                         attempts=attempt, source=narrator.source, template=draft.template, parts=parts)
             if cache is not None:
                 cache.put(key, rec.to_dict())
             return rec
@@ -292,22 +299,22 @@ def run_moment(
 
     # Labelled template fallback: only sentences whose claims verify and that pass lint.
     narration = template_narrate(moment, events, config)
-    text_parts: list[str] = []
+    published = []
     claims: list[Claim] = []
     results_out: list[VerificationResult] = []
     for i, sentence in enumerate(narration.sentences):
         text = sentence.text[language]
         if narration.sentence_ok(i) and lint_text(text, sentence.claims, roster, config, language).ok:
-            text_parts.append(text)
+            published.append(sentence)
             claims += sentence.claims
             results_out += narration.results[i]
-    text = " ".join(text_parts)
+    text, _, parts = join_sentences(published, language)
     trace.append({"attempt": attempts, "step": "fallback", "ok": True,
                   "reason": fallback_reason, "narrator": "template",
-                  "published_sentences": len(text_parts), "total_sentences": len(narration.sentences)})
+                  "published_sentences": len(published), "total_sentences": len(narration.sentences)})
     final_lint = lint_text(text, claims, roster, config, language)
     return record(text=text, claims=tuple(claims), verification=tuple(results_out),
-                  lint_issues=final_lint.issues, attempts=attempts, source="template_fallback")
+                  lint_issues=final_lint.issues, attempts=attempts, source="template_fallback", parts=parts)
 
 
 def run_match(

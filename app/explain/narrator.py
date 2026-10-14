@@ -17,7 +17,7 @@ from app.generator.models import Event
 
 from .claims import Claim, parse_ref
 from .config import DEFAULT_EXPLAIN_CONFIG, ExplainConfig
-from .template_narrator import Narration
+from .template_narrator import Narration, Part, join_sentences
 from .template_narrator import narrate as template_narrate
 
 if TYPE_CHECKING:
@@ -34,6 +34,8 @@ class Draft:
     claim_ids: tuple[str, ...] = ()
     # Claim menu draft (foundry-v5): claims come from the menu, `claims` is empty; see menu.py.
     menu: ClaimMenu | None = None
+    # Pieces of `text` with claim values marked (template narration); empty: the pipeline treats the text as plain.
+    parts: tuple[Part, ...] = ()
 
 
 class NarratorError(Exception):
@@ -103,10 +105,8 @@ class TemplateNarrator:
         self, moment: Moment, persona: str, language: str, feedback: Feedback | None = None
     ) -> Draft:
         n = self.narration(moment)
-        return Draft(
-            " ".join(s.text[language] for s in n.sentences),
-            tuple(c for s in n.sentences for c in s.claims),
-        )
+        text, claims, parts = join_sentences(n.sentences, language)
+        return Draft(text, claims, parts=parts)
 
 
 FAKE_MODES = (

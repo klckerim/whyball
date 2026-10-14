@@ -43,7 +43,7 @@ from .phrases import (
     selectable,
     sentence_starts,
 )
-from .template_narrator import fmt_minute
+from .template_narrator import Part, coalesce, fmt_minute
 from .text_lint import LintIssue, LintResult, Roster, _capitalized_groups, _is_sentence_start, _number_words
 
 SIDES = ("home", "away")
@@ -349,6 +349,21 @@ def render(
     clauses: dict[str, str] | None = None,
 ) -> str:
     """Final text from a bound and verified template. `clauses`: menu clauses (id → template)."""
+    return "".join(p.text for p in render_parts(template, claims, claim_ids, verdicts, ctx, clauses))
+
+
+def render_parts(
+    template: str,
+    claims: Sequence[Claim],
+    claim_ids: Sequence[str],
+    verdicts: Sequence[VerificationResult],
+    ctx: SlotContext,
+    clauses: dict[str, str] | None = None,
+) -> tuple[Part, ...]:
+    """The rendered text in pieces. A piece with a `claim` index is the value of that claim ({value:} and the two
+    numbers of {score} / {score_named}); everything else (names, minutes, labels, event phrases) is plain text.
+    The code that fills each placeholder knows where its text goes, so nothing is matched afterwards."""
+    index = {cid: i for i, cid in enumerate(claim_ids)}
     by_id = {cid: (c, v) for cid, c, v in zip(claim_ids, claims, verdicts)}
     starts = {pos for pos, is_placeholder in template_sentence_starts(template) if is_placeholder}
 
@@ -356,37 +371,48 @@ def render(
         claim, verdict = by_id[cid]
         return verdict.actual if verdict.actual is not None else claim.value
 
-    def capitalize(text: str) -> str:
-        if not text or not text[0].islower():
-            return text
-        return text[0].upper() + text[1:]
+    def capitalized(parts: list[Part]) -> list[Part]:
+        for i, p in enumerate(parts):
+            if p.text:
+                if p.text[0].islower():
+                    parts[i] = Part(p.text[0].upper() + p.text[1:], p.claim)
+                break
+        return parts
 
-    def fill(m: re.Match[str]) -> str:
-        out = value(m)
-        return capitalize(out) if m.start() in starts else out
+    def score(side: str) -> Part:
+        return Part(format_value("score", verified(SCORE_IDS[side]), ctx.language), index[SCORE_IDS[side]])
 
-    def value(m: re.Match[str]) -> str:
+    def fill(m: re.Match[str]) -> list[Part]:
         kind, _, arg = m.group(1).partition(":")
         if kind in SIDES:
-            return ctx.teams[kind]
-        if kind in ("score", "score_named"):
-            h = format_value("score", verified(SCORE_IDS["home"]), ctx.language)
-            a = format_value("score", verified(SCORE_IDS["away"]), ctx.language)
-            return f"{ctx.teams['home']} {h}–{a} {ctx.teams['away']}" if kind == "score_named" else f"{h}–{a}"
+            return [Part(ctx.teams[kind])]
+        if kind == "score":
+            return [score("home"), Part("–"), score("away")]
+        if kind == "score_named":
+            return [Part(f"{ctx.teams['home']} "), score("home"), Part("–"), score("away"),
+                    Part(f" {ctx.teams['away']}")]
         if kind == "player":
-            return ctx.players[arg]
+            return [Part(ctx.players[arg])]
         if kind == "event":
-            return ctx.phrase(arg) or ""
+            return [Part(ctx.phrase(arg) or "")]
         if kind == "clause":
-            return render((clauses or {})[arg], claims, claim_ids, verdicts, ctx, clauses)
+            return list(render_parts((clauses or {})[arg], claims, claim_ids, verdicts, ctx, clauses))
         claim, _ = by_id[arg]
         if kind == "minute":
-            return fmt_minute(claim.end.period, claim.end.minute)
+            return [Part(fmt_minute(claim.end.period, claim.end.minute))]
         if kind == "start":
-            return fmt_minute(claim.start.period, claim.start.minute)
+            return [Part(fmt_minute(claim.start.period, claim.start.minute))]
         if kind == "label":
             counted = template[:m.start()].endswith("{value:" + arg + "} ")
-            return metric_label(claim.metric, ctx.language, verified(arg) if counted else None)
-        return format_value(claim.metric, verified(arg), ctx.language)
+            return [Part(metric_label(claim.metric, ctx.language, verified(arg) if counted else None))]
+        return [Part(format_value(claim.metric, verified(arg), ctx.language), index[arg])]  # {value:}
 
-    return PLACEHOLDER_RE.sub(fill, template)
+    out: list[Part] = []
+    last = 0
+    for m in PLACEHOLDER_RE.finditer(template):
+        out.append(Part(template[last:m.start()]))
+        filled = fill(m)
+        out += capitalized(filled) if m.start() in starts else filled
+        last = m.end()
+    out.append(Part(template[last:]))
+    return coalesce(out)
