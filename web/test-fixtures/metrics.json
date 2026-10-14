@@ -24,7 +24,7 @@
       }
     },
     {
-      "definition": "Number of shot events, any outcome in the claim range for the subject (the team, and the player if one is named).",
+      "definition": "Number of shot events (any outcome) in the claim range for the subject (the team, and the player if one is named).",
       "id": "shots",
       "kind": "count",
       "label": "shots",
@@ -134,7 +134,7 @@
       }
     },
     {
-      "definition": "The team's share of final-third entries in the claim range; 0.5 when there are none. An entry is an on-ball event at least 70 from the team's own goal line (pitch length 105) after play was outside that zone.",
+      "definition": "The team's share of final-third entries in the claim range; 0.5 when there are none. An entry is the team's first on-ball event (pass, dribble, shot, corner) with a position at least 70 from its own goal line (pitch length 105) since its last on-ball event outside that zone, the opponent's last on-ball event or the last kickoff.",
       "id": "field_tilt",
       "kind": "ratio",
       "label": "territorial share",
@@ -164,7 +164,7 @@
       }
     },
     {
-      "definition": "The lowest goal margin for the team at any event in the claim range.",
+      "definition": "The lowest goal margin for the team at any event in the claim range (the margin at the end of the range when it has no events).",
       "id": "min_score_margin",
       "kind": "state",
       "label": "largest deficit",
@@ -174,7 +174,7 @@
       }
     },
     {
-      "definition": "Starting line-up size minus the team's red cards up to the end of the claim range.",
+      "definition": "Starting line-up size minus the team's red cards from kickoff to the end of the claim range (line-up size 11 when the match has no line-up record).",
       "id": "players_on_pitch",
       "kind": "state",
       "label": "players on the pitch",
@@ -184,7 +184,7 @@
       }
     },
     {
-      "definition": "(team pressure − opponent pressure) / (sum of both) over the last 10 minutes played; pressure = 3 × shots + 1 × final-third entries + 2 × corners. 0 when the sum is below 6.",
+      "definition": "(team pressure − opponent pressure) / (sum of both) over the last 10 minutes played up to the end of the claim range (its start is not used); pressure = 3 × shots + 1 × final-third entries + 2 × corners. 0 when the sum is below 6.",
       "id": "pressure_balance",
       "kind": "state",
       "label": "pressure balance over the last 10 minutes of play",

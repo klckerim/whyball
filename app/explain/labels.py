@@ -15,6 +15,8 @@ import re
 
 from app.analytics.config import DEFAULT_CONFIG, AnalyticsConfig
 
+from .config import DEFAULT_EXPLAIN_CONFIG
+
 
 def _pressure_label(language: str, config: AnalyticsConfig = DEFAULT_CONFIG) -> str:
     n = f"{config.pressure_window_min:g}"
@@ -44,7 +46,7 @@ def _definitions(c: AnalyticsConfig = DEFAULT_CONFIG) -> dict[str, str]:
 
     return {
         "goals": count("goal events"),
-        "shots": count("shot events, any outcome"),
+        "shots": count("shot events (any outcome)"),
         "shots_on_target": count("shot events with the outcome goal or saved"),
         "corners": count("corner events"),
         "fouls": count("foul events"),
@@ -56,19 +58,25 @@ def _definitions(c: AnalyticsConfig = DEFAULT_CONFIG) -> dict[str, str]:
         "substitutions": count("substitution events"),
         "possession": "The team's share of pass and dribble events in the claim range; 0.5 when there are none.",
         "field_tilt": (
-            "The team's share of final-third entries in the claim range; 0.5 when there are none. An entry is an "
-            f"on-ball event at least {c.final_third_x:g} from the team's own goal line (pitch length "
-            f"{c.pitch_length:g}) after play was outside that zone."
+            "The team's share of final-third entries in the claim range; 0.5 when there are none. An entry is the "
+            "team's first on-ball event (pass, dribble, shot, corner) with a position at least "
+            f"{c.final_third_x:g} from its own goal line (pitch length {c.pitch_length:g}) since its last on-ball "
+            "event outside that zone, the opponent's last on-ball event or the last kickoff."
         ),
         "score": "The team's goals at the end of the claim range.",
         "score_margin": "The team's goals minus the opponent's goals at the end of the claim range.",
-        "min_score_margin": "The lowest goal margin for the team at any event in the claim range.",
+        "min_score_margin": (
+            "The lowest goal margin for the team at any event in the claim range (the margin at the end of the "
+            "range when it has no events)."
+        ),
         "players_on_pitch": (
-            "Starting line-up size minus the team's red cards up to the end of the claim range."
+            "Starting line-up size minus the team's red cards from kickoff to the end of the claim range "
+            f"(line-up size {DEFAULT_EXPLAIN_CONFIG.full_squad} when the match has no line-up record)."
         ),
         "pressure_balance": (
             "(team pressure − opponent pressure) / (sum of both) over the last "
-            f"{c.pressure_window_min:g} minutes played; pressure = {c.w_shot:g} × shots + {c.w_entry:g} × "
+            f"{c.pressure_window_min:g} minutes played up to the end of the claim range (its start is not "
+            f"used); pressure = {c.w_shot:g} × shots + {c.w_entry:g} × "
             f"final-third entries + {c.w_corner:g} × corners. 0 when the sum is below {c.min_pressure_volume:g}."
         ),
     }
