@@ -12,11 +12,11 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - Generator, analytics, moment detector, selector, claim verifier, template narrator, lint, cache.
 - Foundry narrator foundry-v2 → v5.2 (claim menu); 3 live runs, 0/45 fallbacks ([LLM_RUN](docs/LLM_RUN.md)).
 - Injection eval v2–v5.2 ([EVAL](docs/EVAL.md)); publication store replays the last run ([DEMO_NARRATION](docs/DEMO_NARRATION.md)).
-- README, CI (pytest, Vitest + build, gitleaks, docker). FastAPI (matches, moments, events, series, SSE, `/healthz`, UI deep links): matches, moments, events, metric series, SSE replay, `/healthz`; serves the UI with deep links.
+- README, CI (pytest, Vitest + build, gitleaks, docker). FastAPI (matches, moments, events, series, SSE, `/healthz`, UI deep links).
 - U0 (UI v2 foundation, no screens): UI_SPEC + DESIGN log; `/healthz`, `/api/metrics`, timeline `x`/`y`,
   `squads`; OpenAPI → `web/src/api/schema.gen.ts` + drift checks; `web/test-fixtures/` from the real API;
   `<Fact>` + T1/T2 tests; `web/src/design/tokens.css` (light/dark, stage always dark); fonts; Radix.
-- U1 (7 commits): shell, routes, On Air stage, transport, timeline, pressure band, dwell; card `checks` at publish.
+- U1 (7 commits): shell, routes, On Air stage, transport, timeline, pressure band; card `checks` at publish.
 - U2 (9 commits): card text stored as `segments` (claim values marked by the code that writes them); Proof face
   (moment rail, Receipt with definition/window/verification record, evidence pitch + list); Flip (seal button, P);
   band caption; old UI and `/legacy` deleted. 4 screens reviewed ([DESIGN](docs/DESIGN.md) D26-D31).
@@ -57,10 +57,9 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI v2: [
 - Two demo matches share one run id and prompt version. `.env.example` is tracked; never opened.
 
 ## Deploy state
-- Target: Azure Container Apps, one container, Sweden Central, own resource group. Steps: [DEPLOY](docs/DEPLOY.md).
+- Azure Container Apps, one container, Sweden Central ([DEPLOY](docs/DEPLOY.md)).
 - Image: digest-pinned, non-root; `python -m app.serve` refuses to start if `app.publish --check` fails; CI scans it.
-- Public, unauthenticated: no endpoint calls a model or billable resource (`tests/test_api_surface.py` locks it).
-- Checks: local image smoke (U2 build) and the Azure smoke (P1 build) ALL PASSED.
+- Public, no endpoint calls a model or billable resource (`tests/test_api_surface.py`). Checks: local image smoke (U2 build) and the Azure smoke (P1 build) ALL PASSED.
 
 ## Mentor summary
 - Commits (U2): 6f34e8c P1 closure · aae49f7 explain parts · 86cb9da segments in store/API/fixtures · 975c4bc Fact sources
