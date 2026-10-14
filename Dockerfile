@@ -36,4 +36,4 @@ RUN useradd --system --uid 10001 --no-create-home whyball
 USER whyball
 
 EXPOSE 8000
-CMD ["sh", "-c", "exec uvicorn app.api.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["python", "-m", "app.serve"]
