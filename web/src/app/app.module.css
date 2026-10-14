@@ -1,0 +1,331 @@
+/* Shell, top bar, transport and states. Controls are at least 44 px (DESIGN D19). */
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+/* --- top bar -------------------------------------------------------------------------------- */
+.topBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.wordmark {
+  font: 700 26px / 1 var(--font-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.picker select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.modes {
+  display: inline-flex;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mode {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mode[data-state="active"] {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.barEnd {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.synthetic {
+  padding: 4px 8px;
+  border: 2px solid var(--accent-ink);
+  color: var(--accent-ink);
+  font: 700 14px / 1 var(--font-display);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- main ----------------------------------------------------------------------------------- */
+.main {
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.air {
+  display: grid;
+  gap: 16px;
+}
+/* The stage takes the width the viewport height allows, so stage + transport fit one screen. */
+.stageWrap {
+  width: min(100%, calc((100dvh - 250px) * 16 / 9));
+  min-width: min(100%, 320px);
+  margin: 0 auto;
+}
+.proof {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* --- transport ------------------------------------------------------------------------------ */
+.transport {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.button svg {
+  width: 18px;
+  height: 18px;
+}
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.play {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.speeds {
+  display: inline-flex;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.speed {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+.speed[data-state="on"] {
+  background: var(--surface-2);
+  box-shadow: inset 0 -3px 0 var(--accent-ink);
+}
+.speedHint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- timeline ------------------------------------------------------------------------------- */
+.timeline {
+  position: relative;
+  display: grid;
+  padding-top: 4px;
+}
+.track {
+  position: relative;
+  height: 44px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  touch-action: none;
+  overflow: hidden;
+}
+.band {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.bandHome {
+  fill: var(--home);
+  opacity: 0.35;
+}
+.bandAway {
+  fill: var(--away);
+  opacity: 0.35;
+}
+.axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--border);
+}
+.half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--muted);
+}
+.half span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font: 700 12px / 1 var(--font-display);
+  color: var(--muted);
+}
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1px;
+  background: var(--accent-ink);
+}
+.markers {
+  position: relative;
+  height: 44px;
+}
+.marker {
+  position: absolute;
+  top: 0;
+  width: 28px;
+  height: 44px;
+  margin-left: -14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.marker[aria-current="true"] {
+  color: var(--accent-ink);
+  box-shadow: inset 0 3px 0 var(--accent-ink);
+}
+.ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* --- states --------------------------------------------------------------------------------- */
+.state {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 0;
+}
+.skeleton {
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.empty {
+  margin: 0 auto;
+  max-width: 1440px;
+  color: var(--muted);
+}
+.textButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- help dialog ---------------------------------------------------------------------------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  opacity: 0.8;
+}
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 440px);
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+.dialogTitle {
+  margin: 0;
+  font: 700 24px / 1.2 var(--font-display);
+}
+.keys {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.keys div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+}
+.keys dd {
+  margin: 0;
+}
+.keys kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  font: 600 14px / 1.4 var(--font-body);
+}
+
+@media (max-width: 767px) {
+  .barEnd {
+    margin-left: 0;
+  }
+  .stageWrap {
+    width: 100%;
+  }
+  .speedHint {
+    flex-basis: 100%;
+  }
+}

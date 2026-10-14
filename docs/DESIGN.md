@@ -117,3 +117,38 @@ Newest entries at the bottom.
   feed visualization"), unless they are more than 8 s apart (`BALL.gapS`) or the next one is a kickoff:
   then it holds at the last position. `prefers-reduced-motion`: no interpolation, the marker jumps.
 - Trail: positioned events of the last 12 match seconds, at most 6, cut at a gap and at a kickoff.
+
+## D18. Narrow layout breakpoint [design parameter]
+- Below 768 px wide the lower third leaves the stage and becomes a panel under it; the stage keeps the
+  score bug, the SYNTHETIC DATA mark and the seal. At that width a lower third scaled into the 16:9 frame
+  would be too small to read.
+
+## D19. Touch targets and keyboard seek [design parameters]
+- Buttons, tabs, speed choices, the match picker and the timeline track are at least 44 × 44 px. Moment
+  glyph buttons on the timeline are 28 × 44 px so close moments stay separate; previous/next moment
+  buttons reach the same cards at full size.
+- Timeline keys: ←/→ 30 match seconds, PageUp/PageDown 5 minutes, Home/End kickoff and final whistle.
+
+## D20. JS budget [design parameter]
+- Initial JS ≤ 250 KB gzip. Measured after U1: 109.4 KB gzip (`index-*.js`, 340.9 KB raw); the old UI
+  is a separate 8.6 KB gzip chunk loaded only on `/legacy`. Fonts are separate woff2 files.
+
+## D21. Seal source
+- The seal reads the card's own `checks` (lint issues, claims total, claims verified), written by
+  `build_match` at publish time from the `run_moment` result. Missing or failing checks show "Not
+  verified". Before U1 no card recorded this; the store only held passing cards by construction.
+
+## D22. Event stream endpoint
+- `GET /api/matches/{id}/events` returns every event (match_meta included) in the timeline shape. The
+  match detail timeline holds only goals, cards and whistles, too few for a ball marker.
+- Team names on the score bug are tied to the match_meta event (seq 0) through `<Fact>`.
+
+## D23. Default match and open state [design]
+- `/` shows the first match the API lists. A match opens paused: on the deep-linked `?moment=`, else at
+  `?t=` (seconds on the continuous clock), else on the first model-written (`llm`) card, so the first
+  view shows a full lower third rather than an empty kickoff.
+
+## D24. Old UI isolation
+- The old UI stays at `/legacy` until U2, loaded with `React.lazy` together with its own global CSS.
+  CSS loaded by a lazy chunk is not removed on client-side navigation, so `/legacy` is reached only by a
+  full page load (typed URL or plain link); the new UI never shares a document with the old CSS.

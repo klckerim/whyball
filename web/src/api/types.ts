@@ -13,6 +13,7 @@ export type Evidence = Schemas["EvidenceOut"];
 export type Metrics = Schemas["MetricsOut"];
 export type MetricInfo = Schemas["MetricInfo"];
 export type Health = Schemas["Health"];
+export type Period = Schemas["Period"];
 export type Series = Schemas["Series"];
 export type SeriesPoint = Schemas["SeriesPoint"];
 export type Checks = Schemas["StoredChecks"];
