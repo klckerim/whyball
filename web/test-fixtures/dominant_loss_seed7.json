@@ -1,0 +1,1432 @@
+{
+  "detail": {
+    "duration_t": 5970,
+    "event_match_id": "m-7-dominant_loss",
+    "final_score": {
+      "away": 1,
+      "home": 0
+    },
+    "id": "dominant_loss_seed7",
+    "periods": [
+      {
+        "end_t": 2904,
+        "period": 1,
+        "start_t": 0
+      },
+      {
+        "end_t": 5970,
+        "period": 2,
+        "start_t": 2904
+      }
+    ],
+    "prompt_version": "foundry-v5.2:gpt-5-mini",
+    "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+    "squads": {
+      "away": {
+        "bench": [
+          "Torvel Rundavi",
+          "Tamsel Muldoro",
+          "Nolvek Arbeni",
+          "Nolvek Hostrav",
+          "Feliko Gundrel"
+        ],
+        "lineup": [
+          "Tamsel Quessel",
+          "Sarvik Hazulov",
+          "Orvik Brestani",
+          "Gavrin Drokan",
+          "Zandro Belmaro",
+          "Tamsel Varnelli",
+          "Jorvan Hazulov",
+          "Nolvek Ilvanto",
+          "Lenzar Hazulov",
+          "Quenlo Tolvaro",
+          "Torvel Faskoli"
+        ],
+        "name": "Tessdal Athletic"
+      },
+      "home": {
+        "bench": [
+          "Quenlo Ilvanto",
+          "Korin Sorkani",
+          "Tamsel Ymberto",
+          "Zandro Drokan",
+          "Zandro Sorkani"
+        ],
+        "lineup": [
+          "Feliko Belmaro",
+          "Alvezo Hazulov",
+          "Korin Zerimek",
+          "Tamsel Belmaro",
+          "Jorvan Varnelli",
+          "Gavrin Sorkani",
+          "Orvik Hazulov",
+          "Ombar Belmaro",
+          "Nolvek Kurrand",
+          "Korin Hostrav",
+          "Pernat Ilvanto"
+        ],
+        "name": "Vellorin FC"
+      }
+    },
+    "teams": {
+      "away": "Tessdal Athletic",
+      "home": "Vellorin FC"
+    },
+    "timeline": [
+      {
+        "minute": 25,
+        "minute_label": "25'",
+        "outcome": null,
+        "period": 1,
+        "player": "Torvel Faskoli",
+        "score": {
+          "away": 0,
+          "home": 0
+        },
+        "second": 45,
+        "seq": 157,
+        "t": 1545,
+        "team": "away",
+        "type": "yellow_card",
+        "x": null,
+        "y": null
+      },
+      {
+        "minute": 48,
+        "minute_label": "45+4'",
+        "outcome": null,
+        "period": 1,
+        "player": null,
+        "score": {
+          "away": 0,
+          "home": 0
+        },
+        "second": 24,
+        "seq": 284,
+        "t": 2904,
+        "team": null,
+        "type": "half_time",
+        "x": null,
+        "y": null
+      },
+      {
+        "minute": 57,
+        "minute_label": "57'",
+        "outcome": null,
+        "period": 2,
+        "player": "Nolvek Ilvanto",
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 0,
+        "seq": 350,
+        "t": 3624,
+        "team": "away",
+        "type": "goal",
+        "x": 0.0,
+        "y": 34.0
+      },
+      {
+        "minute": 58,
+        "minute_label": "58'",
+        "outcome": null,
+        "period": 2,
+        "player": "Jorvan Hazulov",
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 13,
+        "seq": 357,
+        "t": 3697,
+        "team": "away",
+        "type": "yellow_card",
+        "x": null,
+        "y": null
+      },
+      {
+        "minute": 70,
+        "minute_label": "70'",
+        "outcome": "saved",
+        "period": 2,
+        "player": "Alvezo Hazulov",
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 0,
+        "seq": 428,
+        "t": 4404,
+        "team": "home",
+        "type": "penalty",
+        "x": 94.0,
+        "y": 34.0
+      },
+      {
+        "minute": 78,
+        "minute_label": "78'",
+        "outcome": null,
+        "period": 2,
+        "player": "Gavrin Drokan",
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 35,
+        "seq": 475,
+        "t": 4919,
+        "team": "away",
+        "type": "yellow_card",
+        "x": null,
+        "y": null
+      },
+      {
+        "minute": 83,
+        "minute_label": "83'",
+        "outcome": null,
+        "period": 2,
+        "player": "Nolvek Kurrand",
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 22,
+        "seq": 501,
+        "t": 5206,
+        "team": "home",
+        "type": "yellow_card",
+        "x": null,
+        "y": null
+      },
+      {
+        "minute": 96,
+        "minute_label": "90+7'",
+        "outcome": null,
+        "period": 2,
+        "player": null,
+        "score": {
+          "away": 1,
+          "home": 0
+        },
+        "second": 6,
+        "seq": 572,
+        "t": 5970,
+        "team": null,
+        "type": "full_time",
+        "x": null,
+        "y": null
+      }
+    ]
+  },
+  "moments": [
+    {
+      "at_seq": 62,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+1.00",
+          "end": "10'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#30",
+              "minute": 4,
+              "minute_label": "4'",
+              "period": 1,
+              "player": "Korin Hostrav",
+              "second": 15,
+              "seq": 30,
+              "team": "home",
+              "type": "pass",
+              "x": 73.9,
+              "y": 24.7
+            },
+            {
+              "id": "m-7-dominant_loss#41",
+              "minute": 6,
+              "minute_label": "6'",
+              "period": 1,
+              "player": "Korin Zerimek",
+              "second": 8,
+              "seq": 41,
+              "team": "home",
+              "type": "dribble",
+              "x": 76.5,
+              "y": 28.4
+            },
+            {
+              "id": "m-7-dominant_loss#42",
+              "minute": 6,
+              "minute_label": "6'",
+              "period": 1,
+              "player": "Jorvan Varnelli",
+              "second": 16,
+              "seq": 42,
+              "team": "home",
+              "type": "shot",
+              "x": 81.5,
+              "y": 26.8
+            },
+            {
+              "id": "m-7-dominant_loss#44",
+              "minute": 6,
+              "minute_label": "6'",
+              "period": 1,
+              "player": "Pernat Ilvanto",
+              "second": 16,
+              "seq": 44,
+              "team": "home",
+              "type": "corner",
+              "x": 105.0,
+              "y": 0.0
+            },
+            {
+              "id": "m-7-dominant_loss#49",
+              "minute": 7,
+              "minute_label": "7'",
+              "period": 1,
+              "player": "Korin Zerimek",
+              "second": 30,
+              "seq": 49,
+              "team": "home",
+              "type": "pass",
+              "x": 92.0,
+              "y": 35.5
+            },
+            {
+              "id": "m-7-dominant_loss#54",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Gavrin Sorkani",
+              "second": 24,
+              "seq": 54,
+              "team": "home",
+              "type": "shot",
+              "x": 95.8,
+              "y": 24.8
+            },
+            {
+              "id": "m-7-dominant_loss#56",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Korin Zerimek",
+              "second": 46,
+              "seq": 56,
+              "team": "home",
+              "type": "pass",
+              "x": 99.8,
+              "y": 34.0
+            },
+            {
+              "id": "m-7-dominant_loss#57",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Tamsel Belmaro",
+              "second": 57,
+              "seq": 57,
+              "team": "home",
+              "type": "shot",
+              "x": 100.8,
+              "y": 27.1
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "3",
+          "end": "10'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#42",
+              "minute": 6,
+              "minute_label": "6'",
+              "period": 1,
+              "player": "Jorvan Varnelli",
+              "second": 16,
+              "seq": 42,
+              "team": "home",
+              "type": "shot",
+              "x": 81.5,
+              "y": 26.8
+            },
+            {
+              "id": "m-7-dominant_loss#54",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Gavrin Sorkani",
+              "second": 24,
+              "seq": 54,
+              "team": "home",
+              "type": "shot",
+              "x": 95.8,
+              "y": 24.8
+            },
+            {
+              "id": "m-7-dominant_loss#57",
+              "minute": 8,
+              "minute_label": "8'",
+              "period": 1,
+              "player": "Tamsel Belmaro",
+              "second": 57,
+              "seq": 57,
+              "team": "home",
+              "type": "shot",
+              "x": 100.8,
+              "y": 27.1
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 3.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "10'",
+          "evidence": [],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M001",
+      "importance": 0.45,
+      "minute": 10,
+      "minute_label": "10'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 3,
+      "source": "template",
+      "t": 603,
+      "team": "home",
+      "text": "10' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 0': Vellorin FC 3, Tessdal Athletic 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 182,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.67",
+          "end": "30'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#173",
+              "minute": 28,
+              "minute_label": "28'",
+              "period": 1,
+              "player": "Jorvan Varnelli",
+              "second": 57,
+              "seq": 173,
+              "team": "home",
+              "type": "shot",
+              "x": 65.5,
+              "y": 1.0
+            },
+            {
+              "id": "m-7-dominant_loss#177",
+              "minute": 29,
+              "minute_label": "29'",
+              "period": 1,
+              "player": "Orvik Hazulov",
+              "second": 53,
+              "seq": 177,
+              "team": "home",
+              "type": "pass",
+              "x": 94.4,
+              "y": 35.2
+            },
+            {
+              "id": "m-7-dominant_loss#182",
+              "minute": 30,
+              "minute_label": "30'",
+              "period": 1,
+              "player": "Gavrin Sorkani",
+              "second": 38,
+              "seq": 182,
+              "team": "home",
+              "type": "pass",
+              "x": 94.7,
+              "y": 52.1
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.67
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "30'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#173",
+              "minute": 28,
+              "minute_label": "28'",
+              "period": 1,
+              "player": "Jorvan Varnelli",
+              "second": 57,
+              "seq": 173,
+              "team": "home",
+              "type": "shot",
+              "x": 65.5,
+              "y": 1.0
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "20'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "30'",
+          "evidence": [],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "20'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M002",
+      "importance": 0.45,
+      "minute": 30,
+      "minute_label": "30'",
+      "period": 1,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 38,
+      "source": "template",
+      "t": 1838,
+      "team": "home",
+      "text": "30' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +0.67 in their favour. Shots since 20': Vellorin FC 1, Tessdal Athletic 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 269,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "59%",
+          "end": "45+1'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#269",
+              "minute": 45,
+              "minute_label": "45+1'",
+              "period": 1,
+              "player": "Ombar Belmaro",
+              "second": 33,
+              "seq": 269,
+              "team": "home",
+              "type": "shot",
+              "x": 81.1,
+              "y": 39.5
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "25'",
+          "team": "home",
+          "value": 0.59
+        },
+        {
+          "comparison": "eq",
+          "display": "4",
+          "end": "45+1'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#173",
+              "minute": 28,
+              "minute_label": "28'",
+              "period": 1,
+              "player": "Jorvan Varnelli",
+              "second": 57,
+              "seq": 173,
+              "team": "home",
+              "type": "shot",
+              "x": 65.5,
+              "y": 1.0
+            },
+            {
+              "id": "m-7-dominant_loss#197",
+              "minute": 33,
+              "minute_label": "33'",
+              "period": 1,
+              "player": "Nolvek Kurrand",
+              "second": 5,
+              "seq": 197,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 16.3
+            },
+            {
+              "id": "m-7-dominant_loss#258",
+              "minute": 43,
+              "minute_label": "43'",
+              "period": 1,
+              "player": "Nolvek Kurrand",
+              "second": 39,
+              "seq": 258,
+              "team": "home",
+              "type": "shot",
+              "x": 81.1,
+              "y": 30.7
+            },
+            {
+              "id": "m-7-dominant_loss#269",
+              "minute": 45,
+              "minute_label": "45+1'",
+              "period": 1,
+              "player": "Ombar Belmaro",
+              "second": 33,
+              "seq": 269,
+              "team": "home",
+              "type": "shot",
+              "x": 81.1,
+              "y": 39.5
+            }
+          ],
+          "id": "shots_for",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "25'",
+          "team": "home",
+          "value": 4.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "45+1'",
+          "evidence": [],
+          "id": "shots_against",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "25'",
+          "team": "away",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "45+1'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#269",
+              "minute": 45,
+              "minute_label": "45+1'",
+              "period": 1,
+              "player": "Ombar Belmaro",
+              "second": 33,
+              "seq": 269,
+              "team": "home",
+              "type": "shot",
+              "x": 81.1,
+              "y": 39.5
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "45+1'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#269",
+              "minute": 45,
+              "minute_label": "45+1'",
+              "period": 1,
+              "player": "Ombar Belmaro",
+              "second": 33,
+              "seq": 269,
+              "team": "home",
+              "type": "shot",
+              "x": 81.1,
+              "y": 39.5
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 0.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M003",
+      "importance": 0.5,
+      "minute": 45,
+      "minute_label": "45+1'",
+      "period": 1,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 33,
+      "source": "llm",
+      "t": 2733,
+      "team": "home",
+      "text": "Since 25' Vellorin FC have had 59% of the ball and a 4–0 lead in shots, yet the score is Vellorin FC 0–0 Tessdal Athletic.",
+      "trace": [],
+      "type": "dominance_without_reward"
+    },
+    {
+      "at_seq": 349,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+1.00",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#301",
+              "minute": 47,
+              "minute_label": "47'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 46,
+              "seq": 301,
+              "team": "away",
+              "type": "pass",
+              "x": 33.3,
+              "y": 44.7
+            },
+            {
+              "id": "m-7-dominant_loss#307",
+              "minute": 48,
+              "minute_label": "48'",
+              "period": 2,
+              "player": "Lenzar Hazulov",
+              "second": 44,
+              "seq": 307,
+              "team": "away",
+              "type": "pass",
+              "x": 31.2,
+              "y": 40.1
+            },
+            {
+              "id": "m-7-dominant_loss#349",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 349,
+              "team": "away",
+              "type": "shot",
+              "x": 10.5,
+              "y": 43.9
+            }
+          ],
+          "id": "pressure_balance_away",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#349",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 349,
+              "team": "away",
+              "type": "shot",
+              "x": 10.5,
+              "y": 43.9
+            }
+          ],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "47'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "57'",
+          "evidence": [],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "47'",
+          "team": "home",
+          "value": 0.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M004",
+      "importance": 0.45,
+      "minute": 57,
+      "minute_label": "57'",
+      "period": 2,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 0,
+      "source": "template",
+      "t": 3624,
+      "team": "away",
+      "text": "57' — Tessdal Athletic take control: pressure balance over the last 10 minutes of play is +1.00 in their favour. Shots since 47': Tessdal Athletic 1, Vellorin FC 0.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 350,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#350",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 350,
+              "team": "away",
+              "type": "goal",
+              "x": 0.0,
+              "y": 34.0
+            }
+          ],
+          "id": "goal",
+          "kind": "count",
+          "label": "goals",
+          "metric": "goals",
+          "player": "Nolvek Ilvanto",
+          "start": "57'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#350",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 350,
+              "team": "away",
+              "type": "goal",
+              "x": 0.0,
+              "y": 34.0
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "57'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#350",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 350,
+              "team": "away",
+              "type": "goal",
+              "x": 0.0,
+              "y": 34.0
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M005",
+      "importance": 0.8,
+      "minute": 57,
+      "minute_label": "57'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "t": 3624,
+      "team": "away",
+      "text": "Nolvek Ilvanto scored at 57', and the score is Vellorin FC 0–1 Tessdal Athletic.",
+      "trace": [],
+      "type": "goal"
+    },
+    {
+      "at_seq": 401,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "+0.50",
+          "end": "65'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#358",
+              "minute": 58,
+              "minute_label": "58'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 32,
+              "seq": 358,
+              "team": "home",
+              "type": "shot",
+              "x": 65.8,
+              "y": 25.6
+            },
+            {
+              "id": "m-7-dominant_loss#364",
+              "minute": 59,
+              "minute_label": "59'",
+              "period": 2,
+              "player": "Tamsel Belmaro",
+              "second": 24,
+              "seq": 364,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 16.3
+            },
+            {
+              "id": "m-7-dominant_loss#372",
+              "minute": 60,
+              "minute_label": "60'",
+              "period": 2,
+              "player": "Jorvan Varnelli",
+              "second": 52,
+              "seq": 372,
+              "team": "home",
+              "type": "pass",
+              "x": 93.1,
+              "y": 6.5
+            },
+            {
+              "id": "m-7-dominant_loss#396",
+              "minute": 64,
+              "minute_label": "64'",
+              "period": 2,
+              "player": "Orvik Hazulov",
+              "second": 49,
+              "seq": 396,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 46.0
+            },
+            {
+              "id": "m-7-dominant_loss#401",
+              "minute": 65,
+              "minute_label": "65'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 36,
+              "seq": 401,
+              "team": "home",
+              "type": "dribble",
+              "x": 92.1,
+              "y": 41.6
+            }
+          ],
+          "id": "pressure_balance_home",
+          "kind": "state",
+          "label": "pressure balance over the last 10 minutes of play",
+          "metric": "pressure_balance",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.5
+        },
+        {
+          "comparison": "eq",
+          "display": "3",
+          "end": "65'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#358",
+              "minute": 58,
+              "minute_label": "58'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 32,
+              "seq": 358,
+              "team": "home",
+              "type": "shot",
+              "x": 65.8,
+              "y": 25.6
+            },
+            {
+              "id": "m-7-dominant_loss#364",
+              "minute": 59,
+              "minute_label": "59'",
+              "period": 2,
+              "player": "Tamsel Belmaro",
+              "second": 24,
+              "seq": 364,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 16.3
+            },
+            {
+              "id": "m-7-dominant_loss#396",
+              "minute": 64,
+              "minute_label": "64'",
+              "period": 2,
+              "player": "Orvik Hazulov",
+              "second": 49,
+              "seq": 396,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 46.0
+            }
+          ],
+          "id": "shots_home",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "55'",
+          "team": "home",
+          "value": 3.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "65'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#349",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 349,
+              "team": "away",
+              "type": "shot",
+              "x": 10.5,
+              "y": 43.9
+            }
+          ],
+          "id": "shots_away",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "55'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M006",
+      "importance": 0.45,
+      "minute": 65,
+      "minute_label": "65'",
+      "period": 2,
+      "prompt_version": "template-v1",
+      "run_id": null,
+      "second": 36,
+      "source": "template",
+      "t": 4140,
+      "team": "home",
+      "text": "65' — Vellorin FC take control: pressure balance over the last 10 minutes of play is +0.50 in their favour. Shots since 55': Vellorin FC 3, Tessdal Athletic 1.",
+      "trace": [],
+      "type": "pressure_shift"
+    },
+    {
+      "at_seq": 408,
+      "claims": [
+        {
+          "comparison": "approx",
+          "display": "71%",
+          "end": "66'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#408",
+              "minute": 66,
+              "minute_label": "66'",
+              "period": 2,
+              "player": "Korin Zerimek",
+              "second": 57,
+              "seq": 408,
+              "team": "home",
+              "type": "shot",
+              "x": 93.6,
+              "y": 16.1
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "46'",
+          "team": "home",
+          "value": 0.71
+        },
+        {
+          "comparison": "eq",
+          "display": "5",
+          "end": "66'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#358",
+              "minute": 58,
+              "minute_label": "58'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 32,
+              "seq": 358,
+              "team": "home",
+              "type": "shot",
+              "x": 65.8,
+              "y": 25.6
+            },
+            {
+              "id": "m-7-dominant_loss#364",
+              "minute": 59,
+              "minute_label": "59'",
+              "period": 2,
+              "player": "Tamsel Belmaro",
+              "second": 24,
+              "seq": 364,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 16.3
+            },
+            {
+              "id": "m-7-dominant_loss#396",
+              "minute": 64,
+              "minute_label": "64'",
+              "period": 2,
+              "player": "Orvik Hazulov",
+              "second": 49,
+              "seq": 396,
+              "team": "home",
+              "type": "shot",
+              "x": 102.9,
+              "y": 46.0
+            },
+            {
+              "id": "m-7-dominant_loss#405",
+              "minute": 66,
+              "minute_label": "66'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 36,
+              "seq": 405,
+              "team": "home",
+              "type": "shot",
+              "x": 96.4,
+              "y": 28.8
+            },
+            {
+              "id": "m-7-dominant_loss#408",
+              "minute": 66,
+              "minute_label": "66'",
+              "period": 2,
+              "player": "Korin Zerimek",
+              "second": 57,
+              "seq": 408,
+              "team": "home",
+              "type": "shot",
+              "x": 93.6,
+              "y": 16.1
+            }
+          ],
+          "id": "shots_for",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "46'",
+          "team": "home",
+          "value": 5.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "66'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#349",
+              "minute": 57,
+              "minute_label": "57'",
+              "period": 2,
+              "player": "Nolvek Ilvanto",
+              "second": 0,
+              "seq": 349,
+              "team": "away",
+              "type": "shot",
+              "x": 10.5,
+              "y": 43.9
+            }
+          ],
+          "id": "shots_against",
+          "kind": "count",
+          "label": "shots",
+          "metric": "shots",
+          "player": null,
+          "start": "46'",
+          "team": "away",
+          "value": 1.0
+        },
+        {
+          "comparison": "eq",
+          "display": "0",
+          "end": "66'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#408",
+              "minute": 66,
+              "minute_label": "66'",
+              "period": 2,
+              "player": "Korin Zerimek",
+              "second": 57,
+              "seq": 408,
+              "team": "home",
+              "type": "shot",
+              "x": 93.6,
+              "y": 16.1
+            }
+          ],
+          "id": "score_home",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.0
+        },
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "66'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#408",
+              "minute": 66,
+              "minute_label": "66'",
+              "period": 2,
+              "player": "Korin Zerimek",
+              "second": 57,
+              "seq": 408,
+              "team": "home",
+              "type": "shot",
+              "x": 93.6,
+              "y": 16.1
+            }
+          ],
+          "id": "score_away",
+          "kind": "state",
+          "label": "goals",
+          "metric": "score",
+          "player": null,
+          "start": "0'",
+          "team": "away",
+          "value": 1.0
+        }
+      ],
+      "id": "m-7-dominant_loss-M007",
+      "importance": 0.5,
+      "minute": 66,
+      "minute_label": "66'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 57,
+      "source": "llm",
+      "t": 4221,
+      "team": "home",
+      "text": "Since 46' Vellorin FC have had 71% of the ball and a 5–1 lead in shots, yet the score is Vellorin FC 0–1 Tessdal Athletic.",
+      "trace": [],
+      "type": "dominance_without_reward"
+    },
+    {
+      "at_seq": 428,
+      "claims": [
+        {
+          "comparison": "eq",
+          "display": "1",
+          "end": "70'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#428",
+              "minute": 70,
+              "minute_label": "70'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 0,
+              "seq": 428,
+              "team": "home",
+              "type": "penalty",
+              "x": 94.0,
+              "y": 34.0
+            }
+          ],
+          "id": "penalty",
+          "kind": "count",
+          "label": "penalties taken and saved",
+          "metric": "penalties_saved",
+          "player": "Alvezo Hazulov",
+          "start": "70'",
+          "team": "home",
+          "value": 1.0
+        },
+        {
+          "comparison": "approx",
+          "display": "62%",
+          "end": "70'",
+          "evidence": [
+            {
+              "id": "m-7-dominant_loss#428",
+              "minute": 70,
+              "minute_label": "70'",
+              "period": 2,
+              "player": "Alvezo Hazulov",
+              "second": 0,
+              "seq": 428,
+              "team": "home",
+              "type": "penalty",
+              "x": 94.0,
+              "y": 34.0
+            }
+          ],
+          "id": "possession",
+          "kind": "ratio",
+          "label": "possession",
+          "metric": "possession",
+          "player": null,
+          "start": "0'",
+          "team": "home",
+          "value": 0.62
+        }
+      ],
+      "id": "m-7-dominant_loss-M008",
+      "importance": 0.6,
+      "minute": 70,
+      "minute_label": "70'",
+      "period": 2,
+      "prompt_version": "foundry-v5.2:gpt-5-mini",
+      "run_id": "foundry-v5.2:gpt-5-mini@2026-10-13T15:02:48+00:00",
+      "second": 0,
+      "source": "llm",
+      "t": 4404,
+      "team": "home",
+      "text": "Alvezo Hazulov's penalty was saved at 70', and Vellorin FC have had 62% of the ball since kickoff.",
+      "trace": [],
+      "type": "penalty"
+    }
+  ],
+  "summary": {
+    "final_score": {
+      "away": 1,
+      "home": 0
+    },
+    "id": "dominant_loss_seed7",
+    "moments": 8,
+    "sources": {
+      "llm": 4,
+      "template": 4,
+      "template_fallback": 0
+    },
+    "teams": {
+      "away": "Tessdal Athletic",
+      "home": "Vellorin FC"
+    }
+  }
+}

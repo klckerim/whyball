@@ -1,0 +1,14 @@
+{
+  "files": {
+    "dominant_loss_seed7.json": "18af9fd2c526327c1f0abfa4776de28af2f2bc0ffab5b054a65bef771ca8ce05",
+    "metrics.json": "ab5347b5f61c0a811b04cc4b329d334e0b5fccb5f94743a0701593b402fcd4bf",
+    "natural_seed100.json": "bc3de4f2ffd79dd47214d554d250c8f56d27b5222cdc6e623adbd19bf5f77ac5",
+    "red_card_swing_seed42.json": "dda0108990a3bc8580b585e1cc591d4da0c561d4492d17a31f04e207cd858c6f"
+  },
+  "generator": ".venv/bin/python -m app.api.fixtures",
+  "sources": {
+    "data/demo_narration/dominant_loss_seed7.json": "c5c55fe53f329b85a11adf52c3a655027c5d3069de50e6be8cde379f1d1be490",
+    "data/demo_narration/natural_seed100.json": "36616eadf6b903af8995842bfcbe51bb6fd31eea4ef7e1b54d58918a7dc4fba6",
+    "data/demo_narration/red_card_swing_seed42.json": "4429791334dde4562b058f406ecb49897b897524d52720aa03a32ad5673d93f1"
+  }
+}
