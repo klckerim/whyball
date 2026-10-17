@@ -10,6 +10,7 @@ import { shortcutFor } from "./keys";
 import { openAt } from "./MatchView";
 import { bandPaths } from "./PressureBand";
 import { SEEK, timeAtX } from "./Timeline";
+import { wallLabel } from "../state/clock";
 import { CHECKED_BY_CAPITAL } from "../design/checker";
 import { FLIP_MS } from "./useFlip";
 
@@ -189,7 +190,9 @@ describe("transport and keyboard", () => {
   it("speed choice states its wall time from the match duration", async () => {
     await ready();
     fireEvent.click(screen.getByRole("radio", { name: "Faster" }));
-    expect(screen.getByText(`whole match in about ${Math.round(red.detail.duration_t / 300)} s`)).toBeTruthy();
+    expect(screen.getByText(`whole match in about ${wallLabel(red.detail.duration_t, 30)}`)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "1×" }));
+    expect(screen.getByText(`whole match in about ${wallLabel(red.detail.duration_t, 1.5)}`)).toBeTruthy();
   });
 
   it("plays in time with the wall clock", async () => {
@@ -198,8 +201,8 @@ describe("transport and keyboard", () => {
     const slider = screen.getByRole("slider", { name: "Match time" });
     const t0 = Number(slider.getAttribute("aria-valuenow"));
     fireEvent.click(screen.getByRole("button", { name: "Play" }));
-    act(() => vi.advanceTimersByTime(1000));
-    expect(Number(slider.getAttribute("aria-valuenow"))).toBe(t0 + 60);
+    act(() => vi.advanceTimersByTime(10000));
+    expect(Number(slider.getAttribute("aria-valuenow"))).toBe(t0 + 15); // 1.5 match seconds per second
   });
 });
 

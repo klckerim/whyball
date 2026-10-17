@@ -42,25 +42,28 @@
 }
 
 .top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
   gap: calc(32 * var(--u));
 }
 
 /* --- score bug ---------------------------------------------------------------------------- */
 .bug {
+  grid-column: 2;
   display: grid;
   grid-template-columns: auto;
   gap: calc(6 * var(--u));
   padding: calc(14 * var(--u)) calc(22 * var(--u));
-  background: var(--stage-surface);
-  border-top: calc(6 * var(--u)) solid var(--stage-accent);
+  background: linear-gradient(135deg, var(--stage-surface-2), var(--stage-surface));
+  border-top: calc(8 * var(--u)) solid var(--stage-accent);
+  border-radius: 0 0 calc(6 * var(--u)) calc(6 * var(--u));
+  box-shadow: 0 calc(8 * var(--u)) calc(30 * var(--u)) color-mix(in srgb, var(--fx-black) 55%, transparent), 0 0 calc(24 * var(--u)) color-mix(in srgb, var(--fx-gold) 18%, transparent);
   font-family: var(--font-display);
 }
 .bugRow {
   display: grid;
-  grid-template-columns: max(calc(28 * var(--u)), 10px) minmax(0, 1fr) max(calc(70 * var(--u)), 18px);
+  grid-template-columns: max(calc(28 * var(--u)), 10px) minmax(0, 1fr) max(calc(90 * var(--u)), 22px);
   align-items: center;
   gap: calc(16 * var(--u));
 }
@@ -77,19 +80,22 @@
   border: max(calc(6 * var(--u)), 2px) solid var(--stage-away);
 }
 .teamName {
-  font-weight: 600;
-  font-size: max(calc(36 * var(--u)), 12px);
+  font-weight: 700;
+  font-size: max(calc(46 * var(--u)), 13px);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
   max-width: max(calc(420 * var(--u)), 150px);
 }
 .score {
   font-weight: 700;
-  font-size: max(calc(56 * var(--u)), 16px);
+  font-size: max(calc(76 * var(--u)), 18px);
   line-height: 1;
+  color: var(--fx-white);
+  text-shadow: 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--fx-white) 35%, transparent);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -102,17 +108,28 @@
   color: var(--stage-muted);
   font-variant-numeric: tabular-nums;
 }
+.runClock {
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-text);
+  letter-spacing: 0.04em;
+}
 .ft {
   color: var(--stage-accent);
 }
 
 .synthetic {
   padding: calc(8 * var(--u)) calc(16 * var(--u));
-  border: calc(3 * var(--u)) solid var(--stage-accent);
-  color: var(--stage-accent);
+  border: max(calc(2 * var(--u)), 1.5px) solid color-mix(in srgb, var(--fx-amber) 60%, transparent);
+  border-radius: calc(4 * var(--u));
+  background: color-mix(in srgb, var(--fx-amber) 8%, transparent);
+  color: var(--fx-amber-ink);
   font: 700 max(calc(28 * var(--u)), 11px) / 1 var(--font-display);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   white-space: nowrap;
+  box-shadow: 0 0 calc(18 * var(--u)) color-mix(in srgb, var(--fx-gold) 25%, transparent);
+  grid-column: 3;
+  justify-self: end;
 }
 
 /* --- pitch ---------------------------------------------------------------------------------- */
@@ -127,9 +144,15 @@
 }
 .lines {
   fill: none;
-  stroke: var(--stage-muted);
-  stroke-width: 0.35;
-  opacity: 0.45;
+  stroke: var(--fx-cyan);
+  stroke-width: 0.4;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 1.2px color-mix(in srgb, var(--fx-cyan) 70%, transparent));
+}
+.pitchBox {
+  background:
+    radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fx-cyan) 10%, transparent), transparent 70%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--fx-white) 2%, transparent) 0 8.33%, transparent 8.33% 16.66%);
 }
 .trail {
   fill: none;
@@ -137,10 +160,14 @@
   stroke-width: 0.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.55;
+  opacity: 0.75;
+  filter: drop-shadow(0 0 1px var(--fx-gold));
 }
 .ball {
-  fill: var(--stage-accent);
+  fill: var(--fx-gold);
+  stroke: var(--fx-white);
+  stroke-width: 0.25;
+  filter: drop-shadow(0 0 2px var(--fx-gold)) drop-shadow(0 0 5px var(--fx-gold));
 }
 .noLocation,
 .feedNote {
@@ -163,15 +190,20 @@
   display: grid;
   gap: 8px;
   padding: 16px;
-  background: var(--surface);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--fx-glass) 94%, var(--fx-black)), color-mix(in srgb, var(--stage-surface) 90%, transparent));
   border-top: 4px solid var(--accent);
+  border-left: 8px solid var(--fx-proof);
   color: var(--text);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--fx-black) 50%, transparent);
 }
 .lowerThird[data-placement="stage"] {
   gap: calc(12 * var(--u));
   padding: calc(20 * var(--u)) calc(28 * var(--u));
   border-top-width: calc(6 * var(--u));
+  border-left-width: calc(12 * var(--u));
   font-size: calc(32 * var(--u));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 .ltHead {
   display: flex;
@@ -184,12 +216,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45em;
-  font: 700 1em / 1.2 var(--font-display);
+  font: 700 1.1em / 1.2 var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
+  color: var(--stage-accent);
 }
 .ltMinute {
-  color: var(--muted);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 .ltMeta {
@@ -275,4 +308,40 @@
   font: 700 0.85em / 1.2 var(--font-body);
   color: var(--text);
   white-space: nowrap;
+}
+
+/* "Checked by code" is the core claim: wherever the seal sits in the stage it glows as a green ring
+ * (ring-2 ring-emerald-500, glow, bg-emerald-950/80, text-emerald-400). Only a passed seal glows. */
+.lowerThird [data-verified="true"],
+.stageSeal [data-verified="true"] {
+  padding: 0.35em 0.9em;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fx-proof-bg) 80%, transparent);
+  color: var(--fx-proof-ink);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 2px var(--fx-proof), 0 0 15px color-mix(in srgb, var(--fx-proof) 60%, transparent);
+}
+.lowerThird [data-verified="true"] svg,
+.stageSeal [data-verified="true"] svg {
+  filter: drop-shadow(0 0 4px var(--fx-proof));
+}
+.proofSeal {
+  border-color: transparent;
+  border-radius: 999px;
+  transition: box-shadow 150ms, background-color 150ms;
+}
+.proofSeal:hover {
+  background: color-mix(in srgb, var(--fx-proof-bg) 60%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--fx-proof) 70%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lowerThird [data-verified="true"] {
+    animation: sealGlow 2.6s ease-in-out infinite;
+  }
+}
+@keyframes sealGlow {
+  50% {
+    box-shadow: 0 0 0 2px var(--fx-proof), 0 0 26px color-mix(in srgb, var(--fx-proof) 80%, transparent);
+  }
 }

@@ -91,6 +91,7 @@ export function Timeline({ t, duration, periods, moments, series, bandTeams = nu
             aria-label={`${typeLabel(m.type)}, ${m.minute_label}`}
             aria-current={m.id === shownId ? "true" : undefined}
             data-source={m.source}
+            data-type={m.type}
             onClick={() => onMoment(m.id)}
           >
             <TypeGlyph type={m.type} />

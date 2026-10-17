@@ -31,11 +31,18 @@
   background: var(--surface);
   cursor: pointer;
 }
+.railItem {
+  transition: box-shadow 150ms, border-color 150ms;
+}
+.railItem:hover {
+  border-color: var(--fx-blue);
+}
 .railItem[aria-selected="true"] {
-  border-color: var(--control-border);
-  border-left-color: var(--accent-ink);
+  border-color: var(--fx-blue);
+  border-left-color: var(--fx-blue);
   background: var(--surface-2);
   font-weight: 700;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-blue) 55%, transparent), inset 0 0 10px color-mix(in srgb, var(--fx-blue) 18%, transparent);
 }
 .railMinute {
   font: 700 20px / 1 var(--font-display);
@@ -112,6 +119,27 @@
   font-weight: 700;
   border-width: 3px;
 }
+.record {
+  /* the audit stamp panel: dark green glass in both themes, so the remapped tokens stay in contrast */
+  --surface: var(--stage-surface);
+  --surface-2: var(--stage-surface-2);
+  --text: var(--stage-text);
+  --muted: var(--stage-muted);
+  --verified: var(--stage-verified);
+  padding: 16px 20px;
+  border: 2px solid var(--fx-proof);
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--fx-proof-bg), var(--stage-surface));
+  color: var(--stage-text);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-proof) 45%, transparent), inset 0 0 22px color-mix(in srgb, var(--fx-proof) 12%, transparent);
+}
+.record .h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--fx-proof-ink);
+}
 .claim,
 .record {
   display: grid;
@@ -164,13 +192,22 @@
   margin: 0;
 }
 .codeTag {
+  display: inline-flex;
+  align-items: center;
   margin-left: 8px;
-  padding: 2px 8px;
-  border: 2px solid var(--verified);
-  border-radius: 4px;
-  color: var(--verified);
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fx-proof-bg) 80%, transparent);
+  color: var(--fx-proof-ink);
+  font-weight: 800;
   text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 2px var(--fx-proof), 0 0 15px color-mix(in srgb, var(--fx-proof) 60%, transparent);
+}
+.codeTag::before {
+  content: "✓";
+  margin-right: 0.4em;
 }
 .note {
   margin: 0;
@@ -191,34 +228,64 @@
 .pitch {
   width: 100%;
   height: auto;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fx-cyan) 10%, var(--stage-bg)), var(--stage-bg) 75%);
+  border: 1px solid var(--fx-glass-line);
   border-radius: 4px;
 }
 .pitchLines {
   fill: none;
-  stroke: var(--muted);
+  stroke: var(--fx-cyan);
+  stroke-width: 0.35;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 1px color-mix(in srgb, var(--fx-cyan) 70%, transparent));
+}
+.motion {
+  fill: none;
+  stroke: var(--fx-gold);
   stroke-width: 0.3;
-  opacity: 0.7;
+  stroke-dasharray: 1.2 0.9;
+  stroke-linecap: round;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 1px var(--fx-gold));
+  pointer-events: none;
 }
 .mark {
-  fill: var(--text);
-  stroke: var(--text);
+  fill: var(--fx-white);
+  stroke: var(--fx-white);
   cursor: pointer;
+  filter: drop-shadow(0 0 1.5px var(--fx-cyan)) drop-shadow(0 0 3px var(--fx-cyan));
 }
 .mark[data-state="dim"] {
-  fill: var(--muted);
-  stroke: var(--muted);
+  fill: var(--stage-muted);
+  stroke: var(--stage-muted);
   opacity: 0.4;
   cursor: default;
+  filter: none;
 }
 .mark[data-state="selected"] {
-  fill: var(--accent-ink);
-  stroke: var(--accent-ink);
+  fill: var(--fx-gold);
+  stroke: var(--fx-gold);
+  filter: drop-shadow(0 0 2px var(--fx-gold)) drop-shadow(0 0 6px var(--fx-gold));
+}
+.mark[data-state="marked"]:hover {
+  filter: drop-shadow(0 0 3px var(--fx-gold)) drop-shadow(0 0 6px var(--fx-cyan));
 }
 .markHalo {
-  stroke: var(--accent-ink);
-  stroke-width: 0.35;
+  stroke: var(--fx-gold);
+  stroke-width: 0.4;
+  stroke-dasharray: 0.9 0.6;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mark[data-state="selected"] .markHalo {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: haloSpin 6s linear infinite;
+  }
+}
+@keyframes haloSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .pitchCaption {
   display: grid;
@@ -276,11 +343,18 @@
   font-size: 14px;
   line-height: 1.3;
 }
+.eventRow {
+  transition: box-shadow 150ms, border-color 150ms;
+}
+.eventRow:hover {
+  border-color: var(--fx-blue);
+}
 .eventRow[aria-pressed="true"] {
-  border-color: var(--control-border);
-  border-left-color: var(--accent-ink);
+  border-color: var(--fx-blue);
+  border-left-color: var(--fx-blue);
   background: var(--surface-2);
   font-weight: 700;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-blue) 55%, transparent), inset 0 0 10px color-mix(in srgb, var(--fx-blue) 18%, transparent);
 }
 .evMinute {
   font-variant-numeric: tabular-nums;

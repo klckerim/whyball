@@ -35,7 +35,7 @@ export function OnAir({ detail, events, moments, t, shownId, guides, onProof }: 
     <div className={styles.onAir}>
       <ProgramStage guides={guides}>
         <div className={styles.top}>
-          {meta ? <ScoreBug detail={detail} meta={meta} current={eventAt(events, t)} ended={t >= detail.duration_t} /> : null}
+          {meta ? <ScoreBug detail={detail} meta={meta} current={eventAt(events, t)} ended={t >= detail.duration_t} t={t} /> : null}
           <SyntheticMark />
         </div>
         <Pitch ball={ball} trail={trail(points, t)} />

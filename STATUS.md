@@ -1,6 +1,6 @@
 # STATUS
 
-Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_SPEC](docs/UI_SPEC.md), design log [DESIGN](docs/DESIGN.md).
+Updated 2026-10-17. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_SPEC](docs/UI_SPEC.md), design log [DESIGN](docs/DESIGN.md).
 
 ## Frozen
 - Scope freeze: evening of 24 October. No new features after that (CLAUDE.md).
@@ -12,7 +12,7 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_
 ## Done
 - Generator, analytics, moment detector, selector, claim verifier, template narrator, lint, cache, foundry-v2..v5.2 ([LLM_RUN](docs/LLM_RUN.md)), injection eval ([EVAL](docs/EVAL.md)).
 - FastAPI (matches, moments, events, series, SSE incl. stored trace, `/healthz`, deep links); CI (pytest, Vitest + build, gitleaks, docker).
-- UI: U0 foundation, U1 On Air, U2 Proof (Receipt, evidence pitch, Flip), old UI deleted. P1: image, guard, frozen API surface, deployed.
+- UI: U0 foundation, U1 On Air, U2 Proof (Receipt, evidence pitch, Flip), old UI deleted. Score bug clock runs to the second (`gameClock`, derived from period starts); replay speeds 1.5 / 6 / 30 (about 60 / 15 / 3 min for 90 min) so card dwell fits between moments; broadcast skin (CSS only): glass top bar + pulsing LIVE BROADCAST chip, neon pitch/ball, glowing "Checked by code" ring, amber SYNTHETIC badge, Proof: green-glow Verification record, blue selected-event glow, bigger glowing pitch marks + dashed motion line, event glow on the timeline, hover/active states (`--fx-*` tokens, contrast-tested). P1: image, guard, frozen API surface, deployed.
 - P2 (this round, 21 commits): agent workflow on Agent Framework core 1.19.0 / foundry 1.13.1 (newest at least 14 days old). Analyst, Narrator
   (wrapped), Guard (code), Verifier; immutable state, 3-attempt edges, fallbacks, flags `analyst`/`verifier`, stored trace + `verification`
   on every card. The published store is the agent run ([AGENT_RUN](docs/AGENT_RUN.md)); offline CLI `python -m app.agents.run`.
@@ -43,7 +43,7 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_
   (Narrator composition and Analyst narrowing, none from a Verifier rejection).
 - dominant_loss M005 text has no scorer or minute (dull candidate, P4 labelling). Stored card red_card_swing 90+1' mentions an uncovered 84' goal.
 - Minutes, names and event phrases inside a card sentence are plain text, not `<Fact>` (D26). 390 px stage pitch small (U5).
-- Tests (2026-10-14, uncached): pytest 972, Vitest 415, `npm run smoke` 7; initial JS 113.7 KB gzip. After `app.publish` rerun `app.api.fixtures`.
+- Tests (2026-10-14, uncached): pytest 972, Vitest 425, `npm run smoke` 7; initial JS 113.7 KB gzip. After `app.publish` rerun `app.api.fixtures`.
 - Price per token unknown (cost only in tokens). `.env.example` is tracked; never opened.
 
 ## Deploy state
@@ -53,11 +53,12 @@ Updated 2026-10-14. Project rules and commands: [CLAUDE.md](CLAUDE.md). UI: [UI_
 
 ## Mentor summary
 - Commits P2: spike + 3a-3g (2fa6242..1d314d9), CLI, canary and reruns, smoke test, publish switch (this commit); two U2 fixes before them.
-- Tests: pytest 972, Vitest 415, smoke 7 (+ remote smoke: trace-sse, verification); JS 113.7 KB (unchanged).
+- Tests: pytest 972, Vitest 425, smoke 7 (+ remote smoke: trace-sse, verification); JS 113.7 KB (unchanged).
 - Spike: cycles + conditional edges work; state is deep-copied (immutable state, read-modify-write); one workflow per run; failures propagate (caught).
 - Pins: core 1.19.0, foundry 1.13.1, openai 1.14.4 (1.20+/1.14.x were younger than 14 days); findings re-verified on them.
 - Live runs: 167 calls, 287.8k tokens in / 54.3k out across canary, rerun, two 15-card runs and 2 smoke runs. Final: 15 llm cards, 0 fallback,
   1 Analyst fallback, 0 Verifier rejections, 67.6 s, 83.3k/15.0k tokens. Analyst + Verifier are ~55% of input tokens.
 - Deviations: self-written estimate; `app/agents` kept out of the image; stray `human_review.<ts>.csv` from a re-render deleted.
 - TODO(verify): token prices; whether `claim_end` window kind should replace `claim_range` for state metrics in the API.
+- Broadcast skin: only CSS plus two presentational attributes (TopBar chip, `data-type` on timeline markers); no state, props or fetch changed. Screenshot run (tools/shots) hung in the sandbox, so the look is not yet eyeballed.
 - First signs (not results): Verifier caught 12/12 injected drafts on a small development set; Analyst narrowing changed 2 texts by dropping possession.

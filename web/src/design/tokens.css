@@ -94,3 +94,22 @@
   --home: #4da3ff;
   --away: #ff8a5b;
 }
+
+/* Broadcast FX (ESPN / Sky studio look): glow accents for live status, game events and the proof seal.
+ * Used on dark surfaces only (top bar, stage, timeline); the same in both themes. Alpha variants are
+ * built with color-mix() in the CSS, never as literals. Contrast of the text ones: tokens.test.ts. */
+html {
+  --fx-glass: #0f172a;
+  --fx-glass-line: #1e293b;
+  --fx-live: #ff2d3d;
+  --fx-cyan: #22e5ff;
+  --fx-gold: #facc15;
+  --fx-proof: #10b981;
+  --fx-proof-ink: #34e8b0;
+  --fx-proof-bg: #022c22;
+  --fx-amber: #fbbf24;
+  --fx-amber-ink: #fcd34d;
+  --fx-blue: #3b9eff;
+  --fx-white: #ffffff;
+  --fx-black: #000000;
+}

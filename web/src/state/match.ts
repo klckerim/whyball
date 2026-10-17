@@ -99,3 +99,23 @@ export function stepMoment<T extends Timed & { id: string }>(
   if (dir === 1) return moments.find((m) => m.t > t) ?? null;
   return [...moments].reverse().find((m) => m.t < t) ?? null;
 }
+
+/** Game seconds at the start of each half: the second half restarts the game clock at 45:00. */
+const HALF_S = 2700;
+const MIN_S = 60;
+
+/**
+ * The running game clock at `t` as "MM:SS", with stoppage as "45+MM:SS" / "90+MM:SS". Derived from the
+ * period starts (the events agree with it to the second); null when `t` lies in no period.
+ */
+export function gameClock(periods: readonly { period: number; start_t: number; end_t: number }[], t: number): string | null {
+  const p = periods.find((x) => t >= x.start_t && (t < x.end_t || x === periods[periods.length - 1]));
+  if (!p) return null;
+  const total = Math.floor(t - p.start_t) + (p.period === 1 ? 0 : HALF_S);
+  const limit = p.period === 1 ? HALF_S : 2 * HALF_S;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const over = Math.max(0, total - limit);
+  const shown = over > 0 ? over : total;
+  const text = `${pad(Math.floor(shown / MIN_S))}:${pad(shown % MIN_S)}`;
+  return over > 0 ? `${limit / MIN_S}+${text}` : text;
+}

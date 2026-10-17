@@ -2,7 +2,7 @@
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 
 import type { Moment, Period, Series } from "../api/types";
-import { SPEEDS, wallSeconds } from "../state/clock";
+import { SPEEDS, wallLabel } from "../state/clock";
 import styles from "./app.module.css";
 import type { BandTeams } from "./PressureBand";
 import { Timeline } from "./Timeline";
@@ -63,7 +63,7 @@ export function Transport(p: Props) {
           ))}
         </ToggleGroup.Root>
         <span className={styles.speedHint}>
-          whole match in about {wallSeconds(p.duration, current.speed)} s
+          whole match in about {wallLabel(p.duration, current.speed)}
         </span>
       </div>
       <Timeline

@@ -38,6 +38,10 @@ export function TopBar({ matches }: { matches: MatchSummary[] | null }) {
           Proof
         </Tabs.Trigger>
       </Tabs.List>
+      <span className={styles.live} title="Replay of a generated match">
+        <span className={styles.liveDot} aria-hidden="true" />
+        LIVE BROADCAST
+      </span>
       <span className={styles.barEnd}>
         <span className={styles.synthetic}>SYNTHETIC DATA</span>
         <button

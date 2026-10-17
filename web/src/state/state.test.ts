@@ -2,9 +2,9 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { matchFixtures } from "../test/fixtures";
-import { clockReducer, SPEEDS, wallSeconds } from "./clock";
+import { clockReducer, SPEEDS, wallLabel, wallSeconds } from "./clock";
 import { dwellMs, dwellReducer, EMPTY_DWELL, MIN_DWELL_MS, READING_CPS } from "./dwell";
-import { arrivals, BALL, ballAt, eventAt, momentsUntil, positioned, stepMoment, trail } from "./match";
+import { arrivals, BALL, ballAt, eventAt, gameClock, momentsUntil, positioned, stepMoment, trail } from "./match";
 import { type Card, initialPlayback, playbackReducer, TICK_MS, usePlayback } from "./playback";
 
 const match = matchFixtures.find((m) => m.summary.id === "red_card_swing_seed42")!;
@@ -32,8 +32,29 @@ describe("clock", () => {
   });
 
   it("speeds use the replay API unit and state their wall time", () => {
-    expect(SPEEDS.map((s) => s.speed)).toEqual([60, 120, 300]);
-    expect(wallSeconds(5400, 60)).toBe(90);
+    expect(SPEEDS.map((s) => s.speed)).toEqual([1.5, 6, 30]);
+    expect(wallSeconds(5400, 1.5)).toBe(3600); // normal: the match in an hour
+    expect(wallLabel(5400, 1.5)).toBe("60 min");
+    expect(wallLabel(5400, 6)).toBe("15 min");
+    expect(wallLabel(5400, 30)).toBe("3 min");
+    expect(wallLabel(5400, 60)).toBe("90 s");
+  });
+});
+
+describe("game clock", () => {
+  const periods = [
+    { period: 1, start_t: 0, end_t: 2855 },
+    { period: 2, start_t: 2855, end_t: 5729 },
+  ];
+  it("runs to the second, restarts at 45:00 and shows stoppage", () => {
+    expect(gameClock(periods, 0)).toBe("00:00");
+    expect(gameClock(periods, 558)).toBe("09:18");
+    expect(gameClock(periods, 2700)).toBe("45:00");
+    expect(gameClock(periods, 2854)).toBe("45+02:34");
+    expect(gameClock(periods, 2855)).toBe("45:00");
+    expect(gameClock(periods, 3246)).toBe("51:31");
+    expect(gameClock(periods, 5729)).toBe("90+02:54");
+    expect(gameClock([], 10)).toBeNull();
   });
 });
 

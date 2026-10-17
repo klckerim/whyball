@@ -84,6 +84,27 @@ describe("stage (dark in both themes)", () => {
   });
 });
 
+describe("broadcast FX (dark surfaces, both themes)", () => {
+  const fx = block("html");
+  const TEXT_FX = [
+    ["fx-cyan", "fx-glass"],
+    ["fx-cyan", "stage-bg"],
+    ["fx-live", "fx-glass"],
+    ["fx-gold", "fx-glass"],
+    ["fx-proof-ink", "fx-proof-bg"],
+    ["fx-white", "fx-glass"],
+    ["fx-amber-ink", "fx-glass"],
+    ["fx-amber-ink", "stage-bg"],
+  ] as [string, string][];
+  const all = { ...fx, ...stage };
+  it.each(TEXT_FX)("%s on %s ≥ 4.5", (fg, bg) => {
+    expect(contrast(all[fg]!, all[bg]!)).toBeGreaterThanOrEqual(4.5);
+  });
+  it("leaves the themed token sets untouched", () => {
+    expect(Object.keys(light).some((k) => k.startsWith("fx-"))).toBe(false);
+  });
+});
+
 it("system dark and explicit dark use the same tokens", () => {
   expect(darkMedia).toEqual(darkExplicit);
 });
